@@ -70,8 +70,9 @@
     {
       "version": "2.0.0",
       "changelog": [
-        "Release Date: 2025-08-06",
+        "Release Date: 2025-08-07",
         "General bug fixes and performance improvements.",
+        "Fixed issue where the Rune directory was incorrectly selected as the default on the game card.",
         "Added French (FR) language support.",
         "Initial Linux support: basic compatibility layer implemented for Linux-based systems."
       ]
