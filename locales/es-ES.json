@@ -2,12 +2,12 @@
   "meta": {
     "name": "Español (España)",
     "author": "Esther",
-    "version": "v1.5.0"
+    "version": "v2.0.0"
   },
   "translations": {
     "app": {
       "title": "Hydra Achievements Manager",
-      "version": "v1.5.0",
+      "version": "v2.0.0",
       "about": "Un gestor moderno de logros de Steam.",
       "credits": "Hecho por Levynsk y Esther (Twitter - @onlysterbr)"
     },

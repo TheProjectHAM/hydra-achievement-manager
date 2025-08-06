@@ -79,18 +79,25 @@ async function renderSearchResults(games) {
   
   const achievementsText = await t('games.achievements') || 'conquistas';
   
-  // Usar um único Map para controlar os jogos únicos
+  // Usar um Map para controlar os jogos únicos e evitar duplicatas
   const uniqueGames = new Map();
   
-  // Primeira passagem: filtrar jogos únicos
+  // Filtrar jogos únicos e válidos
   for (const game of games) {
-    if (game.type !== 'app') continue;
-    
-    // Usar o ID como chave única
-    if (!uniqueGames.has(game.id)) {
-      uniqueGames.set(game.id, game);
+    // Verificar se é um aplicativo válido e se tem ID único
+    if (game.type !== 'app' || !game.id || uniqueGames.has(game.id)) {
+      continue;
     }
+    
+    // Adicionar apenas jogos únicos ao Map
+    uniqueGames.set(game.id, {
+      id: game.id,
+      name: game.name || 'Nome não disponível',
+      tiny_image: game.tiny_image
+    });
   }
+  
+  console.log(`Renderizando ${uniqueGames.size} jogos únicos de ${games.length} resultados`);
   
   // Renderizar apenas os jogos únicos
   for (const game of uniqueGames.values()) {
@@ -120,7 +127,7 @@ async function renderSearchResults(games) {
     gameCard.innerHTML = `
       <img src="${imageUrl}" alt="${game.name}" onerror="this.src='assets/game-placeholder.jpg'">
       <div class="game-info">
-        <div class="game-title">${game.name}</div>
+        <div class="game-title" title="${game.name}">${game.name}</div>
         <div class="game-achievements">
           <i class="fas fa-trophy"></i> ${totalAchievements} ${achievementsText}
         </div>

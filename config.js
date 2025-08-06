@@ -13,7 +13,7 @@ const defaultConfig = {
   theme: 'dark', 
   language: 'pt-BR',
   apiSource: 'hydra',
-  liteMode: false
+  liteMode: true
 };
 
 async function getConfig(key) {

@@ -2,12 +2,12 @@
   "meta": {
     "name": "Português (Brasil)",
     "author": "Levynsk",
-    "version": "v1.5.0"
+    "version": "v2.0.0"
   },
   "translations": {
     "app": {
       "title": "Hydra Achievements Manager",
-      "version": "1.5.0",
+      "version": "2.0.0",
       "about": "Um gerenciador moderno de conquistas Steam.",
       "credits": "Feito por Levynsk e Esther (Twitter - @onlysterbr)"
     },

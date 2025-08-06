@@ -42,7 +42,7 @@
       ]
     },
     {
-      "version": "1.5.0",
+      "version": "2.0.0",
       "changelog": [
         "Added a new tab for game search functionality.",
         "Implemented in-app update checking system.",

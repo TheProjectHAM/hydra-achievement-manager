@@ -423,3 +423,8 @@ hr {
 .update-entry:first-child h4::after {
   display: inline-block;
 }
+
+/* Garantir que o card de configurações tenha a mesma cor dos outros cards */
+.settings-card {
+  background: var(--bg-secondary) !important;
+}

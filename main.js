@@ -106,8 +106,17 @@ ipcMain.handle('get-config', (event, key) => {
     const config = store.get('config') || {};
     // Garantir que outputPaths exista
     if (!config.outputPaths) {
-      config.outputPaths = [config.outputPath || 'C:/Users/Public/Documents/Steam/RUNE'];
-      config.activeOutputPath = config.outputPath || 'C:/Users/Public/Documents/Steam/RUNE';
+      // Definir diretórios padrão baseado no sistema operacional
+      let defaultPath;
+      if (process.platform === 'linux') {
+        const homeDir = require('os').homedir();
+        defaultPath = `${homeDir}/.wine/drive_c/users/Public/Documents/Steam/RUNE`;
+      } else {
+        defaultPath = 'C:/Users/Public/Documents/Steam/RUNE';
+      }
+      
+      config.outputPaths = [config.outputPath || defaultPath];
+      config.activeOutputPath = config.outputPath || defaultPath;
       store.set('config', config);
     }
     return config;
@@ -117,7 +126,15 @@ ipcMain.handle('get-config', (event, key) => {
   if (key === 'outputPaths') {
     const paths = store.get('outputPaths');
     if (!paths) {
-      const currentPath = store.get('outputPath') || 'C:/Users/Public/Documents/Steam/RUNE';
+      let defaultPath;
+      if (process.platform === 'linux') {
+        const homeDir = require('os').homedir();
+        defaultPath = `${homeDir}/.wine/drive_c/users/Public/Documents/Steam/RUNE`;
+      } else {
+        defaultPath = 'C:/Users/Public/Documents/Steam/RUNE';
+      }
+      
+      const currentPath = store.get('outputPath') || defaultPath;
       store.set('outputPaths', [currentPath]);
       return [currentPath];
     }
@@ -130,8 +147,17 @@ ipcMain.handle('get-config', (event, key) => {
 ipcMain.handle('write-achievements', async (event, appId, achievements, targetDirectory, options = {}) => {
   try {
     const config = store.get('config') || {};
-    const outputPaths = config.outputPaths || [config.outputPath || 'C:/Users/Public/Documents/Steam/RUNE'];
     
+    // Definir diretórios padrão baseado no sistema operacional
+    let defaultPath;
+    if (process.platform === 'linux') {
+      const homeDir = require('os').homedir();
+      defaultPath = `${homeDir}/.wine/drive_c/users/Public/Documents/Steam/RUNE`;
+    } else {
+      defaultPath = 'C:/Users/Public/Documents/Steam/RUNE';
+    }
+    
+    const outputPaths = config.outputPaths || [config.outputPath || defaultPath];
     const outputPath = targetDirectory || config.activeOutputPath || outputPaths[0];
     
     console.log('Diretório alvo para salvar:', outputPath);
@@ -282,8 +308,21 @@ ipcMain.handle('write-achievements', async (event, appId, achievements, targetDi
       // Mapa para armazenar conquistas e garantir que não haja duplicatas
       const achievementsMap = new Map();
 
-      // Ignorar o conteúdo anterior do arquivo INI, apenas adicionar as novas conquistas selecionadas
+      // Processar as conquistas selecionadas, garantindo unicidade por ID
       for (const achievement of achievements) {
+        // Verificar se o achievement tem um ID válido
+        if (!achievement.id || typeof achievement.id !== 'string') {
+          console.warn('Achievement com ID inválido ignorado:', achievement);
+          continue;
+        }
+        
+        // Verificar se o unlockTime é válido
+        if (!achievement.unlockTime || isNaN(achievement.unlockTime)) {
+          console.warn(`Achievement ${achievement.id} com unlockTime inválido, usando timestamp atual`);
+          achievement.unlockTime = Math.floor(Date.now() / 1000);
+        }
+        
+        // Adicionar ao mapa (substitui se já existir com o mesmo ID)
         achievementsMap.set(achievement.id, achievement);
       }
 
@@ -294,6 +333,8 @@ ipcMain.handle('write-achievements', async (event, appId, achievements, targetDi
         iniContent += `Achieved=1\n`;
         iniContent += `UnlockTime=${achievement.unlockTime}\n\n`;
       }
+      
+      console.log(`Gerando arquivo INI com ${achievementsMap.size} conquistas únicas`);
 
       console.log('Escrevendo arquivo:', achievementsPath);
       fs.writeFileSync(achievementsPath, iniContent);
@@ -311,14 +352,31 @@ ipcMain.handle('get-output-directories', async (event) => {
   try {
     console.log('Obtendo diretórios de configuração no processo principal...');
     
-    // Diretórios padrão fixos como solicitado
-    const defaultDirectories = [
-      'C:/Users/Public/Documents/Steam/RUNE',
-      'C:/Users/Public/Documents/Steam/CODEX',
-      'C:/ProgramData/Steam/RLD!',
-      'C:/Users/Public/Documents/OnlineFix',
-      'C:/Users/Public/Documents/Steam'
-    ];
+    let defaultDirectories;
+    
+    // Detectar sistema operacional e definir diretórios apropriados
+    if (process.platform === 'linux') {
+      // Diretórios para Linux usando Wine
+      const homeDir = require('os').homedir();
+      const winePrefix = `${homeDir}/.wine/drive_c`;
+      
+      defaultDirectories = [
+        `${winePrefix}/users/Public/Documents/Steam/RUNE`,
+        `${winePrefix}/users/Public/Documents/Steam/CODEX`,
+        `${winePrefix}/ProgramData/Steam/RLD!`,
+        `${winePrefix}/users/Public/Documents/OnlineFix`,
+        `${winePrefix}/users/Public/Documents/Steam`
+      ];
+    } else {
+      // Diretórios padrão para Windows
+      defaultDirectories = [
+        'C:/Users/Public/Documents/Steam/RUNE',
+        'C:/Users/Public/Documents/Steam/CODEX',
+        'C:/ProgramData/Steam/RLD!',
+        'C:/Users/Public/Documents/OnlineFix',
+        'C:/Users/Public/Documents/Steam'
+      ];
+    }
     
     // Salvar no store para futura referência
     store.set('config.outputPaths', defaultDirectories);
@@ -329,7 +387,7 @@ ipcMain.handle('get-output-directories', async (event) => {
       store.set('config.activeOutputPath', defaultDirectories[0]);
     }
     
-    console.log('Diretórios padrão retornados:', defaultDirectories);
+    console.log(`Diretórios padrão para ${process.platform} retornados:`, defaultDirectories);
     return { success: true, directories: defaultDirectories };
   } catch (error) {
     console.error('Erro ao obter diretórios:', error);
@@ -503,7 +561,17 @@ ipcMain.handle('set-language', async (event, langCode) => {
 ipcMain.handle('get-unlocked-achievements', async (event, appId) => {
   try {
     const config = store.get('config') || {};
-    const outputPaths = config.outputPaths || [config.outputPath || 'C:/Users/Public/Documents/Steam/RUNE'];
+    
+    // Definir diretórios padrão baseado no sistema operacional
+    let defaultPath;
+    if (process.platform === 'linux') {
+      const homeDir = require('os').homedir();
+      defaultPath = `${homeDir}/.wine/drive_c/users/Public/Documents/Steam/RUNE`;
+    } else {
+      defaultPath = 'C:/Users/Public/Documents/Steam/RUNE';
+    }
+    
+    const outputPaths = config.outputPaths || [config.outputPath || defaultPath];
     const activeOutputPath = config.activeOutputPath || outputPaths[0];
     
     // Determinar o caminho correto com base no diretório ativo
@@ -631,57 +699,22 @@ ipcMain.handle('select-directory', async () => {
   }
 });
 
-// Adicionar à lista de IPC handlers
-ipcMain.handle('getCurrentVersion', () => {
-  return app.getVersion();
-});
-
-ipcMain.handle('getLatestVersion', async () => {
-  try {
-    const response = await axios.get('https://api.github.com/repos/Levynsk/hydra-achievement-manager/releases/latest');
-    return response.data.tag_name;
-  } catch (error) {
-    console.error('Erro ao buscar última versão:', error);
-    return null;
-  }
-});
-
-ipcMain.handle('getChangelog', async () => {
-  try {
-    const response = await axios.get('https://api.github.com/repos/Levynsk/hydra-achievement-manager/releases/latest');
-    return response.data.body;
-  } catch (error) {
-    console.error('Erro ao buscar changelog:', error);
-    return null;
-  }
-});
-
-ipcMain.handle('getDownloadUrl', async () => {
-  try {
-    const response = await axios.get('https://api.github.com/repos/Levynsk/hydra-achievement-manager/releases/latest');
-    return response.data.html_url;
-  } catch (error) {
-    console.error('Erro ao buscar URL de download:', error);
-    return null;
-  }
-});
-
-// Update handlers
+// Handler unificado para informações de atualização
 ipcMain.handle('get-update-info', async () => {
   try {
-    // Try to get the update data
+    // Buscar dados de atualização do arquivo updates.json
     const response = await axios.get('https://raw.githubusercontent.com/Levynsk/hydra-achievement-manager/refs/heads/main/updates.json');
     const updateData = response.data;
     
     if (!updateData || !updateData.updates || !Array.isArray(updateData.updates)) {
-      throw new Error('Invalid update data format');
+      throw new Error('Formato de dados de atualização inválido');
     }
     
-    // Get latest update (most recent in array)
+    // Obter a atualização mais recente (última no array)
     const latestUpdate = updateData.updates[updateData.updates.length - 1];
     
     if (!latestUpdate || !latestUpdate.version) {
-      throw new Error('No valid version information found');
+      throw new Error('Nenhuma informação de versão válida encontrada');
     }
     
     const currentVersion = app.getVersion();
@@ -691,14 +724,14 @@ ipcMain.handle('get-update-info', async () => {
       currentVersion: currentVersion,
       remoteVersion: latestUpdate.version,
       downloadUrl: 'https://github.com/Levynsk/hydra-achievement-manager/releases/latest',
-      changelog: latestUpdate.changelog || 'No changelog available',
+      changelog: latestUpdate.changelog || 'Nenhum changelog disponível',
       allUpdates: updateData.updates
     };
   } catch (error) {
-    console.error('Error getting update info:', error);
+    console.error('Erro ao obter informações de atualização:', error);
     return {
       success: false,
-      error: error.message || 'Failed to get update information',
+      error: error.message || 'Falha ao obter informações de atualização',
       currentVersion: app.getVersion()
     };
   }
@@ -709,7 +742,7 @@ ipcMain.handle('open-external-link', async (event, url) => {
     await shell.openExternal(url);
     return { success: true };
   } catch (error) {
-    console.error('Error opening external link:', error);
+    console.error('Erro ao abrir link externo:', error);
     return { success: false, message: error.message };
   }
 });

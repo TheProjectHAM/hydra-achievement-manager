@@ -2,12 +2,12 @@
   "meta": {
     "name": "Українська (Україна)",
     "author": "Esther",
-    "version": "v1.5.0"
+    "version": "v2.0.0"
   },
   "translations": {
     "app": {
       "title": "Hydra Achievements Manager",
-      "version": "v1.5.0",
+      "version": "v2.0.0",
       "about": "Сучасний менеджер досягнень Steam.",
       "credits": "Створено Levynsk та Esther (Twitter - @onlysterbr)"
     },

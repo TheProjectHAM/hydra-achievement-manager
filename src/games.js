@@ -130,18 +130,29 @@ export async function fetchGames() {
       
       // Processar os jogos encontrados neste diretório
       for (const game of result.games) {
+        // Verificar se o jogo tem um ID válido
+        if (!game.id || typeof game.id !== 'string') {
+          console.warn('Jogo com ID inválido ignorado:', game);
+          continue;
+        }
+        
         // Se o jogo já existe no Map, apenas atualize se este for o diretório ativo
-        if (gamesMap.has(game.id) && outputPath !== activeOutputPath) continue;
+        if (gamesMap.has(game.id) && outputPath !== activeOutputPath) {
+          console.log(`Jogo ${game.id} já existe no Map, mantendo versão do diretório ativo`);
+          continue;
+        }
         
         try {
           const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${game.id}`);
           const data = await response.json();
           
           let totalAchievements = 0;
+          let gameName = game.id; // Fallback para o ID se não conseguir obter o nome
           
           if (data[game.id]?.success) {
             const gameData = data[game.id].data;
             totalAchievements = gameData.achievements?.total || 0;
+            gameName = gameData.name || game.id;
           }
           
           // Se não conseguiu obter o total da Steam, tenta obter da API Hydra
@@ -159,21 +170,35 @@ export async function fetchGames() {
             }
           }
 
+          // Adicionar ou atualizar o jogo no Map
           gamesMap.set(game.id, {
             id: game.id,
-            name: data[game.id]?.data?.name || game.id,
+            name: gameName,
             image: `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.id}/header.jpg`,
             achievements: {
-              unlocked: game.unlockedAchievements,
+              unlocked: game.unlockedAchievements || 0,
               total: totalAchievements,
             },
             sourcePath: outputPath
           });
         } catch (error) {
           console.error(`Erro ao buscar detalhes do jogo ${game.id}:`, error);
+          // Mesmo com erro, adicionar o jogo com informações básicas
+          gamesMap.set(game.id, {
+            id: game.id,
+            name: game.id,
+            image: `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.id}/header.jpg`,
+            achievements: {
+              unlocked: game.unlockedAchievements || 0,
+              total: 0,
+            },
+            sourcePath: outputPath
+          });
         }
       }
     }
+    
+    console.log(`Processados ${gamesMap.size} jogos únicos de ${outputPaths.length} diretórios`);
 
     // Converter o Map em um array para exibição
     const games = Array.from(gamesMap.values());
@@ -217,18 +242,35 @@ export async function fetchGames() {
       if (outputPaths.length > 0) {
         directoryButtons = '<div class="game-directory-buttons">';
         
-        // Loop para criar os botões
+        // Primeiro, coletar todos os diretórios onde o jogo existe
+        const gameDirectories = [];
         for (const path of outputPaths) {
-          // Verificar se o jogo existe neste diretório
           const gameExistsInDir = await checkGameExistsInDirectory(game.id, path);
-          if (!gameExistsInDir) continue; // Pular este diretório se o jogo não existir nele
+          if (gameExistsInDir) {
+            gameDirectories.push(path);
+          }
+        }
+        
+        // Loop para criar os botões apenas para diretórios onde o jogo existe
+        for (let i = 0; i < gameDirectories.length; i++) {
+          const path = gameDirectories[i];
           
           // Extrair o nome da última pasta do caminho
           const pathParts = path.split(/[\\\/]/);
           const dirName = pathParts[pathParts.length - 1];
           
-          // Se houver apenas um diretório ou se este for o diretório ativo, marcar como ativo
-          const isActive = outputPaths.length === 1 || path === activeOutputPath;
+          // Lógica para marcar como ativo:
+          // 1. Se há apenas um diretório, marcar como ativo
+          // 2. Se o diretório é o activeOutputPath, marcar como ativo
+          // 3. Se o activeOutputPath não está na lista, marcar o primeiro como ativo
+          let isActive = false;
+          if (gameDirectories.length === 1) {
+            isActive = true;
+          } else if (path === activeOutputPath) {
+            isActive = true;
+          } else if (!gameDirectories.includes(activeOutputPath) && i === 0) {
+            isActive = true;
+          }
           
           directoryButtons += `
             <button class="game-directory-btn ${isActive ? 'active' : ''}" 
@@ -414,18 +456,35 @@ async function updateGameCard(gameId, newPath) {
     if (outputPaths.length > 0) {
       directoryButtons = '<div class="game-directory-buttons">';
       
-      // Loop para criar os botões
+      // Primeiro, coletar todos os diretórios onde o jogo existe
+      const gameDirectories = [];
       for (const path of outputPaths) {
-        // Verificar se o jogo existe neste diretório
         const gameExistsInDir = await checkGameExistsInDirectory(gameId, path);
-        if (!gameExistsInDir) continue; // Pular este diretório se o jogo não existir nele
+        if (gameExistsInDir) {
+          gameDirectories.push(path);
+        }
+      }
+      
+      // Loop para criar os botões apenas para diretórios onde o jogo existe
+      for (let i = 0; i < gameDirectories.length; i++) {
+        const path = gameDirectories[i];
         
         // Extrair o nome da última pasta do caminho
         const pathParts = path.split(/[\\\/]/);
         const dirName = pathParts[pathParts.length - 1];
         
-        // Se houver apenas um diretório ou se este for o diretório ativo, marcar como ativo
-        const isActive = outputPaths.length === 1 || path === activeOutputPath;
+        // Lógica para marcar como ativo:
+        // 1. Se há apenas um diretório, marcar como ativo
+        // 2. Se o diretório é o activeOutputPath (newPath), marcar como ativo
+        // 3. Se o activeOutputPath não está na lista, marcar o primeiro como ativo
+        let isActive = false;
+        if (gameDirectories.length === 1) {
+          isActive = true;
+        } else if (path === activeOutputPath) {
+          isActive = true;
+        } else if (!gameDirectories.includes(activeOutputPath) && i === 0) {
+          isActive = true;
+        }
         
         directoryButtons += `
           <button class="game-directory-btn ${isActive ? 'active' : ''}" 

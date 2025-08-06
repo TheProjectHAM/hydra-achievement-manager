@@ -1,7 +1,7 @@
 {
-  "name": "hydra-achievements-manager",
-  "version": "1.6.1",
-  "description": "A modern Hydra achievements manager",
+  "name": "project-ham",
+  "version": "1.6.2",
+  "description": "A modern Project HAM achievements manager",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -10,6 +10,16 @@
     "rebuild": "electron-rebuild",
     "prebuild": "yarn rebuild",
     "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --win --linux",
+    "build:win32": "electron-builder --win --ia32",
+    "build:win64": "electron-builder --win --x64",
+    "build:linux-all": "electron-builder --linux deb rpm tar.xz AppImage",
+    "build:deb": "electron-builder --linux deb",
+    "build:rpm": "electron-builder --linux rpm",
+    "build:arch": "electron-builder --linux tar.xz",
+    "build:appimage": "electron-builder --linux AppImage",
     "postinstall": "electron-builder install-app-deps"
   },
   "author": "Esther and Levelyn",
@@ -26,19 +36,22 @@
     "electron-rebuild": "^3.2.9"
   },
   "build": {
-    "appId": "com.hydra.achievements.manager",
-    "productName": "Hydra Achievements Manager",
-    "copyright": "Copyright © 2025",
+    "appId": "com.project.ham.manager",
+    "productName": "Project HAM",
+    "copyright": "Copyright © 2025 Esther and Levelyn",
     "asar": false,
     "files": [
       "**/*",
       "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
-      "!**/{.git,.hg,.svn,CVS,RCS,SCCS,__pycache__,thumbs.db,.DS_Store,.idea,.vs,.vscode,docs,.github,.gradle,.settings}/**/*"
+      "!**/{.git,.hg,.svn,CVS,RCS,SCCS,__pycache__,thumbs.db,.DS_Store,.idea,.vs,.vscode,docs,.github,.gradle,.settings}/**/*",
+      "!dist/**/*",
+      "!node_modules/.cache/**/*"
     ],
     "extraResources": [
       {
         "from": "assets/",
-        "to": "assets/"
+        "to": "assets/",
+        "filter": ["**/*"]
       }
     ],
     "directories": {
@@ -47,39 +60,113 @@
     },
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "ia32"]
+        }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico",
       "installerHeaderIcon": "assets/icon.ico",
-      "shortcutName": "Hydra Achievements Manager",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Project HAM",
       "license": "LICENSE",
-      "artifactName": "${productName}-setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
     },
     "mac": {
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
       ],
-      "icon": "assets/icon.ico",
-      "category": "public.app-category.utilities"
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.utilities",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
     },
     "linux": {
       "target": [
-        "AppImage"
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "rpm",
+          "arch": ["x64"]
+        },
+        {
+          "target": "tar.xz",
+          "arch": ["x64"]
+        }
       ],
-      "icon": "assets/icon.ico",
+      "icon": "assets/icon.png",
       "category": "Utility",
-      "artifactName": "${productName}-${version}.${ext}"
+      "synopsis": "A modern Project HAM achievements manager for Hydra games",
+      "description": "Project HAM is a modern tool for managing Hydra achievements in games. It provides an intuitive interface for unlocking achievements and managing game progress.",
+      "desktop": {
+        "Name": "Project HAM",
+        "Comment": "Manage Hydra achievements for games",
+        "Keywords": "hydra;achievements;games;ham;manager;",
+        "StartupWMClass": "project-ham"
+      },
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "deb": {
+      "packageCategory": "games",
+      "priority": "optional",
+      "depends": [
+        "gconf2",
+        "gconf-service",
+        "libnotify4",
+        "libappindicator1",
+        "libxtst6",
+        "libnss3"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "rpm": {
+      "packageCategory": "Amusements/Games",
+      "depends": [
+        "libXtst",
+        "libXrandr",
+        "alsa-lib",
+        "libXScrnSaver",
+        "GConf2"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "publish": {
       "provider": "github",
-      "owner": "levynascimento",
+      "owner": "Levynsk",
       "repo": "hydra-achievement-manager"
     }
   }

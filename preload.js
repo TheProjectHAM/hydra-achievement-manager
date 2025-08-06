@@ -206,11 +206,6 @@ contextBridge.exposeInMainWorld('api', {
     return ipcRenderer.invoke('get-unlocked-achievements-from-directory', appId, directoryPath);
   },
 
-  // APIs de atualização
-  getCurrentVersion: () => ipcRenderer.invoke('getCurrentVersion'),
-  getLatestVersion: () => ipcRenderer.invoke('getLatestVersion'),
-  getChangelog: () => ipcRenderer.invoke('getChangelog'),
-  getDownloadUrl: () => ipcRenderer.invoke('getDownloadUrl'),
   minimizeWindow: () => ipcRenderer.invoke('minimizeWindow'),
   closeWindow: () => ipcRenderer.invoke('closeWindow'),
   onExportProgress: (callback) => {

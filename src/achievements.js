@@ -310,11 +310,19 @@ export async function renderAchievements() {
   
   // Adicionar cada conquista ao Map, sobrescrevendo duplicatas
   achievements.forEach(achievement => {
-    // Só adicionar se a conquista tiver um apiname válido
-    if (achievement.apiname) {
-      uniqueAchievements.set(achievement.apiname, achievement);
+    // Verificar se a conquista tem um apiname válido e não está vazia
+    if (achievement.apiname && typeof achievement.apiname === 'string' && achievement.apiname.trim()) {
+      // Se já existe uma conquista com o mesmo apiname, manter a que tem mais informações
+      const existingAchievement = uniqueAchievements.get(achievement.apiname);
+      if (!existingAchievement || 
+          (achievement.displayName && !existingAchievement.displayName) ||
+          (achievement.description && !existingAchievement.description)) {
+        uniqueAchievements.set(achievement.apiname, achievement);
+      }
     }
   });
+  
+  console.log(`Renderizando ${uniqueAchievements.size} conquistas únicas de ${achievements.length} conquistas totais`);
   
   // Renderizar apenas as conquistas únicas
   for (const achievement of uniqueAchievements.values()) {
