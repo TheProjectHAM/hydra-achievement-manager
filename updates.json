@@ -42,12 +42,38 @@
       ]
     },
     {
+      "version": "1.5.0",
+      "changelog": [
+        "New Feature:",
+        "Game Search Tab: You can now search for games directly within the app using a dedicated search tab.",
+        "Updates and Improvements:",
+        "In-App Update Checking: The app now automatically checks for new versions to keep you up to date.",
+        "Interface Optimization: Improved interface for a lighter, smoother, and better-performing experience.",
+        "Bug Fixes:",
+        "General bug fixes and adjustments to enhance stability and usability."
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "changelog": [
+        "Release Date: 2025-05-20",
+        "New Features:",
+        "Added support for light theme, allowing users to switch between light and dark modes.",
+        "Redesigned and improved interface for a more intuitive and modern user experience.",
+        "Improvements:",
+        "Implemented game data export, generating a JSON file with progress data and a folder containing achievement icons.",
+        "Added option to select a custom directory when generating achievements.",
+        "Bug Fixes:",
+        "Various fixes to improve system stability and resolve previous issues."
+      ]
+    },
+    {
       "version": "2.0.0",
       "changelog": [
-        "Added a new tab for game search functionality.",
-        "Implemented in-app update checking system.",
-        "Optimized interface for improved performance and lighter experience.",
-        "General bug fixes and refinements."
+        "Release Date: 2025-08-06",
+        "General bug fixes and performance improvements.",
+        "Added French (FR) language support.",
+        "Initial Linux support: basic compatibility layer implemented for Linux-based systems."
       ]
     }
   ]
