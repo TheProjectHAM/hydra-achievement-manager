@@ -1,8 +1,12 @@
 {
   "name": "project-ham",
-  "version": "1.6.2",
+  "version": "2.0.0",
   "description": "A modern Project HAM achievements manager",
   "main": "main.js",
+  "author": {
+    "name": "Esther and Levelyn",
+    "email": "esther24072006@gmail.com"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "cross-env NODE_ENV=development electron .",
@@ -22,7 +26,6 @@
     "build:appimage": "electron-builder --linux AppImage",
     "postinstall": "electron-builder install-app-deps"
   },
-  "author": "Esther and Levelyn",
   "license": "GPL-3.0-only",
   "dependencies": {
     "axios": "^1.8.4",
@@ -39,13 +42,18 @@
     "appId": "com.project.ham.manager",
     "productName": "Project HAM",
     "copyright": "Copyright © 2025 Esther and Levelyn",
-    "asar": false,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/sharp/**/*"
+    ],
     "files": [
       "**/*",
       "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
       "!**/{.git,.hg,.svn,CVS,RCS,SCCS,__pycache__,thumbs.db,.DS_Store,.idea,.vs,.vscode,docs,.github,.gradle,.settings}/**/*",
       "!dist/**/*",
-      "!node_modules/.cache/**/*"
+      "!node_modules/.cache/**/*",
+      "!build.sh",
+      "!BUILD_GUIDE.md"
     ],
     "extraResources": [
       {
@@ -129,6 +137,8 @@
       "category": "Utility",
       "synopsis": "A modern Project HAM achievements manager for Hydra games",
       "description": "Project HAM is a modern tool for managing Hydra achievements in games. It provides an intuitive interface for unlocking achievements and managing game progress.",
+      "maintainer": "Esther and Levelyn <contact@projectham.dev>",
+      "vendor": "Project HAM Team",
       "desktop": {
         "Name": "Project HAM",
         "Comment": "Manage Hydra achievements for games",
@@ -140,6 +150,7 @@
     "deb": {
       "packageCategory": "games",
       "priority": "optional",
+      "maintainer": "Esther and Levelyn <contact@projectham.dev>",
       "depends": [
         "gconf2",
         "gconf-service",
@@ -152,6 +163,8 @@
     },
     "rpm": {
       "packageCategory": "Amusements/Games",
+      "vendor": "Project HAM Team",
+      "maintainer": "Esther and Levelyn <contact@projectham.dev>",
       "depends": [
         "libXtst",
         "libXrandr",
