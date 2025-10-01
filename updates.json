@@ -75,6 +75,21 @@
         "Fix JSON data export.",
         "New initial screen wizard."
       ]
+    },
+    {
+      "version": "2.0.0",
+      "changelog": [
+        "The entire project has been fully rewritten in TypeScript, bringing improved stability, scalability, and maintainability.",
+        "New Features:",
+        "Time Formatting Options: Added support for multiple date/time styles, including 12-hour (AM/PM) format.",
+        "Expanded Language Support: Hydra Achievement Manager now supports more languages: Polski, Français, 中文 (简体), 日本語.",
+        "Improvements:",
+        "Major codebase modernization with TypeScript.",
+        "Better handling of localization and time display.",
+        "Fixes:",
+        "Resolved multiple long-standing issues from the previous version.",
+        "Improved stability and reduced crashes."
+      ]
     }
   ]
 }
