@@ -2,11 +2,11 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { AchievementMonitor, AchievementUnlocker, UnlockOptions } from '../utils/steam-achievements';
+import { AchievementMonitor, AchievementUnlocker, UnlockOptions } from '../utils';
 import { Jimp } from "jimp";
 import { DEFAULT_PATHS } from '../constants';
-import { HydraAPI } from '../utils/steam-achievements/hydra-api';
-import { SteamAPI } from '../utils/steam-achievements/steam-api';
+import { HydraAPI } from '../utils/hydra-api';
+import { SteamAPI } from '../utils/steam-api';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';
@@ -274,7 +274,7 @@ app.whenReady().then(() => {
   // Handle reload achievements from file
   ipcMain.handle('reload-achievements', async (event, gameId: string, basePath: string) => {
     try {
-      const { AchievementParser } = await import('../utils/steam-achievements');
+      const { AchievementParser } = await import('../utils');
       const filePath = path.join(basePath, gameId, 'achievements.ini');
       const achievements = AchievementParser.parseAchievementFile(filePath);
       return { gameId, achievements };

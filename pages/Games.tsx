@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { SteamSearchResult } from '../types';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { GameAchievements } from '../utils/steam-achievements/types';
+import { GameAchievements } from '../utils/types';
 
 const MonitoredGameCard: React.FC<{
   game: GameAchievements;

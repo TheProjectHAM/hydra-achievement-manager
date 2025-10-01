@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { ApiSource } from '../../types';
 import { SteamIcon, HydraIcon } from '../Icons';
 import { useI18n } from '../../contexts/I18nContext';
-import { SteamAPI } from '../../utils/steam-achievements/steam-api';
-import { HydraAPI } from '../../utils/steam-achievements/hydra-api';
+import { SteamAPI } from '../../utils/steam-api';
+import { HydraAPI } from '../../utils/hydra-api';
 
 interface ApiSettingsProps {
   selectedApi: ApiSource;
