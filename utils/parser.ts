@@ -61,7 +61,14 @@ export class AchievementParser {
       for (const entry of entries) {
         if (entry.isDirectory()) {
           const gameId = entry.name;
-          const achievementFile = path.join(directoryPath, gameId, 'achievements.ini');
+          let achievementFile: string;
+
+          // Special handling for OnlineFix directory structure
+          if (path.basename(directoryPath) === 'OnlineFix') {
+            achievementFile = path.join(directoryPath, gameId, 'Stats', 'achievements.ini');
+          } else {
+            achievementFile = path.join(directoryPath, gameId, 'achievements.ini');
+          }
 
           if (fs.existsSync(achievementFile)) {
             const achievements = this.parseAchievementFile(achievementFile);

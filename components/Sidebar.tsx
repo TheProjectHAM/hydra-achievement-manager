@@ -67,10 +67,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      style={{ width: `${isCollapsed ? width * 0.85 : width}px` }} // largura colapsada = 75% do original
+      style={{ width: `${isCollapsed ? width * 0.85 : width}px` }}
       className="flex flex-col fixed top-10 left-0 bottom-0 z-40 bg-gradient-to-r from-gray-50/80 dark:from-black/50 to-transparent backdrop-blur-sm select-none"
     >
       <div className="flex flex-col h-full w-full">
+
         {/* Top section: Main Navigation */}
         <div className="flex-shrink-0">
           <ul className={isCollapsed ? "p-2" : "p-2 pr-4"}>
@@ -82,11 +83,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => setActiveTab(tab.id)}
                     title={isCollapsed ? t(tab.label) : undefined}
                     aria-label={t(tab.label)}
-                    className={itemClasses(isActive).replace(/rounded-lg/g, '').replace(/rounded-r-full/g, '') + ` flex items-center ${isCollapsed ? '' : 'gap-x-2'}`}
+                    className={itemClasses(isActive).replace(/rounded-lg/g, '') + ` flex items-center ${isCollapsed ? '' : 'gap-x-2'}`}
                     style={{alignItems: 'center', borderRadius: '4px'}}
                   >
                     <span className="flex items-center justify-center text-xl flex-shrink-0 align-middle" style={{height: '1.5em'}}>{tab.icon}</span>
-                    <span className={`truncate whitespace-nowrap align-middle transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 ml-0 flex-grow-0' : 'opacity-100 ml-3 flex-grow'}`} style={{lineHeight: '1.5em'}}>
+                    <span className={`truncate whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 ml-0 flex-grow-0' : 'opacity-100 ml-3 flex-grow'}`} style={{lineHeight: '1.5em'}}>
                       {t(tab.label)}
                     </span>
                   </button>
@@ -94,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               );
             })}
 
-            {/* Divider e Recent Games */}
+            {/* Divider + Recent Games */}
             <li>
               <div className={`transition-all duration-300 ${isCollapsed ? 'my-3' : 'my-2'}`}>
                 {isCollapsed ? (
@@ -119,6 +120,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                   ? 'text-gray-900 dark:text-white'
                   : 'text-gray-800 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white'
               }`;
+
+              const fallbacks = [
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_231x87.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_616x353.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/library_600x900.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/library_hero.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/logo.png`
+              ];
+
               return (
                 <li key={game.gameId}>
                   <button
@@ -133,6 +143,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                       alt=""
                       className={`object-cover flex-shrink-0 transition-all duration-300 ${gameItemStyle.image} ${isCollapsed ? 'mx-auto' : ''}`}
                       style={{borderRadius: '4px'}}
+                      onError={(e) => {
+                        const img = e.target as HTMLImageElement;
+                        if (!img.dataset.index) img.dataset.index = "0";
+                        let index = parseInt(img.dataset.index);
+                        if (index < fallbacks.length) {
+                          img.src = fallbacks[index];
+                          img.dataset.index = String(index + 1);
+                        }
+                      }}
                     />
                     <div className={`overflow-hidden whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'opacity-100 ml-3 flex-grow'}`}>
                       {sidebarMarquee && !isCollapsed ? (
@@ -169,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => setActiveTab(SETTINGS_TAB.id)}
                 title={isCollapsed ? t(SETTINGS_TAB.label) : undefined}
                 aria-label={t(SETTINGS_TAB.label)}
-                className={itemClasses(activeTab === SETTINGS_TAB.id).replace(/rounded-lg/g, '').replace(/rounded-r-full/g, '') + ` flex items-center ${isCollapsed ? '' : 'gap-x-2'}`}
+                className={itemClasses(activeTab === SETTINGS_TAB.id).replace(/rounded-lg/g, '') + ` flex items-center ${isCollapsed ? '' : 'gap-x-2'}`}
                 style={{alignItems: 'center', borderRadius: '4px'}}
               >
                 <span className="flex items-center justify-center text-xl flex-shrink-0 align-middle" style={{height: '1.5em'}}>{SETTINGS_TAB.icon}</span>

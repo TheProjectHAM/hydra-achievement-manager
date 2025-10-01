@@ -15,4 +15,5 @@ export const DEFAULT_PATHS = [
     'C:/Users/Public/Documents/Steam/RUNE',
     'C:/Users/Public/Documents/Steam/CODEX',
     'C:/ProgramData/Steam/RLD!',
+    'C:/Users/Public/Documents/OnlineFix',
 ];

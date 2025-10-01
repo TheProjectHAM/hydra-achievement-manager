@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SteamSearchResult } from '../types';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
@@ -14,7 +13,28 @@ const MonitoredGameCard: React.FC<{
   const achievementsCurrent = game.achievements.filter(a => a.achieved).length;
   const [gameName, setGameName] = useState(gameId);
   const [totalAchievements, setTotalAchievements] = useState<number | null>(null);
-  const imageUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/header.jpg`;
+
+  const fallbackImages = [
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/header.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/header_292x136.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_616x353.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_467x181.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_231x87.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_184x69.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_sm_120.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/library_600x900.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/library_hero.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/logo.png`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/logo.jpg`
+  ];
+
+  const [imageIndex, setImageIndex] = useState(0);
+  const [imageUrl, setImageUrl] = useState(fallbackImages[0]);
+
+  useEffect(() => {
+    setImageIndex(0);
+    setImageUrl(fallbackImages[0]);
+  }, [gameId]);
 
   useEffect(() => {
     const fetchGameName = async () => {
@@ -57,12 +77,25 @@ const MonitoredGameCard: React.FC<{
     }
   };
 
+  const handleImageError = () => {
+    if (imageIndex < fallbackImages.length - 1) {
+      const nextIndex = imageIndex + 1;
+      setImageIndex(nextIndex);
+      setImageUrl(fallbackImages[nextIndex]);
+    } else {
+      // Último fallback → usa um placeholder fixo
+      setImageUrl('/assets/placeholder.jpg');
+    }
+  };
+
   return (
     <div
       onClick={handleClick}
       className="group relative aspect-[16/9] bg-cover bg-center rounded-lg overflow-hidden shadow-lg cursor-pointer"
       style={{ backgroundImage: `url(${imageUrl})` }}
     >
+      <img src={imageUrl} onError={handleImageError} style={{ display: 'none' }} alt="" />
+      
       {/* Gradient overlay for text readability */}
       <div className={`absolute inset-0 transition-opacity duration-300 ${
         theme === 'dark'
@@ -72,11 +105,9 @@ const MonitoredGameCard: React.FC<{
 
       {/* Content wrapper */}
       <div className={`relative flex flex-col justify-end h-full p-3 text-white`}>
-        {/* Bottom: Progress Bar */}
         <div>
             <div className="flex justify-between items-end text-xs font-semibold mb-1 transition-transform duration-300 ease-in-out transform translate-y-4 group-hover:translate-y-0 text-white">
                 <h3 className="font-bold text-lg truncate pr-4">{gameName}</h3>
-
                 <div className="flex items-center flex-shrink-0">
                     <span>{achievementsCurrent} / {totalAchievements ?? '?'}</span>
                 </div>
