@@ -14,7 +14,7 @@ Project HAM is a powerful and user-friendly desktop application designed to help
 1. Clone the repository:
    ```bash
    git clone https://https://github.com/Levynsk/hydra-achievement-manager.git
-   cd project-ham
+   cd hydra-achievement-manager
    ```
 
 2. Install dependencies:
@@ -54,4 +54,5 @@ Please ensure your code follows the existing style and includes appropriate test
 Project HAM is licensed under the GNU General Public License v3.0 (GPL-3.0). See the [LICENSE](LICENSE) file for more details.
 
 For full changelog, see [updates.json](CHANGELOG) (if available).
+
 
