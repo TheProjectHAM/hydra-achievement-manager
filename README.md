@@ -1,86 +1,56 @@
-# 🎮 Hydra Achievement Manager
+# Project HAM
 
-![Preview do Hydra Manager](assets/preview.png)
+Project HAM is a powerful and user-friendly desktop application designed to help you manage, unlock, and export Hydra game achievements. Whether you're a gamer looking to organize your achievements or a developer testing game integrations, Project HAM provides an intuitive interface to interact with Hydra's achievement system.
 
-## ✨ Funcionalidades
+## Installation
 
-- 🎯 Visualize e gerencie conquistas de qualquer jogo do Hydra
-- 🎨 Interface com tema escuro elegante
-- 🔍 Pesquise e filtre conquistas
-- ⏰ Suporte a timestamp personalizado para cada conquista
-- 📊 Acompanhamento de progresso dos seus jogos
-- 🔐 Armazenamento seguro da chave API
-- 📁 Diretório de saída personalizável
+### Prerequisites
 
-## 🚀 Começando
+- Node.js (version 16 or higher)
+- npm or yarn
 
-### Pré-requisitos
+### Building from Source
 
-- Node.js (v14 ou superior)
-- Yarn (v1.22 ou superior)
-- Uma chave API Steam (Opcional) (obtenha [aqui](https://steamcommunity.com/dev/apikey))
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/project-ham.git
+   cd project-ham
+   ```
 
-### Instalação
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-1. Clone este repositório
-```bash
-git clone https://github.com/Levynsk/hydra-achievement-manager.git
-cd hydra-achievement-manager
-```
+3. Build the application:
+   ```bash
+   npm run build
+   ```
 
-2. Instale as dependências
-```bash
-yarn install
-```
+4. Run in development mode:
+   ```bash
+   npm run dev
+   ```
 
-3. Inicie a aplicação
-```bash
-yarn start
-```
+5. Or build for production:
+   ```bash
+   npm run build:win  # For Windows
+   ```
 
-### Compilação
+## Contributing
 
-Para criar um pacote distribuível:
+We welcome contributions to Project HAM! To contribute:
 
-```bash
-yarn build
-```
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Make your changes and commit: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Submit a pull request
 
-Isso criará executáveis na pasta `dist`.
+Please ensure your code follows the existing style and includes appropriate tests.
 
-## 🛠️ Configuração
+## License
 
-1. Abra o aplicativo
-2. Vá para a aba Configurações
-3. Insira sua chave de API da Steam ou use a API Hydra definida por padrão
+Project HAM is licensed under the GNU General Public License v3.0 (GPL-3.0). See the [LICENSE](LICENSE) file for more details.
 
-## 🤝 Contribuindo
-
-Contribuições, issues e pedidos de funcionalidades são bem-vindos!
-
-## 📝 Licença
-
-Este projeto está licenciado sob a licença [GNU GPL](LICENSE).
-
-## ✨ Créditos
-
-Criado com amor por:
-
-- **Levynsk** - *Trabalho inicial & Desenvolvimento*
-- **Esther** ([@onlysterbr](https://twitter.com/onlysterbr)) - *Desenvolvimento & Design*
-
-## 💖 Suporte
-
-Se você achou este projeto útil, considere:
-
-- Seguir os criadores no Twitter
-- Estrelar o repositório
-- Compartilhar com outros usuários
-
-## 📌 Observação
-
-Este aplicativo é apenas para fins educacionais. Use por sua própria conta e risco e de acordo com os termos de serviço do Hydra e Steam.
-
----
-
-<p align="center">Feito com ❤️ por Levynsk & Esther</p>
+For full changelog, see [updates.json](CHANGELOG) (if available).
