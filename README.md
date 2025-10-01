@@ -2,6 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Node.js Version](https://img.shields.io/badge/Node.js-16%2B-brightgreen.svg)](https://nodejs.org/)
+[![release](https://img.shields.io/github/package-json/v/Levynsk/hydra-achievement-manager)](https://github.com/Levynsk/hydra-achievement-manager/releases)
 
 **Project HAM** is a powerful and user-friendly desktop application designed to help you **manage, unlock, and export Hydra game achievements**. Whether you are a gamer looking to organize your achievements or a developer testing game integrations, Project HAM provides an intuitive interface to interact with Hydra's achievement system.
 
@@ -70,3 +71,4 @@ Project HAM is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 For the full changelog, see [updates.json](CHANGELOG) (if available).
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Levynsk/hydra-achievement-manager&type=Date)](https://www.star-history.com/#Levynsk/hydra-achievement-manager&Date)
+
