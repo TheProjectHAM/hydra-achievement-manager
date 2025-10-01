@@ -1,0 +1,72 @@
+{
+  "updates": [
+    {
+      "version": "1.0.0",
+      "changelog": [
+        "Stable release of Hydra Achievements Manager.",
+        "A tool designed to manage and unlock achievements in Hydra."
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "changelog": [
+        "Added multi-language support: PT-BR, EN-US, ES-ES, RU, UK, IT.",
+        "Introduced Game Manager: new section with achievement progress and quick navigation.",
+        "Redesigned interface for a more modern, intuitive, and customizable experience.",
+        "Optimized overall performance.",
+        "Full translation implemented."
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "changelog": [
+        "Fixed: Duplicate achievements issue in the manager UI and bugs during achievement generation.",
+        "Improved: Detection and display system to prevent duplicate achievements.",
+        "Optimized: Achievement file processing to ensure unique entries."
+      ]
+    },
+    {
+      "version": "1.3.0",
+      "changelog": [
+        "Added support for multiple game directory structures: OnlineFix, RLD!, Codex, Rune (automatic recognition).",
+        "Note: OnlineFix support may be unstable due to potential Hydra bugs.",
+        "Implemented achievement loading from existing directories."
+      ]
+    },
+    {
+      "version": "1.4.0",
+      "changelog": [
+        "Integrated new Hydra API as default method.",
+        "No need to generate a Steam key anymore — although manual switching is still available in settings.",
+        "Various bug fixes and improvements."
+      ]
+    },
+    {
+      "version": "1.5.0",
+      "changelog": [
+        "New Feature:",
+        "Game Search Tab: You can now search for games directly within the app using a dedicated search tab.",
+        "Updates and Improvements:",
+        "In-App Update Checking: The app now automatically checks for new versions to keep you up to date.",
+        "Interface Optimization: Improved interface for a lighter, smoother, and better-performing experience.",
+        "Bug Fixes:",
+        "General bug fixes and adjustments to enhance stability and usability."
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "changelog": [
+        "Release Date: 2025-05-20",
+        "New Features:",
+        "Added support for light theme, allowing users to switch between light and dark modes.",
+        "Redesigned and improved interface for a more intuitive and modern user experience.",
+        "Improvements:",
+        "Implemented game data export, generating a JSON file with progress data and a folder containing achievement icons.",
+        "Added option to select a custom directory when generating achievements.",
+        "Bug Fixes:",
+        "Various fixes to improve system stability and resolve previous issues."
+      ]
+    }
+  ]
+}
+
