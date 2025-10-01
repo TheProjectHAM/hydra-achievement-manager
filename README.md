@@ -68,9 +68,10 @@ Project HAM is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 
 ## Changelog
 
-For the full changelog, see [CHANGELOG](uploads.json).
+For the full changelog, see [CHANGELOG](updates.json).
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Levynsk/hydra-achievement-manager&type=Date)](https://www.star-history.com/#Levynsk/hydra-achievement-manager&Date)
+
 
 
 
