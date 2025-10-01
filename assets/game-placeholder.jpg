@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="215" viewBox="0 0 460 215">
-  <rect width="460" height="215" fill="#1e1e1e"/>
-  <text x="230" y="107.5" font-family="Roboto, sans-serif" font-size="24" fill="#a0a0a0" text-anchor="middle" dominant-baseline="middle">
-    <tspan x="230" dy="-20">Imagem não disponível</tspan>
-    <tspan x="230" dy="40"><tspan style="font-family: 'Font Awesome 6 Free';">&#xf11b;</tspan> Steam Game</tspan>
-  </text>
-</svg>
