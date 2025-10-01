@@ -17,8 +17,8 @@ const EXPORT_COOLDOWN = 2000; // 2 seconds
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 740,
+    width: 1366,
+    height: 768,
     frame: false, // Remove default title bar
     webPreferences: {
       nodeIntegration: false,
@@ -378,3 +378,4 @@ ipcMain.handle('maximize-window', () => {
 ipcMain.handle('close-window', () => {
   if (mainWindow) mainWindow.close();
 });
+
