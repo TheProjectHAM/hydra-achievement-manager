@@ -22,6 +22,15 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ name, githubHandle, githubLin
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1.5 group"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const w: any = window as any;
+                      if (w.electronAPI && typeof w.electronAPI.openExternal === 'function') {
+                        w.electronAPI.openExternal(githubLink);
+                      } else {
+                        window.open(githubLink, '_blank');
+                      }
+                    }}
                 >
                     <GithubIcon className="w-4 h-4 text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
                     <span className="truncate">{githubHandle}</span>
@@ -31,6 +40,15 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ name, githubHandle, githubLin
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1.5 group"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const w: any = window as any;
+                      if (w.electronAPI && typeof w.electronAPI.openExternal === 'function') {
+                        w.electronAPI.openExternal(twitterLink);
+                      } else {
+                        window.open(twitterLink, '_blank');
+                      }
+                    }}
                 >
                     <TwitterIcon className="w-4 h-4 text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
                     <span className="truncate">{twitterHandle}</span>
@@ -65,7 +83,16 @@ const AboutSettings: React.FC = () => {
         <div className="border-b border-black/10 dark:border-white/10 my-3"></div>
         <div className="flex justify-between items-center">
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">License</span>
-            <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-900 dark:text-white underline">GPLv3</a>
+            <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-900 dark:text-white underline" onClick={(e) => {
+              e.preventDefault();
+              const w: any = window as any;
+              const url = 'https://www.gnu.org/licenses/gpl-3.0.en.html';
+              if (w.electronAPI && typeof w.electronAPI.openExternal === 'function') {
+                w.electronAPI.openExternal(url);
+              } else {
+                window.open(url, '_blank');
+              }
+            }}>GPLv3</a>
         </div>
         <div className="border-b border-black/10 dark:border-white/10 my-3"></div>
         <div className="flex justify-between items-center">
