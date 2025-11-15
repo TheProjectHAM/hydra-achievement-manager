@@ -122,11 +122,15 @@ const Sidebar: React.FC<SidebarProps> = ({
               }`;
 
               const fallbacks = [
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_sm_120.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_184x69.jpg`,
                 `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_231x87.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_467x181.jpg`,
                 `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_616x353.jpg`,
-                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/library_600x900.jpg`,
                 `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/library_hero.jpg`,
-                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/logo.png`
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/library_600x900.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/header.jpg`,
+                `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/header_292x136.jpg`
               ];
 
               return (
@@ -139,9 +143,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     style={{alignItems: 'center', borderRadius: '4px'}}
                   >
                     <img
-                      src={`https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/header.jpg`}
+                      src={`https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/logo.png`}
                       alt=""
-                      className={`object-cover flex-shrink-0 transition-all duration-300 ${gameItemStyle.image} ${isCollapsed ? 'mx-auto' : ''}`}
+                      className={`object-contain flex-shrink-0 transition-all duration-300 ${gameItemStyle.image} ${isCollapsed ? 'mx-auto' : ''}`}
                       style={{borderRadius: '4px'}}
                       onError={(e) => {
                         const img = e.target as HTMLImageElement;

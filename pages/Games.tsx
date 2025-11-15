@@ -15,25 +15,27 @@ const MonitoredGameCard: React.FC<{
   const [totalAchievements, setTotalAchievements] = useState<number | null>(null);
 
   const fallbackImages = [
-    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/header.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/header_292x136.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/library_hero.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_616x353.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_467x181.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_231x87.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_184x69.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/capsule_sm_120.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/library_600x900.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/library_hero.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/logo.png`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/logo.jpg`
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/logo.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/library_600x900.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/header.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${gameId}/header_292x136.jpg`
   ];
 
   const [imageIndex, setImageIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState(fallbackImages[0]);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   useEffect(() => {
     setImageIndex(0);
     setImageUrl(fallbackImages[0]);
+    setIsImageLoaded(false);
   }, [gameId]);
 
   useEffect(() => {
@@ -83,18 +85,24 @@ const MonitoredGameCard: React.FC<{
       setImageIndex(nextIndex);
       setImageUrl(fallbackImages[nextIndex]);
     } else {
-      // Último fallback → usa um placeholder fixo
-      setImageUrl('/assets/placeholder.jpg');
+      setIsImageLoaded(true);
     }
+  };
+
+  const handleImageLoad = () => {
+    setIsImageLoaded(true);
   };
 
   return (
     <div
       onClick={handleClick}
       className="group relative aspect-[16/9] bg-cover bg-center rounded-lg overflow-hidden shadow-lg cursor-pointer"
-      style={{ backgroundImage: `url(${imageUrl})` }}
+      style={isImageLoaded ? { backgroundImage: `url(${imageUrl})` } : undefined}
     >
-      <img src={imageUrl} onError={handleImageError} style={{ display: 'none' }} alt="" />
+      <img src={imageUrl} onError={handleImageError} onLoad={handleImageLoad} style={{ display: 'none' }} alt="" />
+      {!isImageLoaded && (
+        <div className="absolute inset-0 bg-gray-200 dark:bg-white/10 animate-pulse" />
+      )}
       
       {/* Gradient overlay for text readability */}
       <div className={`absolute inset-0 transition-opacity duration-300 ${
@@ -104,7 +112,7 @@ const MonitoredGameCard: React.FC<{
       }`}></div>
 
       {/* Content wrapper */}
-      <div className={`relative flex flex-col justify-end h-full p-3 text-white`}>
+      <div className={`relative flex flex-col justify-end h-full p-3 text-white ${isImageLoaded ? '' : 'opacity-0'}`}>
         <div>
             <div className="flex justify-between items-end text-xs font-semibold mb-1 transition-transform duration-300 ease-in-out transform translate-y-4 group-hover:translate-y-0 text-white">
                 <h3 className="font-bold text-lg truncate pr-4">{gameName}</h3>
