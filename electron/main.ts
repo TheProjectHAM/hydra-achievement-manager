@@ -28,8 +28,11 @@ function createWindow() {
   });
 
   if (isDev) {
+    const shouldOpenDevTools = process.env.OPEN_DEVTOOLS === 'true';
     mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
+    if (shouldOpenDevTools) {
+      mainWindow.webContents.openDevTools();
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
