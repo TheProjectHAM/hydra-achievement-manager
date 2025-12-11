@@ -11,11 +11,23 @@ export class AchievementWriter {
       return 0;
     }
 
+    let hour24 = parseInt(timestamp.hour);
+
+    // Convert 12h format to 24h format if ampm is present
+    if (timestamp.ampm) {
+      if (timestamp.ampm === 'PM' && hour24 < 12) {
+        hour24 += 12; // 1 PM -> 13, 11 PM -> 23
+      } else if (timestamp.ampm === 'AM' && hour24 === 12) {
+        hour24 = 0; // 12 AM -> 0 (midnight)
+      }
+      // 12 PM stays 12 (noon), 1-11 AM stay the same
+    }
+
     const date = new Date(
       parseInt(timestamp.year),
       parseInt(timestamp.month) - 1, // Month is 0-indexed
       parseInt(timestamp.day),
-      timestamp.ampm ? (timestamp.ampm === 'PM' ? parseInt(timestamp.hour) + 12 : parseInt(timestamp.hour)) % 24 : parseInt(timestamp.hour),
+      hour24,
       parseInt(timestamp.minute)
     );
 

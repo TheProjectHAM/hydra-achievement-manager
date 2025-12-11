@@ -30,7 +30,7 @@ const App: React.FC = () => {
     // Checa se já foi configurado antes (exemplo: localStorage)
     return !localStorage.getItem('wizardCompleted');
   });
-  
+
   const { timeFormat, sidebarWidth, setSidebarWidth } = useTheme();
   const { isDirectorySelectionOpen, selectedDuplicateGame, closeDirectorySelection, selectDirectory, duplicateGames, openDirectorySelection, gameNames } = useMonitoredAchievements();
   const [isResizing, setIsResizing] = useState(false);
@@ -41,7 +41,7 @@ const App: React.FC = () => {
     e.preventDefault();
     setIsResizing(true);
   };
-  
+
   const handleResizing = useCallback((e: MouseEvent) => {
     if (isResizing) {
       const newWidth = e.clientX;
@@ -74,76 +74,76 @@ const App: React.FC = () => {
       document.body.classList.remove('resizing');
     };
   }, [isResizing, handleResizing, handleResizeEnd]);
-  
-  const handleAchievementToggle = (gameId: number, achievementName:string) => {
-    setAchievementStatus(prev => {
-        const gameStatuses = prev[gameId] || {};
-        const currentStatus = gameStatuses[achievementName];
-        const newCompletedState = !currentStatus?.completed;
 
-        return {
-            ...prev,
-            [gameId]: {
-                ...gameStatuses,
-                [achievementName]: {
-                    ...(currentStatus || { timestamp: { day: '', month: '', year: '', hour: '', minute: '' } }),
-                    completed: newCompletedState,
-                },
-            },
-        };
+  const handleAchievementToggle = (gameId: number, achievementName: string) => {
+    setAchievementStatus(prev => {
+      const gameStatuses = prev[gameId] || {};
+      const currentStatus = gameStatuses[achievementName];
+      const newCompletedState = !currentStatus?.completed;
+
+      return {
+        ...prev,
+        [gameId]: {
+          ...gameStatuses,
+          [achievementName]: {
+            ...(currentStatus || { timestamp: { day: '', month: '', year: '', hour: '', minute: '' } }),
+            completed: newCompletedState,
+          },
+        },
+      };
     });
   };
 
   const handleTimestampChange = (gameId: number, achievementName: string, field: keyof Timestamp, value: string) => {
     setAchievementStatus(prev => {
-        const gameStatuses = prev[gameId] || {};
-        const currentStatus = gameStatuses[achievementName];
+      const gameStatuses = prev[gameId] || {};
+      const currentStatus = gameStatuses[achievementName];
 
-        if (!currentStatus) return prev;
+      if (!currentStatus) return prev;
 
-        return {
-            ...prev,
-            [gameId]: {
-                ...gameStatuses,
-                [achievementName]: {
-                    ...currentStatus,
-                    timestamp: {
-                        ...currentStatus.timestamp,
-                        [field]: value,
-                    },
-                },
+      return {
+        ...prev,
+        [gameId]: {
+          ...gameStatuses,
+          [achievementName]: {
+            ...currentStatus,
+            timestamp: {
+              ...currentStatus.timestamp,
+              [field]: value,
             },
-        };
+          },
+        },
+      };
     });
   };
 
   const handleTimestampClear = (gameId: number, achievementName: string) => {
     setAchievementStatus(prev => {
-        const gameStatuses = prev[gameId] || {};
-        const currentStatus = gameStatuses[achievementName];
+      const gameStatuses = prev[gameId] || {};
+      const currentStatus = gameStatuses[achievementName];
 
-        if (!currentStatus) return prev;
+      if (!currentStatus) return prev;
 
-        return {
-            ...prev,
-            [gameId]: {
-                ...gameStatuses,
-                [achievementName]: {
-                    ...currentStatus,
-                    timestamp: { day: '', month: '', year: '', hour: '', minute: '' },
-                },
-            },
-        };
+      return {
+        ...prev,
+        [gameId]: {
+          ...gameStatuses,
+          [achievementName]: {
+            ...currentStatus,
+            timestamp: { day: '', month: '', year: '', hour: '', minute: '' },
+          },
+        },
+      };
     });
   };
 
   const handleAchievementStatusUpdate = (gameId: number, achievementName: string, status: AchievementStatus) => {
     setAchievementStatus(prev => ({
-        ...prev,
-        [gameId]: {
-            ...(prev[gameId] || {}),
-            [achievementName]: status,
-        },
+      ...prev,
+      [gameId]: {
+        ...(prev[gameId] || {}),
+        [achievementName]: status,
+      },
     }));
   };
 
@@ -176,10 +176,10 @@ const App: React.FC = () => {
           return customTimestamp || { day: '', month: '', year: '', hour: '', minute: '' };
         case 'random':
         default: {
-          // Generate random date within last 30 days
+          // Generate random date within last 365 days
           const now = new Date();
-          const randomDays = Math.floor(Math.random() * 30);
-          const randomDate = new Date(now.getTime() - randomDays * 24 * 60 * 60 * 1000);
+          const past = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          const randomDate = new Date(past.getTime() + Math.random() * (now.getTime() - past.getTime()));
 
           const timestamp: Timestamp = {
             day: String(randomDate.getDate()).padStart(2, '0'),
@@ -207,7 +207,7 @@ const App: React.FC = () => {
       .map(([name, status]: [string, AchievementStatus]) => {
         // Check if timestamp is empty (all fields are empty strings)
         const hasEmptyTimestamp = !status.timestamp.day && !status.timestamp.month &&
-                                  !status.timestamp.year && !status.timestamp.hour && !status.timestamp.minute;
+          !status.timestamp.year && !status.timestamp.hour && !status.timestamp.minute;
 
         return {
           name,
@@ -321,15 +321,15 @@ const App: React.FC = () => {
         return <SearchContent onGameSelect={handleGameSelect} />;
       case 'conquistas':
         return <AchievementsContent
-                  game={selectedGame}
-                  achievementStatus={achievementStatus}
-                  onAchievementToggle={handleAchievementToggle}
-                  onTimestampChange={handleTimestampChange}
-                  onTimestampClear={handleTimestampClear}
-                  onGlobalUnlock={handleGlobalUnlock}
-                  onExportStart={handleExportStart}
-                  onAchievementStatusUpdate={handleAchievementStatusUpdate}
-                />;
+          game={selectedGame}
+          achievementStatus={achievementStatus}
+          onAchievementToggle={handleAchievementToggle}
+          onTimestampChange={handleTimestampChange}
+          onTimestampClear={handleTimestampClear}
+          onGlobalUnlock={handleGlobalUnlock}
+          onExportStart={handleExportStart}
+          onAchievementStatusUpdate={handleAchievementStatusUpdate}
+        />;
       case 'configuracoes':
         return <SettingsContent />;
       default:
@@ -353,10 +353,10 @@ const App: React.FC = () => {
       <TitleBar />
       <div className="flex h-full pt-10 bg-gray-50 dark:bg-black bg-[radial-gradient(circle_at_1px_1px,#00000010_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,#ffffff15_1px,transparent_0)] [background-size:24px_24px]">
         {currentView === 'main' && (
-          <Sidebar 
-            tabs={TABS} 
-            activeTab={activeTabId} 
-            setActiveTab={handleSetActiveTab} 
+          <Sidebar
+            tabs={TABS}
+            activeTab={activeTabId}
+            setActiveTab={handleSetActiveTab}
             isCollapsed={isSidebarCollapsed}
             width={sidebarWidth}
             onResizeStart={handleResizeStart}
@@ -364,7 +364,7 @@ const App: React.FC = () => {
             selectedGameId={selectedGame?.id}
           />
         )}
-        <main 
+        <main
           className={`flex-1 transition-all duration-300 ${currentView === 'export' ? 'ml-0' : ''} ${currentView === 'export' || isLayoutManaged ? 'overflow-hidden' : 'overflow-y-auto'} ${activeTabId === 'jogos' ? 'no-scrollbar' : ''}`}
           style={{ marginLeft: currentView === 'main' ? sidebarWidth : 0 }}
         >
