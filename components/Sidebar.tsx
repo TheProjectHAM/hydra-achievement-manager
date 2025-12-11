@@ -68,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       style={{ width: `${isCollapsed ? width * 0.85 : width}px` }}
-      className="flex flex-col fixed top-10 left-0 bottom-0 z-40 bg-gradient-to-r from-gray-50/80 dark:from-black/50 to-transparent backdrop-blur-sm select-none"
+      className="flex flex-col fixed top-10 left-0 bottom-0 z-40 bg-gray-100 dark:bg-[#0a0a0b] border-r border-black/10 dark:border-white/5 select-none"
     >
       <div className="flex flex-col h-full w-full">
 
@@ -84,10 +84,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     title={isCollapsed ? t(tab.label) : undefined}
                     aria-label={t(tab.label)}
                     className={itemClasses(isActive).replace(/rounded-lg/g, '') + ` flex items-center ${isCollapsed ? '' : 'gap-x-2'}`}
-                    style={{alignItems: 'center', borderRadius: '4px'}}
+                    style={{ alignItems: 'center', borderRadius: '4px' }}
                   >
-                    <span className="flex items-center justify-center text-xl flex-shrink-0 align-middle" style={{height: '1.5em'}}>{tab.icon}</span>
-                    <span className={`truncate whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 ml-0 flex-grow-0' : 'opacity-100 ml-3 flex-grow'}`} style={{lineHeight: '1.5em'}}>
+                    <span className="flex items-center justify-center text-xl flex-shrink-0 align-middle" style={{ height: '1.5em' }}>{tab.icon}</span>
+                    <span className={`truncate whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 ml-0 flex-grow-0' : 'opacity-100 ml-3 flex-grow'}`} style={{ lineHeight: '1.5em' }}>
                       {t(tab.label)}
                     </span>
                   </button>
@@ -115,11 +115,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           <ul className={isCollapsed ? "px-2" : "px-2 pr-4"}>
             {recentGames.map((game) => {
               const isActive = selectedGameId === parseInt(game.gameId) && activeTab === 'conquistas';
-              const gameNameClasses = `font-semibold ${gameItemStyle.name} ${
-                isActive
-                  ? 'text-gray-900 dark:text-white'
-                  : 'text-gray-800 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white'
-              }`;
+              const gameNameClasses = `font-semibold ${gameItemStyle.name} ${isActive
+                ? 'text-gray-900 dark:text-white'
+                : 'text-gray-800 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white'
+                }`;
 
               const fallbacks = [
                 `https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/capsule_sm_120.jpg`,
@@ -140,13 +139,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                     title={isCollapsed ? game.name : `${game.name} (${game.achievementsCurrent}/${game.achievementsTotalFromAPI ?? game.achievementsTotal})`}
                     aria-label={game.name}
                     className={gameItemClasses(isActive).replace(/rounded-lg/g, '') + ' flex items-center gap-x-2'}
-                    style={{alignItems: 'center', borderRadius: '4px'}}
+                    style={{ alignItems: 'center', borderRadius: '4px' }}
                   >
                     <img
                       src={`https://cdn.akamai.steamstatic.com/steam/apps/${game.gameId}/logo.png`}
                       alt=""
                       className={`object-contain flex-shrink-0 transition-all duration-300 ${gameItemStyle.image} ${isCollapsed ? 'mx-auto' : ''}`}
-                      style={{borderRadius: '4px'}}
+                      style={{ borderRadius: '4px' }}
                       onError={(e) => {
                         const img = e.target as HTMLImageElement;
                         if (!img.dataset.index) img.dataset.index = "0";
@@ -171,11 +170,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                       ) : (
                         <p className={`truncate ${gameNameClasses}`}>{game.name}</p>
                       )}
-                      <p className={`${gameItemStyle.count} truncate ${
-                        isActive
-                          ? 'text-gray-600 dark:text-gray-300'
-                          : 'text-gray-500 dark:text-gray-400'
-                      }`}>{t('sidebar.achievementsCount', { current: game.achievementsCurrent, total: game.achievementsTotalFromAPI ?? game.achievementsTotal })}</p>
+                      <p className={`${gameItemStyle.count} truncate ${isActive
+                        ? 'text-gray-600 dark:text-gray-300'
+                        : 'text-gray-500 dark:text-gray-400'
+                        }`}>{t('sidebar.achievementsCount', { current: game.achievementsCurrent, total: game.achievementsTotalFromAPI ?? game.achievementsTotal })}</p>
                     </div>
                   </button>
                 </li>
@@ -193,10 +191,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 title={isCollapsed ? t(SETTINGS_TAB.label) : undefined}
                 aria-label={t(SETTINGS_TAB.label)}
                 className={itemClasses(activeTab === SETTINGS_TAB.id).replace(/rounded-lg/g, '') + ` flex items-center ${isCollapsed ? '' : 'gap-x-2'}`}
-                style={{alignItems: 'center', borderRadius: '4px'}}
+                style={{ alignItems: 'center', borderRadius: '4px' }}
               >
-                <span className="flex items-center justify-center text-xl flex-shrink-0 align-middle" style={{height: '1.5em'}}>{SETTINGS_TAB.icon}</span>
-                <span className={`truncate whitespace-nowrap align-middle transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 ml-0 flex-grow-0' : 'opacity-100 ml-3 flex-grow'}`} style={{lineHeight: '1.5em'}}>
+                <span className="flex items-center justify-center text-xl flex-shrink-0 align-middle" style={{ height: '1.5em' }}>{SETTINGS_TAB.icon}</span>
+                <span className={`truncate whitespace-nowrap align-middle transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 ml-0 flex-grow-0' : 'opacity-100 ml-3 flex-grow'}`} style={{ lineHeight: '1.5em' }}>
                   {t(SETTINGS_TAB.label)}
                 </span>
               </button>

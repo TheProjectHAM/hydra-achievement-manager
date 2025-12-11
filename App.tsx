@@ -75,6 +75,71 @@ const App: React.FC = () => {
     };
   }, [isResizing, handleResizing, handleResizeEnd]);
 
+  // Convert timestamps when time format changes
+  useEffect(() => {
+    setAchievementStatus(prev => {
+      const updated = { ...prev };
+      let hasChanges = false;
+
+      // Iterate through all games and achievements
+      Object.entries(updated).forEach(([gameIdStr, gameStatuses]) => {
+        Object.entries(gameStatuses).forEach(([achievementName, status]) => {
+          const timestamp = status.timestamp;
+
+          // Skip empty timestamps
+          if (!timestamp.day || !timestamp.month || !timestamp.year ||
+            !timestamp.hour || !timestamp.minute) {
+            return;
+          }
+
+          // Convert timestamps based on timeFormat
+          if (timeFormat === '12h') {
+            // If switching to 12h format and no ampm field exists, convert from 24h
+            if (!timestamp.ampm) {
+              hasChanges = true;
+              const hour24 = parseInt(timestamp.hour);
+              const hour12 = hour24 % 12 || 12;
+              const ampm = hour24 >= 12 ? 'PM' : 'AM';
+
+              updated[parseInt(gameIdStr)][achievementName] = {
+                ...status,
+                timestamp: {
+                  ...timestamp,
+                  hour: String(hour12).padStart(2, '0'),
+                  ampm: ampm,
+                },
+              };
+            }
+          } else if (timeFormat === '24h') {
+            // If switching to 24h format and ampm field exists, convert from 12h
+            if (timestamp.ampm) {
+              hasChanges = true;
+              let hour24 = parseInt(timestamp.hour);
+
+              if (timestamp.ampm === 'PM' && hour24 < 12) {
+                hour24 += 12;
+              } else if (timestamp.ampm === 'AM' && hour24 === 12) {
+                hour24 = 0;
+              }
+
+              // Remove ampm field
+              const { ampm, ...timestampWithout } = timestamp;
+              updated[parseInt(gameIdStr)][achievementName] = {
+                ...status,
+                timestamp: {
+                  ...timestampWithout,
+                  hour: String(hour24).padStart(2, '0'),
+                },
+              };
+            }
+          }
+        });
+      });
+
+      return hasChanges ? updated : prev;
+    });
+  }, [timeFormat]);
+
   const handleAchievementToggle = (gameId: number, achievementName: string) => {
     setAchievementStatus(prev => {
       const gameStatuses = prev[gameId] || {};
@@ -351,7 +416,7 @@ const App: React.FC = () => {
   return (
     <div className="w-screen h-screen text-gray-900 dark:text-white font-sans overflow-hidden">
       <TitleBar />
-      <div className="flex h-full pt-10 bg-gray-50 dark:bg-black bg-[radial-gradient(circle_at_1px_1px,#00000010_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,#ffffff15_1px,transparent_0)] [background-size:24px_24px]">
+      <div className="flex h-full pt-10 dark:bg-[#0a0a0b]">
         {currentView === 'main' && (
           <Sidebar
             tabs={TABS}

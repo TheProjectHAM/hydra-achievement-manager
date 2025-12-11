@@ -14,33 +14,33 @@ interface ApiSettingsProps {
 }
 
 const ApiOptionButton: React.FC<{
-    id: ApiSource;
-    label: string;
-    icon: React.ReactNode;
-    isSelected: boolean;
-    isRecommended: boolean;
-    onClick: (id: ApiSource) => void;
+  id: ApiSource;
+  label: string;
+  icon: React.ReactNode;
+  isSelected: boolean;
+  isRecommended: boolean;
+  onClick: (id: ApiSource) => void;
 }> = ({ id, label, icon, isSelected, isRecommended, onClick }) => {
-    const activeClasses = 'bg-gray-800 text-white dark:bg-white dark:text-black shadow-md';
-    const inactiveClasses = 'bg-gray-100 dark:bg-white/5 text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-white/10';
+  const activeClasses = 'bg-white text-black dark:bg-white dark:text-black shadow-lg border-2 border-gray-300 dark:border-white';
+  const inactiveClasses = 'bg-gray-100 dark:bg-white/5 text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-white/10';
 
-    return (
-        <div className="relative flex-1 overflow-visible">
-            <button
-                onClick={() => onClick(id)}
-                className={`w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold rounded-lg transition-all duration-200 focus:outline-none ${isSelected ? activeClasses : inactiveClasses}`}
-                aria-pressed={isSelected}
-            >
-                <span className="text-xl">{icon}</span>
-                <span>{label}</span>
-            </button>
-            {isRecommended && (
-                <span className="absolute top-1 right-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded-full font-medium z-20 shadow-sm">
-                    Recommended
-                </span>
-            )}
-        </div>
-    );
+  return (
+    <div className="relative flex-1 overflow-visible">
+      <button
+        onClick={() => onClick(id)}
+        className={`w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold rounded-lg transition-all duration-200 focus:outline-none ${isSelected ? activeClasses : inactiveClasses}`}
+        aria-pressed={isSelected}
+      >
+        <span className="text-xl">{icon}</span>
+        <span>{label}</span>
+      </button>
+      {isRecommended && (
+        <span className="absolute top-1 right-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded-full font-medium z-20 shadow-sm">
+          Recommended
+        </span>
+      )}
+    </div>
+  );
 };
 
 const ApiSettings: React.FC<ApiSettingsProps> = ({

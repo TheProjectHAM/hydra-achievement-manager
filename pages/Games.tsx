@@ -103,43 +103,44 @@ const MonitoredGameCard: React.FC<{
       {!isImageLoaded && (
         <div className="absolute inset-0 bg-gray-200 dark:bg-white/10 animate-pulse" />
       )}
-      
+
       {/* Gradient overlay for text readability */}
-      <div className={`absolute inset-0 transition-opacity duration-300 ${
-        theme === 'dark'
-          ? 'bg-gradient-to-b from-black/80 via-black/20 to-black/80'
-          : 'bg-gradient-to-b from-black/40 via-black/10 to-black/40'
-      }`}></div>
+      <div className={`absolute inset-0 transition-opacity duration-300 ${theme === 'dark'
+        ? 'bg-gradient-to-b from-black/80 via-black/20 to-black/80'
+        : 'bg-gradient-to-b from-black/40 via-black/10 to-black/40'
+        }`}></div>
 
       {/* Content wrapper */}
       <div className={`relative flex flex-col justify-end h-full p-3 text-white ${isImageLoaded ? '' : 'opacity-0'}`}>
         <div>
-            <div className="flex justify-between items-end text-xs font-semibold mb-1 transition-transform duration-300 ease-in-out transform translate-y-4 group-hover:translate-y-0 text-white">
-                <h3 className="font-bold text-lg truncate pr-4">{gameName}</h3>
-                <div className="flex items-center flex-shrink-0">
-                    <span>{achievementsCurrent} / {totalAchievements ?? '?'}</span>
-                </div>
+          <div className="flex justify-between items-end text-xs font-semibold mb-1 transition-transform duration-300 ease-in-out transform translate-y-4 group-hover:translate-y-0 text-white">
+            <h3 className="font-bold text-lg truncate pr-4">{gameName}</h3>
+            <div className="flex items-center flex-shrink-0">
+              <span>{achievementsCurrent} / {totalAchievements ?? '?'}</span>
             </div>
-            {/* Progress bar container (appears on hover) */}
-            <div className={`w-full rounded-full h-1.5 overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-              theme === 'dark' ? 'bg-black/20' : 'bg-gray-300'
+          </div>
+          {/* Progress bar container (appears on hover) */}
+          <div className={`w-full rounded-full h-1.5 overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${theme === 'dark' ? 'bg-black/20' : 'bg-gray-300'
             }`}>
-                <div
-                    className={`h-full rounded-full ${
-                      theme === 'dark' ? 'bg-white' : 'bg-gray-800'
-                    }`}
-                    style={{
-                      width: totalAchievements ? `${(achievementsCurrent / totalAchievements) * 100}%` : '0%',
-                    }}
-                ></div>
-            </div>
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${totalAchievements && achievementsCurrent === totalAchievements
+                  ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 animate-shimmer'
+                  : theme === 'dark'
+                    ? 'bg-white'
+                    : 'bg-indigo-500'
+                }`}
+              style={{
+                width: totalAchievements ? `${(achievementsCurrent / totalAchievements) * 100}%` : '0%',
+                backgroundSize: totalAchievements && achievementsCurrent === totalAchievements ? '200% 100%' : 'auto',
+              }}
+            ></div>
+          </div>
         </div>
       </div>
 
       {/* Outline on hover */}
-      <div className={`absolute inset-0 rounded-lg pointer-events-none transition-all duration-300 group-hover:ring-2 group-hover:ring-inset ${
-        theme === 'dark' ? 'group-hover:ring-white' : 'group-hover:ring-gray-900'
-      }`}></div>
+      <div className={`absolute inset-0 rounded-lg pointer-events-none transition-all duration-300 group-hover:ring-2 group-hover:ring-inset ${theme === 'dark' ? 'group-hover:ring-white' : 'group-hover:ring-gray-900'
+        }`}></div>
     </div>
   );
 };

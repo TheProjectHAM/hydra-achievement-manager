@@ -1,8 +1,8 @@
 import React from 'react';
 import { Theme, useTheme } from '../../contexts/ThemeContext';
 import { SidebarGameScale } from '../../types';
-import { 
-  LightModeIcon, DarkModeIcon, TextDecreaseIcon, TextFieldsIcon, TextIncreaseIcon, UpdateIcon 
+import {
+  LightModeIcon, DarkModeIcon, TextDecreaseIcon, TextFieldsIcon, TextIncreaseIcon, UpdateIcon
 } from '../Icons';
 import { useI18n } from '../../contexts/I18nContext';
 
@@ -85,17 +85,15 @@ const ToggleSwitch: React.FC<{ enabled: boolean, onChange: (enabled: boolean) =>
   <button
     type="button"
     onClick={() => onChange(!enabled)}
-    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-      enabled ? 'bg-gray-800 dark:bg-white' : 'bg-gray-300 dark:bg-white/20'
-    }`}
+    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${enabled ? 'bg-white dark:bg-white border-gray-300 dark:border-white' : 'bg-gray-300 dark:bg-[#141415]'
+      }`}
     role="switch"
     aria-checked={enabled}
   >
     <span
       aria-hidden="true"
-      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-black shadow ring-0 transition duration-200 ease-in-out ${
-        enabled ? 'translate-x-5' : 'translate-x-0'
-      }`}
+      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full shadow ring-0 transition duration-200 ease-in-out ${enabled ? 'translate-x-5 bg-black dark:bg-black' : 'translate-x-0 bg-white'
+        }`}
     />
   </button>
 );
@@ -109,8 +107,8 @@ interface AppearanceSettingsProps {
   setSelectedMarquee: (marquee: boolean) => void;
 }
 
-const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({ 
-  selectedTheme, setSelectedTheme, 
+const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
+  selectedTheme, setSelectedTheme,
   selectedGameScale, setSelectedGameScale,
   selectedMarquee, setSelectedMarquee
 }) => {
@@ -138,11 +136,11 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 mt-2">{t('settings.appearance.sidebar')}</h3>
       <div className="space-y-4">
-        <SettingRow 
+        <SettingRow
           title={t('settings.appearance.resetSidebarWidth')}
           description={t('settings.appearance.resetSidebarWidthDesc')}
         >
-          <button 
+          <button
             onClick={() => setSidebarWidth(DEFAULT_SIDEBAR_WIDTH)}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-semibold bg-black/5 text-gray-700 hover:bg-black/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white"
           >
@@ -150,14 +148,14 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
             <span>{t('settings.appearance.reset')}</span>
           </button>
         </SettingRow>
-        <SettingRow 
+        <SettingRow
           title={t('settings.appearance.sidebarMarquee')}
           description={t('settings.appearance.sidebarMarqueeDesc')}
         >
           <ToggleSwitch enabled={selectedMarquee} onChange={setSelectedMarquee} />
         </SettingRow>
       </div>
-      
+
       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 mt-2">{t('settings.appearance.sidebarGameScale')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <OptionCard

@@ -91,7 +91,7 @@ const SettingOptionCard: React.FC<{
   </div>
 );
 
-const LocaleSettings: React.FC<LocaleSettingsProps> = ({ 
+const LocaleSettings: React.FC<LocaleSettingsProps> = ({
   selectedLanguage, setSelectedLanguage,
   selectedDateFormat, setSelectedDateFormat,
   selectedTimeFormat, setSelectedTimeFormat,

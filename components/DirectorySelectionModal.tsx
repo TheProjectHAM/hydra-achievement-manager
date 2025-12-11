@@ -15,8 +15,8 @@ const DirectoryItem: React.FC<{
   isSelected: boolean;
   onSelect: () => void;
 }> = ({ dir, isSelected, onSelect }) => {
-  const baseClasses = 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20';
-  const selectedClasses = 'border-gray-800 dark:border-white bg-black/5 dark:bg-white/5';
+  const baseClasses = 'bg-white dark:bg-[#141415] border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20';
+  const selectedClasses = 'bg-gray-100 dark:bg-[#1a1a1b] border-gray-800 dark:border-white';
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -85,7 +85,7 @@ const DirectorySelectionModal: React.FC<DirectorySelectionModalProps> = ({
         aria-hidden="true"
       ></div>
 
-      <div className="relative w-[640px] h-[480px] bg-gray-50/90 dark:bg-black/85 rounded-lg shadow-2xl border border-black/10 dark:border-white/10 flex flex-col">
+      <div className="relative w-[640px] h-[480px] bg-gray-50 dark:bg-[#0a0a0b] rounded-lg shadow-2xl border border-black/10 dark:border-white/5 flex flex-col">
         <div className="flex items-start justify-between p-6 pb-4 flex-shrink-0">
           <div>
             <h2 id="directory-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">
@@ -128,7 +128,7 @@ const DirectorySelectionModal: React.FC<DirectorySelectionModalProps> = ({
             <button
               onClick={handleConfirm}
               disabled={!selectedPath}
-              className="bg-gray-800 hover:bg-gray-700 text-white dark:bg-white dark:hover:bg-gray-200 dark:text-black font-semibold py-2 px-5 rounded-lg transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-gray-800 hover:bg-gray-700 text-white dark:bg-[#1a1a1b] dark:hover:bg-[#232325] dark:text-white font-semibold py-2 px-5 rounded-lg transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {t('directorySelectionModal.select')}
             </button>

@@ -24,17 +24,17 @@ const TitleBar: React.FC = () => {
 
   return (
     <div
-      className="h-10 bg-gray-100 dark:bg-black text-gray-800 dark:text-gray-200 flex items-center justify-between pl-4 pr-0 text-sm select-none fixed top-0 left-0 right-0 z-50 border-b border-black/10 dark:border-white/10"
+      className="h-10 bg-gray-100 dark:bg-[#0a0a0b] text-gray-800 dark:text-gray-200 flex items-center justify-between pl-4 pr-0 text-sm select-none fixed top-0 left-0 right-0 z-50 border-b border-black/10 dark:border-white/5"
       style={{ WebkitAppRegion: 'drag' }}
     >
       {/* Left */}
       <div className="flex items-center">
-        {!isMac && 
-            <span className="font-semibold text-black dark:text-white">Project HAM</span>
+        {!isMac &&
+          <span className="font-semibold text-black dark:text-white">Project HAM</span>
         }
         {isMac && macControls}
       </div>
-      
+
       {/* Right */}
       <div className="h-full" style={{ WebkitAppRegion: 'no-drag' }}>
         {!isMac && <WindowControls />}

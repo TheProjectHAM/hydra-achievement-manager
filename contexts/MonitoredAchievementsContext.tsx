@@ -86,7 +86,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
           directories: dirInfo,
         });
         // For now, add the most recent one to unique games
-        const mostRecent = gameEntries.reduce((prev, current) => 
+        const mostRecent = gameEntries.reduce((prev, current) =>
           prev.lastModified > current.lastModified ? prev : current
         );
         uniqueGames.push(mostRecent);
@@ -163,6 +163,16 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
       setIsDirectorySelectionOpen(true);
     }
   };
+
+  // Update selectedDuplicateGame when duplicateGames changes while modal is open
+  useEffect(() => {
+    if (isDirectorySelectionOpen && selectedDuplicateGame) {
+      const updatedDuplicate = duplicateGames.find(d => d.gameId === selectedDuplicateGame.gameId);
+      if (updatedDuplicate) {
+        setSelectedDuplicateGame(updatedDuplicate);
+      }
+    }
+  }, [duplicateGames, isDirectorySelectionOpen, selectedDuplicateGame]);
 
   const closeDirectorySelection = () => {
     setIsDirectorySelectionOpen(false);

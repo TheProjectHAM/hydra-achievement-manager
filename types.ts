@@ -25,6 +25,7 @@ declare global {
       minimize: () => Promise<void>;
       maximize: () => Promise<void>;
       close: () => Promise<void>;
+      onMaximizeChange: (callback: (maximized: boolean) => void) => void;
       onAchievementsUpdate: (callback: (games: any[]) => void) => void;
       requestAchievements: () => void;
       getGameName: (gameId: string) => Promise<string>;

@@ -27,6 +27,15 @@ function createWindow() {
     },
   });
 
+  // Send maximize state changes to renderer
+  mainWindow.on('maximize', () => {
+    mainWindow.webContents.send('maximize-change', true);
+  });
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow.webContents.send('maximize-change', false);
+  });
+
   if (isDev) {
     const shouldOpenDevTools = process.env.OPEN_DEVTOOLS === 'true';
     mainWindow.loadURL('http://localhost:3000');

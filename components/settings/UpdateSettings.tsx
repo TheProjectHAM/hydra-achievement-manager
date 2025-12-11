@@ -76,7 +76,7 @@ const UpdateSettings: React.FC = () => {
         <button
           onClick={handleCheckForUpdates}
           disabled={isChecking}
-          className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white dark:bg-white dark:hover:bg-gray-200 dark:text-black font-semibold py-2 px-5 rounded-lg transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white dark:bg-[#1a1a1b] dark:hover:bg-[#232325] dark:text-white font-semibold py-2 px-5 rounded-lg transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isChecking ? (
             <>
@@ -98,8 +98,8 @@ const UpdateSettings: React.FC = () => {
         {[...updates].reverse().map((log) => (
           <div key={log.version} className="bg-gray-100/50 dark:bg-white/5 rounded-lg p-5">
             <div className="flex items-center gap-3 mb-3 border-b border-black/10 dark:border-white/10 pb-3">
-              <div className="bg-gray-200 dark:bg-black/30 p-1.5 rounded-md">
-                <TagIcon className="text-gray-700 dark:text-gray-300 text-lg"/>
+              <div className="bg-gray-200 dark:bg-[#17171a] p-1.5 rounded-md">
+                <TagIcon className="text-gray-700 dark:text-gray-300 text-lg" />
               </div>
               <div>
                 <h4 className="font-bold text-gray-900 dark:text-white">Version {log.version}</h4>

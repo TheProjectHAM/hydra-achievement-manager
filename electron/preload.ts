@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.invoke('minimize-window'),
   maximize: () => ipcRenderer.invoke('maximize-window'),
   close: () => ipcRenderer.invoke('close-window'),
+  onMaximizeChange: (callback: (maximized: boolean) => void) => {
+    ipcRenderer.on('maximize-change', (_event, maximized) => callback(maximized));
+  },
   onAchievementsUpdate: (callback: (games: any[]) => void) => {
     ipcRenderer.on('achievements-update', (_event, games) => callback(games));
   },
@@ -24,3 +27,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadSettings: () => ipcRenderer.invoke('load-settings'),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 });
+

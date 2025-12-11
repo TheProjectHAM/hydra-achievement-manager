@@ -93,7 +93,7 @@ const ExportPage: React.FC<{
               <p className="text-xl text-gray-200 mt-2">{error}</p>
               <button
                 onClick={onFinish}
-                className="mt-12 bg-gray-800 hover:bg-gray-700 text-white dark:bg-white dark:hover:bg-gray-200 dark:text-black font-semibold py-3 px-8 rounded-lg transition-all shadow-lg hover:shadow-2xl text-lg"
+                className="mt-12 bg-gray-800 hover:bg-gray-700 text-white dark:bg-[#1a1a1b] dark:hover:bg-[#232325] dark:text-white font-semibold py-3 px-8 rounded-lg transition-all shadow-lg hover:shadow-2xl text-lg"
               >
                 {t('exportPage.close')}
               </button>

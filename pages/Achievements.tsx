@@ -8,81 +8,80 @@ import { useI18n } from '../contexts/I18nContext';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
 import UnlockModal from '../components/UnlockModal';
 
-  const AchievementCard: React.FC<{
-    achievement: Achievement;
-    status: AchievementStatus;
-    onToggle: () => void;
-    onTimestampChange: (field: keyof Timestamp, value: string) => void;
-    onTimestampClear: () => void;
-  }> = ({ achievement, status, onToggle, onTimestampChange, onTimestampClear }) => {
-    const isCompleted = status.completed;
-    const { dateFormat, timeFormat, theme } = useTheme();
-    const { t } = useI18n();
+const AchievementCard: React.FC<{
+  achievement: Achievement;
+  status: AchievementStatus;
+  onToggle: () => void;
+  onTimestampChange: (field: keyof Timestamp, value: string) => void;
+  onTimestampClear: () => void;
+}> = ({ achievement, status, onToggle, onTimestampChange, onTimestampClear }) => {
+  const isCompleted = status.completed;
+  const { dateFormat, timeFormat, theme } = useTheme();
+  const { t } = useI18n();
 
-    const cardClasses = `
-      bg-white dark:bg-white/5 rounded-lg p-4 flex flex-col gap-4 transition-all hover:bg-gray-50 dark:hover:bg-white/10 relative cursor-pointer h-39 border border-gray-200 dark:border-transparent
+  const cardClasses = `
+      bg-white dark:bg-[#141415] rounded-lg p-4 flex flex-col gap-4 transition-all hover:bg-gray-50 dark:hover:bg-[#1a1a1b] relative cursor-pointer h-39 border border-gray-200 dark:border-white/5
       ${isCompleted ? 'opacity-100' : 'opacity-60 dark:opacity-50 hover:opacity-100'}
     `;
 
-    const handleSetCurrentTimestamp = () => {
-      if (!isCompleted) return;
-      const now = new Date();
-      onTimestampChange('day', String(now.getDate()).padStart(2, '0'));
-      onTimestampChange('month', String(now.getMonth() + 1).padStart(2, '0'));
-      onTimestampChange('year', String(now.getFullYear()));
-      onTimestampChange('minute', String(now.getMinutes()).padStart(2, '0'));
-      
-      if (timeFormat === '12h') {
-        const hour12 = now.getHours() % 12 || 12;
-        onTimestampChange('hour', String(hour12).padStart(2, '0'));
-        onTimestampChange('ampm', now.getHours() >= 12 ? 'PM' : 'AM');
-      } else {
-        onTimestampChange('hour', String(now.getHours()).padStart(2, '0'));
-      }
-    };
+  const handleSetCurrentTimestamp = () => {
+    if (!isCompleted) return;
+    const now = new Date();
+    onTimestampChange('day', String(now.getDate()).padStart(2, '0'));
+    onTimestampChange('month', String(now.getMonth() + 1).padStart(2, '0'));
+    onTimestampChange('year', String(now.getFullYear()));
+    onTimestampChange('minute', String(now.getMinutes()).padStart(2, '0'));
 
-    return (
-      <div className={`${cardClasses.trim()} achievement-card`} onClick={onToggle}>
-        <div className="flex items-start gap-4 w-full flex-grow">
-          <img src={achievement.icon} alt={achievement.displayName} className="w-16 h-16 rounded-md object-cover flex-shrink-0" />
-          <div className="flex-grow min-w-0">
-              <h3 className="font-bold text-gray-900 dark:text-white text-md">{achievement.displayName}</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 line-clamp-2">
-                {achievement.description || t('achievementsPage.noDescription')}
-              </p>
-          </div>
-          <div
-              className={`absolute top-3 right-3 w-6 h-6 rounded-md flex items-center justify-center border transition-colors z-10 ${
-                isCompleted
-                  ? theme === 'dark'
-                    ? 'bg-white border-white'
-                    : 'bg-black border-black'
-                  : theme === 'dark'
-                    ? 'bg-black/30 border-white/20 group-hover:border-white/50'
-                    : 'bg-gray-200 border-gray-300 group-hover:border-gray-400'
-              }`}
-              aria-label={t(isCompleted ? 'achievementsPage.markAsNotCompleted' : 'achievementsPage.markAsCompleted')}
-              aria-pressed={isCompleted}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle();
-              }}
-          >
-              {isCompleted && <CheckIcon className={`text-base ${theme === 'dark' ? 'text-black' : 'text-white'}`} />}
-          </div>
-        </div>
-        <TimestampSelector
-          timestamp={status.timestamp}
-          onChange={onTimestampChange}
-          onClear={onTimestampClear}
-          onSetCurrent={handleSetCurrentTimestamp}
-          disabled={!isCompleted}
-          dateFormat={dateFormat}
-          timeFormat={timeFormat}
-        />
-      </div>
-    );
+    if (timeFormat === '12h') {
+      const hour12 = now.getHours() % 12 || 12;
+      onTimestampChange('hour', String(hour12).padStart(2, '0'));
+      onTimestampChange('ampm', now.getHours() >= 12 ? 'PM' : 'AM');
+    } else {
+      onTimestampChange('hour', String(now.getHours()).padStart(2, '0'));
+    }
   };
+
+  return (
+    <div className={`${cardClasses.trim()} achievement-card`} onClick={onToggle}>
+      <div className="flex items-start gap-4 w-full flex-grow">
+        <img src={achievement.icon} alt={achievement.displayName} className="w-16 h-16 rounded-md object-cover flex-shrink-0" />
+        <div className="flex-grow min-w-0">
+          <h3 className="font-bold text-gray-900 dark:text-white text-md">{achievement.displayName}</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 line-clamp-2">
+            {achievement.description || t('achievementsPage.noDescription')}
+          </p>
+        </div>
+        <div
+          className={`absolute top-3 right-3 w-6 h-6 rounded-md flex items-center justify-center border transition-colors z-10 ${isCompleted
+              ? theme === 'dark'
+                ? 'bg-white border-white'
+                : 'bg-black border-black'
+              : theme === 'dark'
+                ? 'bg-black/30 border-white/20 group-hover:border-white/50'
+                : 'bg-gray-200 border-gray-300 group-hover:border-gray-400'
+            }`}
+          aria-label={t(isCompleted ? 'achievementsPage.markAsNotCompleted' : 'achievementsPage.markAsCompleted')}
+          aria-pressed={isCompleted}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+        >
+          {isCompleted && <CheckIcon className={`text-base ${theme === 'dark' ? 'text-black' : 'text-white'}`} />}
+        </div>
+      </div>
+      <TimestampSelector
+        timestamp={status.timestamp}
+        onChange={onTimestampChange}
+        onClear={onTimestampClear}
+        onSetCurrent={handleSetCurrentTimestamp}
+        disabled={!isCompleted}
+        dateFormat={dateFormat}
+        timeFormat={timeFormat}
+      />
+    </div>
+  );
+};
 
 interface AchievementsContentProps {
   game: SteamSearchResult | null;
@@ -96,7 +95,7 @@ interface AchievementsContentProps {
 }
 
 const AchievementsContent: React.FC<AchievementsContentProps> = ({
-    game, achievementStatus, onAchievementToggle, onTimestampChange, onTimestampClear, onGlobalUnlock, onExportStart, onAchievementStatusUpdate
+  game, achievementStatus, onAchievementToggle, onTimestampChange, onTimestampClear, onGlobalUnlock, onExportStart, onAchievementStatusUpdate
 }) => {
   const { t } = useI18n();
   const { games: monitoredGames } = useMonitoredAchievements();
@@ -139,25 +138,25 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
 
   const toggleAllAchievements = () => {
     if (!game) return;
-     const allNames = gameAchievements.map(ach => ach.internalName);
-     if (hasSelected) {
-       // Unselect all
-       allNames.forEach(name => {
-         onAchievementStatusUpdate(game.id, name, {
-           completed: false,
-           timestamp: { day: '', month: '', year: '', hour: '', minute: '' }
-         });
-       });
-     } else {
-       // Select all
-       allNames.forEach(name => {
-         onAchievementStatusUpdate(game.id, name, {
-           completed: true,
-           timestamp: { day: '', month: '', year: '', hour: '', minute: '' }
-         });
-       });
-     }
-   };
+    const allNames = gameAchievements.map(ach => ach.internalName);
+    if (hasSelected) {
+      // Unselect all
+      allNames.forEach(name => {
+        onAchievementStatusUpdate(game.id, name, {
+          completed: false,
+          timestamp: { day: '', month: '', year: '', hour: '', minute: '' }
+        });
+      });
+    } else {
+      // Select all
+      allNames.forEach(name => {
+        onAchievementStatusUpdate(game.id, name, {
+          completed: true,
+          timestamp: { day: '', month: '', year: '', hour: '', minute: '' }
+        });
+      });
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -336,9 +335,9 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
     completed: false,
     timestamp: { day: '', month: '', year: '', hour: '', minute: '' },
   };
-  
-  const paginationButtonClasses = "flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 rounded-lg border border-gray-300 dark:border-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-  const actionButtonClasses = "flex items-center gap-2 h-10 px-4 text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors";
+
+  const paginationButtonClasses = "flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#1a1a1b] dark:text-gray-400 dark:hover:bg-[#232325] rounded-lg border border-gray-300 dark:border-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const actionButtonClasses = "flex items-center gap-2 h-10 px-4 text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#1a1a1b] dark:text-gray-400 dark:hover:bg-[#232325] transition-colors";
 
   return (
     <>
@@ -362,7 +361,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
           <div className="flex items-center gap-2 w-full">
             <button
               onClick={toggleAllAchievements}
-              className="flex items-center justify-center gap-2 h-10 w-40 text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors rounded-lg"
+              className="flex items-center justify-center gap-2 h-10 w-40 text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#1a1a1b] dark:text-gray-400 dark:hover:bg-[#232325] transition-colors rounded-lg"
             >
               {hasSelected ? t('achievementsPage.unselectAll') : t('achievementsPage.selectAll')}
             </button>
@@ -375,7 +374,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('achievementsPage.searchPlaceholder')}
-                className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg pl-10 pr-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition-colors"
+                className="w-full bg-white dark:bg-[#17171a] border border-gray-300 dark:border-white/10 rounded-lg pl-10 pr-4 py-2 text-gray-900 dark:text-gray-300 placeholder-gray-500 dark:placeholder-gray-600 focus:outline-none focus:border-sky-500 dark:focus:border-gray-600 transition-colors"
                 aria-label={t('achievementsPage.searchPlaceholder')}
               />
             </div>
@@ -407,7 +406,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
             <div className="text-center h-full flex flex-col items-center justify-center -mt-16">
               <div className="inline-flex bg-gray-200 dark:bg-white/5 p-4 rounded-full mb-4 text-5xl text-gray-800 dark:text-white 
                               w-full max-w-[150px] aspect-square items-center justify-center">
-                <SearchIcon/>
+                <SearchIcon />
               </div>
               <h2 className="text-xl font-bold mb-2">
                 {t('achievementsPage.noResultsForQuery', { query: searchQuery })}
@@ -415,11 +414,11 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
             </div>
           )}
         </div>
-        
+
         {filteredAchievements.length > 0 && (
           <footer className="flex-shrink-0 relative mt-6 flex justify-between items-center">
             {/* Left Side: Timestamp Manager */}
-            <GlobalTimestampManager 
+            <GlobalTimestampManager
               mode={unlockMode}
               setMode={setUnlockMode}
               timestamp={customTimestamp}
