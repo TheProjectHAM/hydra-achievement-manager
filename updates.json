@@ -90,6 +90,22 @@
         "Resolved multiple long-standing issues from the previous version.",
         "Improved stability and reduced crashes."
       ]
+    },
+    {
+      "version": "2.1.0",
+      "changelog": [
+        "Bug Fixes:",
+        "Timestamp Handling Refactor:",
+        "Fixed: Timestamp normalization now applies consistently across all date/time formats.",
+        "Resolved an issue where older timestamps kept the wrong formatting.",
+        "Conversions between 12h and 24h are now reflected instantly across the UI.",
+        "Prevents mismatches between newly loaded and existing achievement timestamps.",
+        "Achievement Data Refresh:",
+        "Fixed: Achievement data now refreshes automatically after any modification.",
+        "UI immediately updates the status of unlocked achievements.",
+        "Prevents displaying outdated information when the source file changes.",
+        "Improved reliability when switching between games with large achievement lists."
+      ]
     }
   ]
 }
