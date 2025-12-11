@@ -3,8 +3,8 @@ import { UpdateIcon, TagIcon } from '../Icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { formatDate, formatDateObj } from '../../formatters';
 import { useI18n } from '../../contexts/I18nContext';
+import packageJson from '../../package.json';
 
-const APP_VERSION = '2.0.0';
 const UPDATES_URL = 'https://raw.githubusercontent.com/Levynsk/hydra-achievement-manager/refs/heads/main/updates.json';
 
 const UpdateSettings: React.FC = () => {
@@ -44,12 +44,12 @@ const UpdateSettings: React.FC = () => {
   const latest = updates[updates.length - 1]?.version;
   let updateStatus = '';
   if (latest) {
-    if (APP_VERSION === latest) {
+    if (packageJson.version === latest) {
       updateStatus = 'You are up to date!';
-    } else if (APP_VERSION < latest) {
+    } else if (packageJson.version < latest) {
       updateStatus = `New version available: ${latest}`;
     } else {
-      updateStatus = `You are a beta tester! (version: ${APP_VERSION})`;
+      updateStatus = `You are a beta tester! (version: ${packageJson.version})`;
     }
   }
 
@@ -58,7 +58,7 @@ const UpdateSettings: React.FC = () => {
       {/* Update checker card */}
       <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-6 flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
         <div className="flex-grow text-center sm:text-left">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('settings.updates.currentVersion', { version: APP_VERSION })}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('settings.updates.currentVersion', { version: packageJson.version })}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {t('settings.updates.lastChecked', { date: lastCheckedFormatted })}
           </p>
