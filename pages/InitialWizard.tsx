@@ -142,6 +142,11 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
         { id: 'gruvbox', name: t('settings.appearance.gruvboxTheme'), palette: ['#282828', '#3c3836', '#fb4934'] },
         { id: 'tokyo-night', name: t('settings.appearance.tokyoNightTheme'), palette: ['#1a1b26', '#24283b', '#7aa2f7'] },
         { id: 'everforest', name: t('settings.appearance.everforestTheme'), palette: ['#2d353b', '#343f44', '#a7c080'] },
+        { id: 'dracula', name: t('settings.appearance.draculaTheme'), palette: ['#282a36', '#44475a', '#bd93f9'] },
+        { id: 'retrowave', name: t('settings.appearance.retrowaveTheme'), palette: ['#140522', '#24103d', '#d746ff'] },
+        { id: 'github-dark', name: t('settings.appearance.githubDarkTheme'), palette: ['#0d1117', '#161b22', '#58a6ff'] },
+        { id: 'solarized-dark', name: t('settings.appearance.solarizedDarkTheme'), palette: ['#002b36', '#073642', '#268bd2'] },
+        { id: 'one-dark', name: t('settings.appearance.oneDarkTheme'), palette: ['#282c34', '#353b45', '#61afef'] },
     ];
 
     const nextStep = () => setStep(s => Math.min(s + 1, totalSteps));
@@ -324,7 +329,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                             <h2 className="text-[10px] font-black uppercase tracking-[0.5em] opacity-40" style={{ color: 'var(--text-main)' }}>Step 04</h2>
                             <h1 className="text-3xl font-black uppercase tracking-tight" style={{ color: 'var(--text-main)' }}>{t('wizard.visualStyle')}</h1>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {THEMES.map(t => (
                                 <ThemeCard
                                     key={t.id}

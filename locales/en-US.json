@@ -171,7 +171,12 @@
       "title": "Monitored Directories",
       "description": "The app scans these folders for game achievements. Add your Steam library or compatdata folders here.",
       "addDirectory": "Add new directory",
-      "noDirectories": "No directories are currently being monitored."
+      "noDirectories": "No directories are currently being monitored.",
+      "winePrefixTitle": "Wine Prefix (Linux)",
+      "winePrefixDescription": "Set your Wine prefix root (without drive_c). Example: /home/user/Games/Heroic/Prefixes/default/MyGame.",
+      "winePrefixPlaceholder": "/home/user/Games/Heroic/Prefixes/default/MyGame",
+      "savePrefix": "Save prefix",
+      "savingPrefix": "Saving..."
     },
     "appearance": {
       "tab": "Appearance",
@@ -184,6 +189,7 @@
       "tokyoNightTheme": "Tokyo Night",
       "everforestTheme": "Everforest",
       "draculaTheme": "Dracula",
+      "retrowaveTheme": "Retrowave",
       "githubDarkTheme": "GitHub Dark",
       "solarizedDarkTheme": "Solarized Dark",
       "oneDarkTheme": "One Dark",

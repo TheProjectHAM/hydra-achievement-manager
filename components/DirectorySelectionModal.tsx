@@ -19,8 +19,17 @@ const DirectoryItem: React.FC<{
 }> = ({ dir, isSelected, onSelect }) => {
   const { t } = useI18n();
   const { dateFormat, timeFormat } = useTheme();
+  const formatUsersForDisplay = (input: string) =>
+    input.replace(/(^|[\\/])users(?=[\\/])/gi, '$1Users');
+  const getPathTitle = (input: string) => {
+    const normalized = input.replace(/[\\]+/g, '/');
+    const parts = normalized.split('/').filter(Boolean);
+    return parts[parts.length - 1] || input;
+  };
 
   const formattedDate = formatDateObj(dir.lastModified, dateFormat, timeFormat);
+  const displayPath = formatUsersForDisplay(dir.path);
+  const displayTitle = getPathTitle(displayPath);
 
   const isSteam = dir.source === 'steam' || dir.path.startsWith('steam://');
 
@@ -45,13 +54,13 @@ const DirectoryItem: React.FC<{
         )}
         <div className="flex-grow min-w-0">
           <div className="flex items-center justify-between">
-            <p className="font-semibold truncate" style={{ color: 'var(--text-main)' }}>{dir.name}</p>
+            <p className="font-semibold truncate" style={{ color: 'var(--text-main)' }}>{isSteam ? dir.name : displayTitle}</p>
             <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
               <span>{dir.achievementCount} {t('common.achievements').toLowerCase()}</span>
             </div>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <p className="text-xs truncate opacity-60" style={{ color: 'var(--text-main)' }}>{dir.path}</p>
+            <p className="text-xs truncate opacity-60" style={{ color: 'var(--text-main)' }}>{displayPath}</p>
             <p className="text-xs opacity-60 ml-2" style={{ color: 'var(--text-main)' }}>
               {formattedDate}
             </p>

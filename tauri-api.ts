@@ -286,6 +286,8 @@ export const removeMonitoredDirectory = (path: string) =>
 
 export const toggleMonitoredDirectory = (path: string) =>
   invoke<any[]>("toggle_monitored_directory", { path });
+export const setWinePrefixPath = (path: string) =>
+  invoke<any[]>("set_wine_prefix_path", { path });
 
 export const pickFolder = () => invoke<string | null>("pick_folder");
 export const pickSteamVdfFile = () =>
@@ -382,6 +384,7 @@ export const electronAPI = {
   addMonitoredDirectory,
   removeMonitoredDirectory,
   toggleMonitoredDirectory,
+  setWinePrefixPath,
   pickFolder,
   pickSteamVdfFile,
   pickSteamDllFile,

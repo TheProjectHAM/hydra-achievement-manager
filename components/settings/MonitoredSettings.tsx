@@ -23,6 +23,8 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     setSteamIntegrationEnabled
 }) => {
     const { t } = useI18n();
+    const formatUsersForDisplay = (input: string) =>
+        input.replace(/(^|[\\/])users(?=[\\/])/gi, '$1Users');
     const [directories, setDirectories] = useState<DirectoryConfig[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [cacheSize, setCacheSize] = useState<string>('Loading...');
@@ -30,6 +32,9 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     const [steamLibraryVdfPath, setSteamLibraryVdfPath] = useState<string | null>(null);
     const [steamGamesFound, setSteamGamesFound] = useState<number>(0);
     const [isSteamMissing, setIsSteamMissing] = useState(false);
+    const isLinux = (window as any).electronAPI?.platform === 'linux';
+    const [winePrefixPath, setWinePrefixPath] = useState<string>('~/.wine');
+    const [isSavingWinePrefix, setIsSavingWinePrefix] = useState(false);
 
     useEffect(() => {
         const loadCacheSize = async () => {
@@ -92,6 +97,11 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 try {
                     const dirs = await (window as any).electronAPI.getMonitoredDirectories();
                     setDirectories(dirs);
+                    const settings = await (window as any).electronAPI.loadSettings();
+                    const savedPrefix = settings?.winePrefixPath;
+                    if (typeof savedPrefix === 'string' && savedPrefix.trim()) {
+                        setWinePrefixPath(savedPrefix);
+                    }
                 } catch (error) {
                     console.error('Error loading monitored directories:', error);
                 } finally {
@@ -103,6 +113,24 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
         };
         loadDirs();
     }, []);
+
+    const handleSaveWinePrefix = async () => {
+        if (!isLinux || !(window as any).electronAPI?.setWinePrefixPath) return;
+
+        const trimmed = winePrefixPath.trim();
+        if (!trimmed) return;
+
+        setIsSavingWinePrefix(true);
+        try {
+            const updatedDirs = await (window as any).electronAPI.setWinePrefixPath(trimmed);
+            setDirectories(updatedDirs);
+            setWinePrefixPath(trimmed);
+        } catch (error) {
+            console.error('Error saving Wine prefix path:', error);
+        } finally {
+            setIsSavingWinePrefix(false);
+        }
+    };
 
     const handleAddDirectory = async () => {
         if (!(window as any).electronAPI) return;
@@ -195,6 +223,41 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 </button>
             </div>
 
+            {isLinux && (
+                <div className="border rounded-md p-6 flex flex-col gap-4 shadow-sm" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}>
+                    <div className="space-y-1">
+                        <h4 className="text-sm font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-main)' }}>
+                            {t('settings.monitored.winePrefixTitle')}
+                        </h4>
+                        <p className="text-xs font-medium leading-relaxed opacity-60" style={{ color: 'var(--text-main)' }}>
+                            {t('settings.monitored.winePrefixDescription')}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <input
+                            value={winePrefixPath}
+                            onChange={(e) => setWinePrefixPath(e.target.value)}
+                            placeholder={t('settings.monitored.winePrefixPlaceholder')}
+                            className="flex-1 h-11 px-4 rounded-md border text-xs font-semibold"
+                            style={{
+                                backgroundColor: 'var(--bg-color)',
+                                borderColor: 'var(--border-color)',
+                                color: 'var(--text-main)'
+                            }}
+                        />
+                        <button
+                            onClick={handleSaveWinePrefix}
+                            disabled={isSavingWinePrefix || !winePrefixPath.trim()}
+                            className={`h-11 px-5 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all ${isSavingWinePrefix || !winePrefixPath.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--hover-bg)] active:scale-95'}`}
+                            style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                        >
+                            {isSavingWinePrefix ? t('settings.monitored.savingPrefix') : t('settings.monitored.savePrefix')}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="space-y-3">
                 <div
                     key={steamDirectory.path}
@@ -210,7 +273,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                 <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>Steam</p>
                                 <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>DEFAULT</span>
                             </div>
-                            <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{steamDirectory.path}</p>
+                            <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{formatUsersForDisplay(steamDirectory.path)}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -261,7 +324,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                             <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>DEFAULT</span>
                                         )}
                                     </div>
-                                    <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{dir.path}</p>
+                                    <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{formatUsersForDisplay(dir.path)}</p>
                                 </div>
                             </div>
 

@@ -16,6 +16,9 @@ import AchievementsContent from './pages/Achievements';
 import ExportPage from './pages/Export';
 import InitialWizard from './pages/InitialWizard';
 import { unlockAchievements, reloadAchievements, getSteamLibraryInfo, getAchievementIniLastModified } from './tauri-api';
+import ToastContainer, { ToastItemData } from './components/ToastContainer';
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import packageJson from './package.json';
 
 type View = 'main' | 'export';
 
@@ -23,6 +26,14 @@ const MIN_SIDEBAR_WIDTH = 80;
 const MAX_SIDEBAR_WIDTH = 500;
 const SNAP_THRESHOLD = 120;
 const ACHIEVEMENT_STATUS_CACHE_KEY = 'achievement_status_cache_v1';
+const UPDATES_URL =
+  import.meta.env.VITE_UPDATES_URL ||
+  "https://raw.githubusercontent.com/Levynsk/hydra-achievement-manager/refs/heads/main/updates.json";
+
+interface UpdateEntry {
+  version: string;
+  subVersion?: string;
+}
 
 const App: React.FC = () => {
   const [activeTabId, setActiveTabId] = useState<string>('jogos');
@@ -33,6 +44,8 @@ const App: React.FC = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [showWizard, setShowWizard] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [toasts, setToasts] = useState<ToastItemData[]>([]);
+  const { t } = useI18n();
 
   useEffect(() => {
     const checkWizardStatus = async () => {
@@ -54,6 +67,80 @@ const App: React.FC = () => {
 
     checkWizardStatus();
   }, []);
+
+  const closeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const pushToast = useCallback((toast: Omit<ToastItemData, 'id'>) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    setToasts((prev) => [...prev, { ...toast, id }]);
+  }, []);
+
+  const parseSemver = (version: string): [number, number, number] => {
+    const [major = '0', minor = '0', patch = '0'] = version.split('.');
+    return [Number(major) || 0, Number(minor) || 0, Number(patch) || 0];
+  };
+
+  const parseDateTag = (tag?: string): number => {
+    if (!tag) return 0;
+    const digits = tag.replace(/\D/g, '');
+    return Number(digits) || 0;
+  };
+
+  const compareUpdates = (a: UpdateEntry, b: UpdateEntry): number => {
+    const [aMaj, aMin, aPat] = parseSemver(a.version);
+    const [bMaj, bMin, bPat] = parseSemver(b.version);
+    if (aMaj !== bMaj) return aMaj - bMaj;
+    if (aMin !== bMin) return aMin - bMin;
+    if (aPat !== bPat) return aPat - bPat;
+    return parseDateTag(a.subVersion) - parseDateTag(b.subVersion);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkForUpdatesOnStartup = async () => {
+      try {
+        const response = await tauriFetch(UPDATES_URL, { method: 'GET' });
+        const data = await response.json() as { updates?: UpdateEntry[] };
+        const updates = data?.updates || [];
+        if (!updates.length || cancelled) return;
+
+        const latest = [...updates].sort(compareUpdates).at(-1);
+        if (!latest) return;
+
+        const current: UpdateEntry = {
+          version: packageJson.version,
+          subVersion: (packageJson as any).versionDateTag || '',
+        };
+
+        if (compareUpdates(latest, current) > 0) {
+          const latestLabel = `v${latest.version}${latest.subVersion ? ` ${latest.subVersion}` : ''}`;
+          pushToast({
+            title: t('settings.updates.updateAvailable'),
+            message: `${t('settings.updates.currentVersion').replace('{version}', latestLabel)}. ${t('settings.updates.description')}`,
+            durationMs: 5000,
+            type: 'update',
+          });
+        } else {
+          pushToast({
+            title: t('settings.updates.systemUpToDate'),
+            message: t('settings.updates.upToDate'),
+            durationMs: 3200,
+            type: 'success',
+          });
+        }
+      } catch (error) {
+        console.warn('Startup update check failed:', error);
+      }
+    };
+
+    checkForUpdatesOnStartup();
+    return () => {
+      cancelled = true;
+    };
+  }, [pushToast, t]);
 
   useEffect(() => {
     try {
@@ -375,8 +462,19 @@ const App: React.FC = () => {
       };
     };
 
-    // Prepare achievements data
-    const gameStatuses = achievementStatus[getStatusSourceKey(selectedGame.id, unlockSourcePath)] || {};
+    // Prepare achievements data.
+    // When a game has no existing achievements.ini, selections are often tracked under
+    // the "auto" source key until a concrete path is chosen in the unlock modal.
+    // Fallback order prevents empty unlock payloads in that first-write scenario.
+    const statusCandidates = [
+      getStatusSourceKey(selectedGame.id, unlockSourcePath),
+      getStatusSourceKey(selectedGame.id, selectedGameSourcePath),
+      getStatusSourceKey(selectedGame.id, null),
+    ];
+    const gameStatuses =
+      statusCandidates
+        .map((key) => achievementStatus[key])
+        .find((bucket) => bucket && Object.keys(bucket).length > 0) || {};
 
     const achievements = (isSteam && allAchievements)
       ? allAchievements.map(ach => {
@@ -474,6 +572,12 @@ const App: React.FC = () => {
     const mergedGame = games.find(g => g.gameId === game.id.toString());
     const hasBothSources = (mergedGame as any)?.source === 'both';
     const isSteamOnly = (mergedGame as any)?.source === 'steam';
+    const singleLocalPath =
+      mergedGame &&
+      (mergedGame as any).directory &&
+      (mergedGame as any).directory !== 'steam://'
+        ? String((mergedGame as any).directory)
+        : null;
 
     if (duplicate || hasBothSources) {
       if (duplicate) {
@@ -484,9 +588,15 @@ const App: React.FC = () => {
     } else {
       // Preserve Steam source cache/status in-memory because Steam Web API can lag.
       if (!isSteamOnly) {
-        resetGameAchievementStatus(game.id, null);
+        resetGameAchievementStatus(game.id, singleLocalPath);
       }
-      setSelectedGameSourcePath(null);
+      // Auto-select the only available source when modal is not required.
+      // Steam-only -> steam:// ; Local-only -> concrete directory path.
+      if (isSteamOnly) {
+        setSelectedGameSourcePath('steam://');
+      } else {
+        setSelectedGameSourcePath(singleLocalPath);
+      }
       setSelectedGame(game);
       setActiveTabId('conquistas');
       setCurrentView('main');
@@ -639,17 +749,28 @@ const App: React.FC = () => {
 
   if (showWizard) {
     return (
-      <InitialWizard onFinish={() => {
-        setShowWizard(false);
-        localStorage.setItem('wizardCompleted', 'true');
-      }} />
+      <>
+        <InitialWizard onFinish={() => {
+          setShowWizard(false);
+          localStorage.setItem('wizardCompleted', 'true');
+        }} />
+        <ToastContainer toasts={toasts} onClose={closeToast} />
+      </>
     );
   }
 
   return (
     <div className="w-screen h-screen overflow-hidden text-[var(--text-main)] flex flex-col">
       <TitleBar />
-      <div className="flex flex-1 overflow-hidden" style={{ backgroundColor: 'var(--bg-color)' }}>
+      <div
+        className="flex flex-1 overflow-hidden"
+        style={{
+          backgroundColor: 'var(--bg-color)',
+          backgroundImage: 'var(--bg-gradient, none)',
+          backgroundAttachment: 'fixed',
+          backgroundSize: 'cover'
+        }}
+      >
         {currentView === 'main' && (
           <Sidebar
             tabs={TABS}
@@ -690,6 +811,7 @@ const App: React.FC = () => {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
       />
+      <ToastContainer toasts={toasts} onClose={closeToast} />
     </div>
   );
 };

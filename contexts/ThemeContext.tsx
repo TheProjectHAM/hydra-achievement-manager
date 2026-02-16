@@ -9,6 +9,7 @@ export type Theme =
   | 'tokyo-night'
   | 'everforest'
   | 'dracula'
+  | 'retrowave'
   | 'catppuccin'
   | 'github-dark'
   | 'solarized-dark'
@@ -87,6 +88,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       'tokyo-night',
       'everforest',
       'dracula',
+      'retrowave',
       'catppuccin',
       'github-dark',
       'solarized-dark',

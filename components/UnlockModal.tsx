@@ -36,9 +36,19 @@ const PathItem: React.FC<{
     const { dateFormat, timeFormat } = useTheme();
     const isSteam = path.startsWith('steam://');
     const hasExistingFile = existingAchievementCount !== null && !isSteam;
+    const formatUsersForDisplay = (input: string) =>
+        input.replace(/(^|[\\/])users(?=[\\/])/gi, '$1Users');
+    const getPathTitle = (input: string) => {
+        const normalized = input.replace(/[\\]+/g, '/');
+        const parts = normalized.split('/').filter(Boolean);
+        return parts[parts.length - 1] || input;
+    };
+
     const displayPath = path.includes('.wine') && path.includes('drive_c')
         ? (path.split('drive_c/')[1] || path)
         : path;
+    const displayPathFormatted = formatUsersForDisplay(displayPath);
+    const displayTitle = getPathTitle(displayPathFormatted);
 
     const formattedLastModified = lastModified ? formatDateObj(lastModified, dateFormat, timeFormat) : '';
     const formattedSteamVdfLastModified = steamVdfLastModified ? formatDateObj(steamVdfLastModified, dateFormat, timeFormat) : '';
@@ -66,9 +76,21 @@ const PathItem: React.FC<{
                         <FolderIcon className="text-xl flex-shrink-0 text-[var(--text-muted)]" />
                     )}
                     <div className="min-w-0 flex-grow mt-0.5 space-y-1.5">
-                        <p className="font-bold truncate text-sm tracking-wide" style={{ color: 'var(--text-main)' }}>
-                            {isSteam ? 'Steam' : displayPath}
-                        </p>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <p className="font-bold truncate text-sm tracking-wide min-w-0" style={{ color: 'var(--text-main)' }}>
+                                {isSteam ? 'Steam' : displayTitle}
+                            </p>
+                            {!isSteam && hasExistingFile && (
+                                <>
+                                    <span className="px-1.5 py-0.5 rounded-md font-semibold border whitespace-nowrap text-[10px]" style={{ color: 'var(--text-main)', borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                                        {t('unlockModal.existingAchievements', { count: existingAchievementCount })}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded-md font-semibold border whitespace-nowrap text-[10px]" style={{ color: 'var(--text-main)', borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                                        {t('unlockModal.newTotal', { count: newAchievementCount })}
+                                    </span>
+                                </>
+                            )}
+                        </div>
                         <div className="flex items-center justify-between gap-2 min-w-0">
                             <div className="min-w-0 flex-1 flex items-center gap-1.5">
                                 {!isSteam && path.includes('.wine') && path.includes('drive_c') && (
@@ -81,17 +103,12 @@ const PathItem: React.FC<{
                                         {steamVdfPath || 'libraryfolders.vdf not found'}
                                     </p>
                                 ) : hasExistingFile ? (
-                                    <div className="min-w-0 flex items-center gap-1.5 text-[10px]">
-                                        <span className="px-1.5 py-0.5 rounded-md font-semibold border whitespace-nowrap" style={{ color: 'var(--text-main)', borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
-                                            {t('unlockModal.existingAchievements', { count: existingAchievementCount })}
-                                        </span>
-                                        <span className="px-1.5 py-0.5 rounded-md font-semibold border whitespace-nowrap" style={{ color: 'var(--text-main)', borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
-                                            {t('unlockModal.newTotal', { count: newAchievementCount })}
-                                        </span>
-                                    </div>
+                                    <p className="font-semibold text-xs opacity-85 min-w-0 flex-1 truncate" style={{ color: 'var(--text-main)' }}>
+                                        {displayPathFormatted}
+                                    </p>
                                 ) : (
                                     <p className="font-semibold text-xs opacity-85 min-w-0 flex-1 truncate" style={{ color: 'var(--text-main)' }}>
-                                        {displayPath}
+                                        {displayPathFormatted}
                                     </p>
                                 )}
                             </div>

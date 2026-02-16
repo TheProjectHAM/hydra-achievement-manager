@@ -171,7 +171,12 @@
       "title": "Diretórios Monitorados",
       "description": "O aplicativo escaneia estas pastas em busca de conquistas. Adicione sua biblioteca Steam ou pastas compatdata aqui.",
       "addDirectory": "Adicionar novo diretório",
-      "noDirectories": "Nenhum diretório está sendo monitorado no momento."
+      "noDirectories": "Nenhum diretório está sendo monitorado no momento.",
+      "winePrefixTitle": "Prefixo Wine (Linux)",
+      "winePrefixDescription": "Defina a raiz do seu prefixo Wine (sem drive_c). Exemplo: /home/user/Games/Heroic/Prefixes/default/Megabonk.",
+      "winePrefixPlaceholder": "/home/user/Games/Heroic/Prefixes/default/Megabonk",
+      "savePrefix": "Salvar prefixo",
+      "savingPrefix": "Salvando..."
     },
     "appearance": {
       "tab": "Aparência",

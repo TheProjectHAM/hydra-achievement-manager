@@ -191,6 +191,7 @@ const AppearanceSettings: React.FC<{
       { id: 'tokyo-night', name: t('settings.appearance.tokyoNightTheme'), palette: ['#1a1b26', '#24283b', '#7aa2f7'] },
       { id: 'everforest', name: t('settings.appearance.everforestTheme'), palette: ['#2d353b', '#343f44', '#a7c080'] },
       { id: 'dracula', name: t('settings.appearance.draculaTheme'), palette: ['#282a36', '#44475a', '#bd93f9'] },
+      { id: 'retrowave', name: t('settings.appearance.retrowaveTheme'), palette: ['#140522', '#24103d', '#d746ff'] },
       { id: 'github-dark', name: t('settings.appearance.githubDarkTheme'), palette: ['#0d1117', '#161b22', '#58a6ff'] },
       { id: 'solarized-dark', name: t('settings.appearance.solarizedDarkTheme'), palette: ['#002b36', '#073642', '#268bd2'] },
       { id: 'one-dark', name: t('settings.appearance.oneDarkTheme'), palette: ['#282c34', '#353b45', '#61afef'] },
