@@ -1,76 +1,59 @@
-# Project HAM 
+# Project HAM
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Node.js Version](https://img.shields.io/badge/Node.js-16%2B-brightgreen.svg)](https://nodejs.org/)
-[![release](https://img.shields.io/github/package-json/v/Levynsk/hydra-achievement-manager)](https://github.com/Levynsk/hydra-achievement-manager/releases)
+[![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB)](https://tauri.app/)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-brightgreen.svg)](https://nodejs.org/)
+[![Rust](https://img.shields.io/badge/Rust-stable-orange.svg)](https://www.rust-lang.org/)
 
-**Project HAM** is a powerful and user-friendly desktop application designed to help you **manage, unlock, and export Hydra game achievements**. Whether you are a gamer looking to organize your achievements or a developer testing game integrations, Project HAM provides an intuitive interface to interact with Hydra's achievement system.
+Project HAM is a desktop application for managing Hydra and Steam achievements, now fully ported to a Rust/Tauri architecture.
 
----
+## What You Can Do
 
-## Installation
+- Manage and track Hydra and Steam achievements in a desktop app
+- Work with both Hydra and Steam achievements directly in your workflow
+- Browse games, open their achievement lists, and update progress
+- Export achievement data when needed
 
-### Prerequisites
+## Prerequisites
 
-* Node.js (16 or higher)
-* npm or yarn
+- Node.js 18+
+- npm
+- Rust (stable toolchain)
+- Tauri system dependencies for your OS
 
-### Build from Source
+## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/Levynsk/hydra-achievement-manager.git
-cd hydra-achievement-manager
-
 # Install dependencies
 npm install
 
-# Run in development mode
-npm run dev
-
-# Build for production
-npm run build:win  # Windows
+# Run desktop app in development mode (frontend + Tauri)
+npm run tauri:dev
 ```
 
----
+## Build
+
+```bash
+# Build frontend assets
+npm run build
+
+# Build desktop bundles with Tauri
+npm run tauri:build
+```
+
+Build outputs are generated under `src-tauri/target/` (Tauri bundles) and `dist/` (frontend assets).
 
 ## Contributing
 
-We welcome contributions!
-
 1. Fork the repository
-2. Create a feature branch:
-
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Make your changes and commit:
-
-   ```bash
-   git commit -m 'Add some feature'
-   ```
-4. Push to the branch:
-
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Commit your changes
+4. Push to your branch
 5. Open a pull request
-
-> Ensure your code follows the existing style and includes appropriate tests.
-
----
 
 ## License
 
-Project HAM is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See the [LICENSE](LICENSE) file for details.
-
----
-
-## Changelog
-
-For the full changelog, see [CHANGELOG](updates.json).
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Levynsk/hydra-achievement-manager&type=Date)](https://www.star-history.com/#Levynsk/hydra-achievement-manager&Date)
+Project HAM is licensed under the GNU General Public License v3.0 (GPL-3.0). See `LICENSE` for details.
 
 
 
