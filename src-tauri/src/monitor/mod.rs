@@ -73,7 +73,10 @@ impl AchievementMonitor {
                     match rx.recv_timeout(std::time::Duration::from_millis(100)) {
                         Ok(Ok(event)) => {
                             if event.paths.iter().any(|p| {
-                                p.file_name().and_then(|n| n.to_str()) == Some("achievements.ini")
+                                matches!(
+                                    p.file_name().and_then(|n| n.to_str()),
+                                    Some("achievements.ini") | Some("achievements.json")
+                                )
                             }) {
                                 last_event_time = std::time::Instant::now();
                                 pending_update = true;

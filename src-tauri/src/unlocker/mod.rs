@@ -3,6 +3,7 @@ use crate::parser::expand_path;
 use anyhow::{Context, Result};
 use chrono::{Datelike, NaiveDateTime, Timelike};
 use rand::Rng;
+use serde_json::{Map, Value};
 use std::fs;
 use std::path::Path;
 
@@ -67,6 +68,52 @@ impl AchievementWriter {
             .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
 
         log::info!("Achievement file written: {}", file_path.display());
+        Ok(())
+    }
+
+    /// Escreve arquivo achievements.json do GSE preservando campos extras existentes.
+    pub fn write_gse_achievement_file<P: AsRef<Path>>(
+        file_path: P,
+        achievements: &[AchievementEntry],
+    ) -> Result<()> {
+        let file_path = file_path.as_ref();
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+        }
+
+        let mut root_obj: Map<String, Value> = if file_path.exists() {
+            let content = fs::read_to_string(file_path)
+                .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+            serde_json::from_str(&content).unwrap_or_default()
+        } else {
+            Map::new()
+        };
+
+        for ach in achievements {
+            let mut entry_obj = root_obj
+                .get(&ach.name)
+                .and_then(|v| v.as_object())
+                .cloned()
+                .unwrap_or_default();
+
+            entry_obj.insert("earned".to_string(), Value::Bool(ach.achieved));
+            entry_obj.insert(
+                "earned_time".to_string(),
+                Value::from(if ach.achieved { ach.unlock_time } else { 0 }),
+            );
+
+            root_obj.insert(ach.name.clone(), Value::Object(entry_obj));
+        }
+
+        let content = serde_json::to_string_pretty(&root_obj)
+            .with_context(|| format!("Failed to serialize JSON: {}", file_path.display()))?;
+
+        fs::write(file_path, content)
+            .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
+
+        log::info!("GSE achievement file written: {}", file_path.display());
         Ok(())
     }
 
@@ -199,15 +246,22 @@ impl AchievementUnlocker {
         let achievement_entries = Self::process_achievements(options);
 
         let expanded_path = expand_path(&options.selected_path);
-        let file_path = expanded_path
-            .join(&options.game_id)
-            .join("achievements.ini");
+        let game_dir = expanded_path.join(&options.game_id);
+        let ini_path = game_dir.join("achievements.ini");
+        let json_path = game_dir.join("achievements.json");
 
-        // Deleta arquivo antigo
-        AchievementWriter::delete_old_file(&file_path)?;
+        let is_gse_path = expanded_path
+            .to_string_lossy()
+            .to_lowercase()
+            .contains("gse saves");
 
-        // Escreve novo arquivo
-        AchievementWriter::write_achievement_file(&file_path, &achievement_entries)?;
+        if json_path.exists() || is_gse_path {
+            AchievementWriter::write_gse_achievement_file(&json_path, &achievement_entries)?;
+        } else {
+            // Deleta arquivo antigo INI e escreve novo
+            AchievementWriter::delete_old_file(&ini_path)?;
+            AchievementWriter::write_achievement_file(&ini_path, &achievement_entries)?;
+        }
 
         Ok(())
     }

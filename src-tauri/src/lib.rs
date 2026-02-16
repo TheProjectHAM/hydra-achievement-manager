@@ -129,78 +129,45 @@ pub fn run() {
             let user_data_path = app_handle.path().app_data_dir().unwrap_or_default();
             let settings_path = user_data_path.join("settings.json");
 
-            let default_paths = vec![
-                "C:/Users/Public/Documents/Steam/RUNE",
-                "C:/Users/Public/Documents/Steam/CODEX",
-                "C:/ProgramData/Steam/RLD!",
-                "C:/Users/Public/Documents/OnlineFix",
-            ];
-
-            let mut monitored_configs: Vec<DirectoryConfig> = if cfg!(target_os = "windows") {
-                default_paths
-                    .into_iter()
-                    .map(|p| {
-                        let name = p.split('/').last().unwrap_or("Unknown").to_string();
-                        DirectoryConfig {
-                            name,
-                            path: p.to_string(),
-                            enabled: true,
-                            is_default: true,
-                        }
-                    })
-                    .collect()
-            } else {
-                let home_dir = dirs::home_dir().unwrap_or_default();
-                let wine_prefix = home_dir.join(".wine/drive_c");
-                default_paths
-                    .into_iter()
-                    .map(|p| {
-                        let name = p.split('/').last().unwrap_or("Unknown").to_string();
-                        let path_suffix = if p.starts_with("C:/") { &p[3..] } else { p };
-                        let full_path = wine_prefix.join(path_suffix).to_string_lossy().to_string();
-
-                        DirectoryConfig {
-                            name,
-                            path: full_path,
-                            enabled: true,
-                            is_default: true,
-                        }
-                    })
-                    .collect()
-            };
-
+            let mut loaded_settings: Option<serde_json::Value> = None;
             if settings_path.exists() {
                 if let Ok(settings_data) = std::fs::read_to_string(&settings_path) {
-                    if let Ok(settings) = serde_json::from_str::<serde_json::Value>(&settings_data)
-                    {
-                        if let Some(configs_val) =
-                            settings.get("monitoredConfigs").and_then(|v| v.as_array())
-                        {
-                            let saved_configs: Vec<DirectoryConfig> = configs_val
-                                .iter()
-                                .filter_map(|v| serde_json::from_value(v.clone()).ok())
-                                .collect();
+                    loaded_settings = serde_json::from_str::<serde_json::Value>(&settings_data).ok();
+                }
+            }
 
-                            // Mescla configurações salvas com defaults (preservando o estado enabled das defaults)
-                            for mut saved in saved_configs {
-                                // Auto-fix legacy wine paths on Windows
-                                if cfg!(target_os = "windows")
-                                    && saved.path.contains(".wine/drive_c")
-                                {
-                                    if let Some(suffix_start) = saved.path.find("drive_c/") {
-                                        let suffix = &saved.path[suffix_start + 8..];
-                                        saved.path = format!("C:/{}", suffix);
-                                    }
-                                }
+            let saved_wine_prefix = loaded_settings
+                .as_ref()
+                .and_then(|s| s.get("winePrefixPath"))
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string());
 
-                                if let Some(existing) =
-                                    monitored_configs.iter_mut().find(|c| c.path == saved.path)
-                                {
-                                    existing.enabled = saved.enabled;
-                                } else if !saved.is_default {
-                                    monitored_configs.push(saved);
-                                }
+            let mut monitored_configs: Vec<DirectoryConfig> =
+                crate::commands::build_default_directory_configs(saved_wine_prefix.as_deref());
+
+            if let Some(settings) = &loaded_settings {
+                if let Some(configs_val) = settings.get("monitoredConfigs").and_then(|v| v.as_array())
+                {
+                    let saved_configs: Vec<DirectoryConfig> = configs_val
+                        .iter()
+                        .filter_map(|v| serde_json::from_value(v.clone()).ok())
+                        .collect();
+
+                    // Mescla configurações salvas com defaults (preservando o estado enabled das defaults)
+                    for mut saved in saved_configs {
+                        // Auto-fix legacy wine paths on Windows
+                        if cfg!(target_os = "windows") && saved.path.contains(".wine/drive_c") {
+                            if let Some(suffix_start) = saved.path.find("drive_c/") {
+                                let suffix = &saved.path[suffix_start + 8..];
+                                saved.path = format!("C:/{}", suffix);
                             }
+                        }
+
+                        if let Some(existing) = monitored_configs.iter_mut().find(|c| c.path == saved.path)
+                        {
+                            existing.enabled = saved.enabled;
+                        } else if !saved.is_default {
+                            monitored_configs.push(saved);
                         }
                     }
                 }
@@ -243,6 +210,7 @@ pub fn run() {
             commands::add_monitored_directory,
             commands::remove_monitored_directory,
             commands::toggle_monitored_directory,
+            commands::set_wine_prefix_path,
             commands::pick_folder,
             commands::pick_steam_vdf_file,
             commands::pick_steam_dll_file,

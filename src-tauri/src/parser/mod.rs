@@ -1,5 +1,6 @@
 use crate::models::{AchievementEntry, GameAchievements};
 use anyhow::{Context, Result};
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +15,15 @@ impl AchievementParser {
                 log::error!("Failed to read achievement file: {}", file_path.display());
                 format!("Failed to read file: {}", file_path.display())
             })?;
+
+        if file_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.eq_ignore_ascii_case("json"))
+            .unwrap_or(false)
+        {
+            return Self::parse_gse_achievement_json(&content, file_path);
+        }
 
         let mut achievements = Vec::new();
         let mut current_achievement: Option<AchievementEntry> = None;
@@ -64,6 +74,38 @@ impl AchievementParser {
         Ok(achievements)
     }
 
+    fn parse_gse_achievement_json(file_content: &str, file_path: &Path) -> Result<Vec<AchievementEntry>> {
+        let json: Value = serde_json::from_str(file_content)
+            .with_context(|| format!("Failed to parse JSON: {}", file_path.display()))?;
+
+        let object = json
+            .as_object()
+            .with_context(|| format!("Invalid GSE achievements JSON format: {}", file_path.display()))?;
+
+        let mut achievements = Vec::new();
+
+        for (name, payload) in object {
+            if let Some(payload_obj) = payload.as_object() {
+                let achieved = payload_obj
+                    .get("earned")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let unlock_time = payload_obj
+                    .get("earned_time")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0);
+
+                achievements.push(AchievementEntry {
+                    name: name.clone(),
+                    achieved,
+                    unlock_time,
+                });
+            }
+        }
+
+        Ok(achievements)
+    }
+
     /// Parse um diretório de achievements
     pub fn parse_directory<P: AsRef<Path>>(directory_path: P) -> Result<Vec<GameAchievements>> {
         let directory_path = directory_path.as_ref();
@@ -83,18 +125,27 @@ impl AchievementParser {
                 if metadata.is_dir() {
                     let game_id = entry.file_name().to_string_lossy().to_string();
                     
-                    // Verifica se é estrutura OnlineFix
+                    // Verifica se é estrutura OnlineFix (ini em Stats) ou GSE (achievements.json)
                     let achievement_file = if directory_path
                         .file_name()
                         .and_then(|n| n.to_str())
                         == Some("OnlineFix")
                     {
-                        entry.path().join("Stats").join("achievements.ini")
+                        let onlinefix_ini = entry.path().join("Stats").join("achievements.ini");
+                        if onlinefix_ini.exists() { Some(onlinefix_ini) } else { None }
                     } else {
-                        entry.path().join("achievements.ini")
+                        let ini_file = entry.path().join("achievements.ini");
+                        let json_file = entry.path().join("achievements.json");
+                        if ini_file.exists() {
+                            Some(ini_file)
+                        } else if json_file.exists() {
+                            Some(json_file)
+                        } else {
+                            None
+                        }
                     };
 
-                    if achievement_file.exists() {
+                    if let Some(achievement_file) = achievement_file {
                         log::info!("Processing game: {} (File: {})", game_id, achievement_file.display());
                         match Self::parse_achievement_file(&achievement_file) {
                             Ok(achievements) => {

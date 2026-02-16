@@ -6,7 +6,7 @@ use crate::utils::{AchievementExporter, CacheManager};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
@@ -57,6 +57,113 @@ fn read_language_from_settings(app_handle: &AppHandle) -> String {
     }
 
     "en-US".to_string()
+}
+
+pub fn build_default_directory_configs(wine_prefix_path: Option<&str>) -> Vec<DirectoryConfig> {
+    fn resolve_gse_user(users_roots: &[PathBuf]) -> String {
+        let mut found_steamuser = false;
+
+        for root in users_roots {
+            if !root.exists() {
+                continue;
+            }
+
+            if let Ok(entries) = fs::read_dir(root) {
+                for entry in entries.flatten() {
+                    let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+                    if !is_dir {
+                        continue;
+                    }
+
+                    let username = entry.file_name().to_string_lossy().to_string();
+                    let gse_dir = entry.path().join("AppData").join("Roaming").join("GSE Saves");
+                    if !gse_dir.exists() {
+                        continue;
+                    }
+
+                    if username.eq_ignore_ascii_case("steamuser") {
+                        found_steamuser = true;
+                    } else {
+                        return username;
+                    }
+                }
+            }
+        }
+
+        if found_steamuser {
+            "steamuser".to_string()
+        } else {
+            "steamuser".to_string()
+        }
+    }
+
+    if cfg!(target_os = "windows") {
+        let gse_user = resolve_gse_user(&[
+            Path::new("C:/users").to_path_buf(),
+            Path::new("C:/Users").to_path_buf(),
+        ]);
+        let default_paths = vec![
+            "C:/Users/Public/Documents/Steam/RUNE".to_string(),
+            "C:/Users/Public/Documents/Steam/CODEX".to_string(),
+            "C:/ProgramData/Steam/RLD!".to_string(),
+            "C:/Users/Public/Documents/OnlineFix".to_string(),
+            format!("C:/users/{}/AppData/Roaming/GSE Saves", gse_user),
+        ];
+
+        default_paths
+            .into_iter()
+            .map(|p| DirectoryConfig {
+                name: p.split('/').last().unwrap_or("Unknown").to_string(),
+                path: p,
+                enabled: true,
+                is_default: true,
+            })
+            .collect()
+    } else {
+        let prefix_raw = wine_prefix_path
+            .map(|p| p.trim())
+            .filter(|p| !p.is_empty())
+            .unwrap_or("~/.wine");
+
+        let expanded_prefix = crate::parser::expand_path(prefix_raw);
+        let wine_drive_c = if expanded_prefix
+            .file_name()
+            .and_then(|n| n.to_str())
+            == Some("drive_c")
+        {
+            expanded_prefix
+        } else {
+            expanded_prefix.join("drive_c")
+        };
+
+        let gse_user = resolve_gse_user(&[
+            wine_drive_c.join("users"),
+            wine_drive_c.join("Users"),
+        ]);
+        let default_paths = vec![
+            "C:/Users/Public/Documents/Steam/RUNE".to_string(),
+            "C:/Users/Public/Documents/Steam/CODEX".to_string(),
+            "C:/ProgramData/Steam/RLD!".to_string(),
+            "C:/Users/Public/Documents/OnlineFix".to_string(),
+            format!("C:/users/{}/AppData/Roaming/GSE Saves", gse_user),
+        ];
+
+        default_paths
+            .into_iter()
+            .map(|p| {
+                let name = p.split('/').last().unwrap_or("Unknown").to_string();
+                let path_suffix = if p.starts_with("C:/") { &p[3..] } else { &p };
+                let full_path = wine_drive_c.join(path_suffix).to_string_lossy().to_string();
+
+                DirectoryConfig {
+                    name,
+                    path: full_path,
+                    enabled: true,
+                    is_default: true,
+                }
+            })
+            .collect()
+    }
 }
 
 /// Função interna para obter o nome de um jogo
@@ -546,9 +653,18 @@ pub async fn reload_achievements(
     base_path: String,
     app_handle: AppHandle,
 ) -> Result<Value, String> {
-    let file_path = PathBuf::from(&base_path)
-        .join(&game_id)
-        .join("achievements.ini");
+    let expanded_base_path = crate::parser::expand_path(&base_path);
+    let game_dir = expanded_base_path.join(&game_id);
+    let ini_path = game_dir.join("achievements.ini");
+    let json_path = game_dir.join("achievements.json");
+
+    let file_path = if ini_path.exists() {
+        ini_path
+    } else if json_path.exists() {
+        json_path
+    } else {
+        ini_path
+    };
 
     let achievements =
         AchievementParser::parse_achievement_file(&file_path).map_err(|e| e.to_string())?;
@@ -837,7 +953,7 @@ pub async fn get_monitored_directories(
     }
 }
 
-/// Obtém a última modificação real do arquivo achievements.ini para um jogo em um caminho.
+/// Obtém a última modificação real do arquivo achievements.ini/achievements.json para um jogo em um caminho.
 #[tauri::command]
 pub async fn get_achievement_ini_last_modified(
     game_id: String,
@@ -848,12 +964,16 @@ pub async fn get_achievement_ini_last_modified(
     }
 
     let expanded = crate::parser::expand_path(&path);
-    let ini_path = expanded.join(game_id).join("achievements.ini");
-    if !ini_path.exists() {
+    let game_dir = expanded.join(game_id);
+    let ini_path = game_dir.join("achievements.ini");
+    let json_path = game_dir.join("achievements.json");
+    let target_path = if ini_path.exists() { ini_path } else { json_path };
+
+    if !target_path.exists() {
         return Ok(None);
     }
 
-    let modified = std::fs::metadata(&ini_path)
+    let modified = std::fs::metadata(&target_path)
         .map_err(|e| e.to_string())?
         .modified()
         .map_err(|e| e.to_string())?
@@ -983,6 +1103,61 @@ pub async fn remove_monitored_directory(
     let _ = save_settings(settings, app_handle).await;
 
     Ok(current_directories)
+}
+
+#[tauri::command]
+pub async fn set_wine_prefix_path(
+    path: String,
+    state: tauri::State<'_, crate::AppState>,
+    app_handle: AppHandle,
+) -> Result<Vec<DirectoryConfig>, String> {
+    if !cfg!(target_os = "linux") {
+        return Err("Wine prefix path is only available on Linux".to_string());
+    }
+
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("Wine prefix path cannot be empty".to_string());
+    }
+
+    let updated_directories = {
+        let mut monitor_lock = state.monitor.lock().map_err(|e| e.to_string())?;
+        let monitor = monitor_lock
+            .as_mut()
+            .ok_or_else(|| "Monitor not initialized".to_string())?;
+
+        let current = monitor.get_directories();
+        let custom_dirs: Vec<DirectoryConfig> =
+            current.iter().filter(|d| !d.is_default).cloned().collect();
+
+        let default_enabled: std::collections::HashMap<String, bool> = current
+            .iter()
+            .filter(|d| d.is_default)
+            .map(|d| (d.name.clone(), d.enabled))
+            .collect();
+
+        let mut next = build_default_directory_configs(Some(trimmed));
+        for dir in &mut next {
+            if let Some(enabled) = default_enabled.get(&dir.name) {
+                dir.enabled = *enabled;
+            }
+        }
+
+        next.extend(custom_dirs);
+        monitor.set_directories(next.clone());
+        monitor.restart_monitoring().map_err(|e| e.to_string())?;
+        next
+    };
+
+    let mut settings = load_settings(app_handle.clone())
+        .await
+        .unwrap_or(serde_json::json!({}));
+    settings["winePrefixPath"] = Value::String(trimmed.to_string());
+    settings["monitoredConfigs"] =
+        serde_json::to_value(&updated_directories).map_err(|e| e.to_string())?;
+    save_settings(settings, app_handle).await?;
+
+    Ok(updated_directories)
 }
 
 // ==================== Steam Integration Commands ====================
