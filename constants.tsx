@@ -11,9 +11,29 @@ export const TABS: Tab[] = [
   { id: 'conquistas', label: 'sidebar.achievements', icon: <TrophyIcon /> },
 ];
 
-export const DEFAULT_PATHS = [
-    'C:/Users/Public/Documents/Steam/RUNE',
-    'C:/Users/Public/Documents/Steam/CODEX',
-    'C:/ProgramData/Steam/RLD!',
-    'C:/Users/Public/Documents/OnlineFix',
+const WINDOWS_PATHS = [
+  'C:/Users/Public/Documents/Steam/RUNE',
+  'C:/Users/Public/Documents/Steam/CODEX',
+  'C:/ProgramData/Steam/RLD!',
+  'C:/Users/Public/Documents/OnlineFix',
 ];
+
+const LINUX_PATHS = [
+  '~/.wine/drive_c/Users/Public/Documents/Steam/RUNE',
+  '~/.wine/drive_c/Users/Public/Documents/Steam/CODEX',
+  '~/.wine/drive_c/ProgramData/Steam/RLD!',
+  '~/.wine/drive_c/Users/Public/Documents/OnlineFix',
+];
+
+// Detect platform and export appropriate paths
+const getPlatform = () => {
+  if (typeof window !== 'undefined' && (window as any).electronAPI?.platform) {
+    return (window as any).electronAPI.platform;
+  }
+  if (typeof window !== 'undefined' && navigator.userAgent.includes('Windows')) {
+    return 'win32';
+  }
+  return 'linux';
+};
+
+export const DEFAULT_PATHS = getPlatform() === 'win32' ? WINDOWS_PATHS : LINUX_PATHS;

@@ -6,6 +6,7 @@ export type SidebarGameScale = 'sm' | 'md' | 'lg';
 
 export type DateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
 export type TimeFormat = '24h' | '12h';
+export type GamesViewMode = 'grid' | 'list';
 
 export interface Tab {
   id: string;
@@ -43,6 +44,8 @@ export interface Achievement {
   displayName: string;
   description: string;
   icon: string;
+  percent?: number;
+  hidden?: boolean;
 }
 
 export interface Timestamp {
@@ -59,9 +62,49 @@ export interface AchievementStatus {
   timestamp: Timestamp;
 }
 
+export interface AchievementEntry {
+  name: string;
+  achieved: boolean;
+  unlockTime: number;
+}
+
+export interface GameAchievements {
+  gameId: string;
+  achievements: AchievementEntry[];
+  lastModified: Date | number;
+  directory: string;
+}
+
 export interface Game {
   id: number;
   name: string;
   achievementsCurrent: number;
   achievementsTotal: number;
+  source?: 'hydra' | 'steam'; // Source of the game data
+}
+
+// Steam Integration Types
+export interface SteamGame {
+  gameId: string;
+  name: string;
+  achievementsTotal: number;
+  achievementsCurrent: number;
+  source: string;
+}
+
+export interface SteamAchievementData {
+  name: string;
+  displayName: string;
+  description: string;
+  achieved: boolean;
+  unlockTime: number;
+  icon: string;
+  iconGray: string;
+  percent?: number;
+  hidden?: boolean;
+}
+
+export interface SteamUserInfo {
+  userId: string;
+  userName: string;
 }

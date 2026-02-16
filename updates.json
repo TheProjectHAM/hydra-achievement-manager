@@ -2,109 +2,13 @@
   "updates": [
     {
       "version": "1.0.0",
+      "subVersion": "v20260216",
       "changelog": [
-        "Stable release of Hydra Achievements Manager.",
-        "A tool designed to manage and unlock achievements in Hydra."
-      ]
-    },
-    {
-      "version": "1.1.0",
-      "changelog": [
-        "Added multi-language support: PT-BR, EN-US, ES-ES, RU, UK, IT.",
-        "Introduced Game Manager: new section with achievement progress and quick navigation.",
-        "Redesigned interface for a more modern, intuitive, and customizable experience.",
-        "Optimized overall performance.",
-        "Full translation implemented."
-      ]
-    },
-    {
-      "version": "1.2.0",
-      "changelog": [
-        "Fixed: Duplicate achievements issue in the manager UI and bugs during achievement generation.",
-        "Improved: Detection and display system to prevent duplicate achievements.",
-        "Optimized: Achievement file processing to ensure unique entries."
-      ]
-    },
-    {
-      "version": "1.3.0",
-      "changelog": [
-        "Added support for multiple game directory structures: OnlineFix, RLD!, Codex, Rune (automatic recognition).",
-        "Note: OnlineFix support may be unstable due to potential Hydra bugs.",
-        "Implemented achievement loading from existing directories."
-      ]
-    },
-    {
-      "version": "1.4.0",
-      "changelog": [
-        "Integrated new Hydra API as default method.",
-        "No need to generate a Steam key anymore — although manual switching is still available in settings.",
-        "Various bug fixes and improvements."
-      ]
-    },
-    {
-      "version": "1.5.0",
-      "changelog": [
-        "New Feature:",
-        "Game Search Tab: You can now search for games directly within the app using a dedicated search tab.",
-        "Updates and Improvements:",
-        "In-App Update Checking: The app now automatically checks for new versions to keep you up to date.",
-        "Interface Optimization: Improved interface for a lighter, smoother, and better-performing experience.",
-        "Bug Fixes:",
-        "General bug fixes and adjustments to enhance stability and usability."
-      ]
-    },
-    {
-      "version": "1.6.0",
-      "changelog": [
-        "Release Date: 2025-05-20",
-        "New Features:",
-        "Added support for light theme, allowing users to switch between light and dark modes.",
-        "Redesigned and improved interface for a more intuitive and modern user experience.",
-        "Improvements:",
-        "Implemented game data export, generating a JSON file with progress data and a folder containing achievement icons.",
-        "Added option to select a custom directory when generating achievements.",
-        "Bug Fixes:",
-        "Various fixes to improve system stability and resolve previous issues."
-      ]
-    },
-    {
-      "version": "1.6.1",
-      "changelog": [
-        "Release Date: 2025-05-21",
-        "Improvements:",
-        "Fix JSON data export.",
-        "New initial screen wizard."
-      ]
-    },
-    {
-      "version": "2.0.0",
-      "changelog": [
-        "The entire project has been fully rewritten in TypeScript, bringing improved stability, scalability, and maintainability.",
-        "New Features:",
-        "Time Formatting Options: Added support for multiple date/time styles, including 12-hour (AM/PM) format.",
-        "Expanded Language Support: Hydra Achievement Manager now supports more languages: Polski, Français, 中文 (简体), 日本語.",
-        "Improvements:",
-        "Major codebase modernization with TypeScript.",
-        "Better handling of localization and time display.",
-        "Fixes:",
-        "Resolved multiple long-standing issues from the previous version.",
-        "Improved stability and reduced crashes."
-      ]
-    },
-    {
-      "version": "2.1.0",
-      "changelog": [
-        "Bug Fixes:",
-        "Timestamp Handling Refactor:",
-        "Fixed: Timestamp normalization now applies consistently across all date/time formats.",
-        "Resolved an issue where older timestamps kept the wrong formatting.",
-        "Conversions between 12h and 24h are now reflected instantly across the UI.",
-        "Prevents mismatches between newly loaded and existing achievement timestamps.",
-        "Achievement Data Refresh:",
-        "Fixed: Achievement data now refreshes automatically after any modification.",
-        "UI immediately updates the status of unlocked achievements.",
-        "Prevents displaying outdated information when the source file changes.",
-        "Improved reliability when switching between games with large achievement lists."
+        "Rebuilt the backend with Rust and Tauri to improve performance, reliability, and maintainability.",
+        "Implemented native support for Steam achievements to provide a more robust and consistent data flow.",
+        "Enhanced the application theme system for a cleaner and more cohesive visual experience.",
+        "Refined game and achievement management workflows for better accuracy and operational stability.",
+        "Delivered broad usability, architecture, and quality-of-life improvements across the application."
       ]
     }
   ]

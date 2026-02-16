@@ -1,63 +1,40 @@
 {
   "name": "ProjectHAM",
   "private": true,
-  "version": "2.1.0",
-  "main": "dist-electron/main.js",
+  "version": "1.0.0",
+  "versionDateTag": "v20260216",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "electron": "vite build && electron .",
-    "electron:dev": "vite build && electron .",
-    "build:win": "vite build && electron-builder --win --x64"
+    "initial": "VITE_INITIAL_DEBUG=true vite",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
-    "jimp": "^1.6.0",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-http": "^2.0.0",
+    "@tauri-apps/plugin-opener": "^2.0.0",
+    "@tauri-apps/plugin-process": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    "axios": "^1.13.4",
+    "date-fns": "^4.1.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.0",
-    "electron": "^33.0.0",
-    "electron-builder": "^24.6.0",
+    "baseline-browser-mapping": "^2.9.19",
+    "cross-env": "^10.1.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0",
-    "vite-plugin-electron": "^0.28.0",
-    "vite-plugin-electron-renderer": "^0.14.5"
-  },
-  "build": {
-    "appId": "com.project.ham",
-    "productName": "Project HAM",
-    "files": [
-      "dist/**",
-      "dist-electron/**",
-      "electron/**",
-      "node_modules/**",
-      "package.json",
-      "LICENSE"
-    ],
-    "directories": {
-      "buildResources": "assets"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "assets/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": true,
-      "license": "LICENSE"
-    }
+    "vite": "^6.2.0"
   }
 }
