@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useI18n } from "../../contexts/I18nContext";
 import TestResultsModal from "../TestResultsModal";
+import { saveSettings } from "../../tauri-api";
 
 interface DebugSettingsProps {
   forceFrontendFetch: boolean;
@@ -15,6 +16,7 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
 }) => {
   const { t } = useI18n();
   const [isTestRunning, setIsTestRunning] = useState(false);
+  const [isRestartingWizard, setIsRestartingWizard] = useState(false);
   const [testResults, setTestResults] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -25,6 +27,20 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
       }
     } catch (error) {
       console.error("Failed to open devtools:", error);
+    }
+  };
+
+  const restartOnboardingWizard = async () => {
+    if (isRestartingWizard) return;
+    setIsRestartingWizard(true);
+    try {
+      await saveSettings({ wizardCompleted: false });
+      localStorage.removeItem("wizardCompleted");
+      window.dispatchEvent(new Event("settings-saved"));
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to restart onboarding wizard:", error);
+      setIsRestartingWizard(false);
     }
   };
 
@@ -281,6 +297,36 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
               }}
             >
               Open
+            </button>
+          </div>
+
+          {/* Restart Wizard */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h4
+                className="text-sm font-black tracking-[0.15em] uppercase mb-1.5"
+                style={{ color: "var(--text-main)" }}
+              >
+                Onboarding Wizard
+              </h4>
+              <p
+                className="text-xs font-medium leading-relaxed w-full"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Reopen the initial setup wizard on next launch.
+              </p>
+            </div>
+
+            <button
+              onClick={restartOnboardingWizard}
+              disabled={isRestartingWizard}
+              className="h-9 px-4 rounded-md text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 border hover:bg-[var(--hover-bg)] disabled:opacity-50 disabled:cursor-wait"
+              style={{
+                borderColor: "var(--border-color)",
+                color: "var(--text-main)",
+              }}
+            >
+              {isRestartingWizard ? "Restarting..." : "Run Wizard"}
             </button>
           </div>
         </div>

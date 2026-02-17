@@ -331,6 +331,8 @@
     "regionalFormats": "Regional Formats",
     "datePreference": "Date Preference",
     "timeSystem": "Time System",
+    "enableSteamIntegration": "Enable Steam integration",
+    "winePrefixTitle": "Wine/Proton Prefix",
     "goBack": "Back",
     "continue": "Continue",
     "completeSetup": "Finish Setup"
