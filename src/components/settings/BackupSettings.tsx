@@ -372,7 +372,9 @@ const BackupSettings: React.FC = () => {
         }
       }
 
-      const next = Array.from(groupedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+      const next = Array.from(groupedMap.values())
+        .filter((group) => group.totalAchievements > 0)
+        .sort((a, b) => a.name.localeCompare(b.name));
       setGroups(next);
       setSelectedGameIds(new Set(next.map((g) => g.gameId)));
     } catch (error) {
