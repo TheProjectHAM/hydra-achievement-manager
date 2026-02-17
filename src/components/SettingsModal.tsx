@@ -11,6 +11,7 @@ import {
   CloseIcon,
   FolderIcon,
   BugIcon,
+  ExportIcon,
 } from "./Icons";
 import LocaleSettings from "./settings/LanguageSettings";
 import AboutSettings from "./settings/AboutSettings";
@@ -19,6 +20,7 @@ import UpdateSettings from "./settings/UpdateSettings";
 import ApiSettings from "./settings/ApiSettings";
 import MonitoredSettings from "./settings/MonitoredSettings";
 import DebugSettings from "./settings/DebugSettings";
+import BackupSettings from "./settings/BackupSettings";
 import { ToastItemData } from "./ToastContainer";
 import {
   DateFormat,
@@ -35,6 +37,7 @@ type SubTabId =
   | "appearance"
   | "api"
   | "monitored"
+  | "backup"
   | "updates"
   | "about"
   | "debug";
@@ -379,6 +382,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       icon: <FolderIcon />,
       label: t("settings.monitored.tab"),
     },
+    { id: "backup", icon: <ExportIcon />, label: t("settings.backup.tab") },
     { id: "updates", icon: <UpdateIcon />, label: t("settings.updates.tab") },
     { id: "about", icon: <InfoIcon />, label: t("settings.about.tab") },
   ];
@@ -437,6 +441,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
             setSteamIntegrationEnabled={setSteamIntegrationEnabled}
           />
         );
+      case "backup":
+        return <BackupSettings />;
       case "updates":
         return <UpdateSettings />;
       case "about":
@@ -529,13 +535,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
         <header className="flex items-start justify-between px-12 pt-10 pb-4">
           <div className="space-y-1">
             <h3
-              className="text-3xl font-black tracking-tight uppercase"
+              className="text-3xl font-black tracking-tight"
               style={{ color: "var(--text-main)" }}
             >
               {tabs.find((t) => t.id === activeSubTab)?.label}
             </h3>
             <p
-              className="text-xs font-medium max-w-full uppercase tracking-wider opacity-60 truncate whitespace-nowrap"
+              className="text-xs font-medium max-w-full opacity-60 truncate whitespace-nowrap"
               style={{ color: "var(--text-main)" }}
             >
               {activeSubTab === "language" &&
@@ -545,6 +551,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
               {activeSubTab === "api" && t("settings.api.description")}
               {activeSubTab === "monitored" &&
                 t("settings.monitored.description")}
+              {activeSubTab === "backup" && t("settings.backup.description")}
               {activeSubTab === "updates" && t("settings.updates.description")}
               {activeSubTab === "about" && t("settings.about.description")}
               {activeSubTab === "debug" && systemInfo && (

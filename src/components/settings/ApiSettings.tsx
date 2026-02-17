@@ -274,7 +274,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
               value={steamApiKey}
               onChange={(e) => setSteamApiKey(e.target.value)}
               placeholder={t("settings.api.apiKeyPlaceholder")}
-              className="w-full h-12 border rounded-md pl-4 pr-20 text-sm font-semibold outline-none shadow-inner"
+              className="w-full h-12 border rounded-md pl-4 pr-20 text-sm font-semibold outline-none shadow-inner placeholder:text-[var(--text-muted)]"
               style={{
                 backgroundColor: "var(--input-bg)",
                 borderColor: "var(--border-color)",

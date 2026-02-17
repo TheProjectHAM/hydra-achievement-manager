@@ -272,6 +272,72 @@ export const unlockAchievements = (options: any) =>
 export const exportAchievements = (gameId: string) =>
   invoke<any>("export_achievements", { gameId });
 
+// Backup / Restore
+export const createAchievementsBackup = (
+  outputPath: string,
+  selectedGameIds?: string[],
+  includeSettings: boolean = true,
+) =>
+  invoke<{ outputPath: string; gamesCount: number; hasSettings: boolean }>(
+    "create_achievements_backup",
+    {
+      outputPath,
+      selectedGameIds: selectedGameIds && selectedGameIds.length > 0 ? selectedGameIds : null,
+      includeSettings,
+    },
+  );
+
+export const previewAchievementsRestore = (backupPath: string) =>
+  invoke<{
+    backupPath: string;
+    totalEntries: number;
+    items: Array<{
+      index: number;
+      gameId: string;
+      directory: string;
+      fileFormat: string;
+      backupAchievements: number;
+      existingAchievements: number;
+      overlappingAchievements: number;
+      changedAchievements: number;
+      unchangedAchievements: number;
+      newAchievements: number;
+      willReplace: boolean;
+    }>;
+    settings: {
+      included: boolean;
+      totalKeys: number;
+      conflictingKeys: number;
+      missingKeys: number;
+    };
+  }>("preview_achievements_restore", { backupPath });
+
+export const applyAchievementsRestore = (
+  backupPath: string,
+  selectedIndices?: number[],
+  gameConflictResolutions?: Array<{ index: number; strategy: "backup" | "current" | "cancel" }>,
+  restoreSettings: boolean = false,
+  settingsStrategy: "backup" | "current" | "merge" = "backup",
+) =>
+  invoke<{
+    backupPath: string;
+    restoredEntries: number;
+    skippedEntries: number;
+    restoredSettings: boolean;
+  }>(
+    "apply_achievements_restore",
+    {
+      backupPath,
+      selectedIndices: selectedIndices && selectedIndices.length > 0 ? selectedIndices : null,
+      gameConflictResolutions:
+        gameConflictResolutions && gameConflictResolutions.length > 0
+          ? gameConflictResolutions
+          : null,
+      restoreSettings,
+      settingsStrategy,
+    },
+  );
+
 // Directories
 export const getMonitoredDirectories = () =>
   invoke<any[]>("get_monitored_directories");
@@ -380,6 +446,9 @@ export const electronAPI = {
   reloadAchievements,
   unlockAchievements,
   exportAchievements,
+  createAchievementsBackup,
+  previewAchievementsRestore,
+  applyAchievementsRestore,
   getMonitoredDirectories,
   addMonitoredDirectory,
   removeMonitoredDirectory,

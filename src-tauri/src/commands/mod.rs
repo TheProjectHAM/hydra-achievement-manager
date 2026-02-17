@@ -1,4 +1,5 @@
 pub mod achievements;
+pub mod backup;
 pub mod cache_system;
 pub mod directories;
 pub mod game_lookup;

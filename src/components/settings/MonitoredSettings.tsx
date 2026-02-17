@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '../../contexts/I18nContext';
-import { FolderIcon, CloseIcon, SteamIcon } from '../Icons';
+import { FolderIcon, CloseIcon, SteamBrandIcon } from '../Icons';
 import { ApiSource } from '../../types';
 
 interface DirectoryConfig {
@@ -239,9 +239,9 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                             value={winePrefixPath}
                             onChange={(e) => setWinePrefixPath(e.target.value)}
                             placeholder={t('settings.monitored.winePrefixPlaceholder')}
-                            className="flex-1 h-11 px-4 rounded-md border text-xs font-semibold"
+                            className="flex-1 h-11 px-4 rounded-md border text-xs font-semibold placeholder:text-[var(--text-muted)]"
                             style={{
-                                backgroundColor: 'var(--bg-color)',
+                                backgroundColor: 'var(--input-bg)',
                                 borderColor: 'var(--border-color)',
                                 color: 'var(--text-main)'
                             }}
@@ -266,7 +266,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 >
                     <div className="flex items-center gap-4 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-lg bg-[var(--hover-bg)] flex items-center justify-center flex-shrink-0">
-                            <SteamIcon className="text-xl opacity-70" />
+                            <SteamBrandIcon className="w-5 h-5 opacity-80" />
                         </div>
                         <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
