@@ -38,6 +38,13 @@ struct BackupGameEntry {
     achievements: Vec<AchievementEntry>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SteamBackupEntryInput {
+    pub game_id: String,
+    pub achievements: Vec<AchievementEntry>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BackupResult {
@@ -69,6 +76,12 @@ pub struct RestorePreviewItem {
     pub unchanged_achievements: usize,
     pub new_achievements: usize,
     pub will_replace: bool,
+    pub is_steam_entry: bool,
+    pub missing_base_path: bool,
+    pub steam_unavailable: bool,
+    pub steam_game_not_detected: bool,
+    pub restore_blocked: bool,
+    pub restore_block_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -115,6 +128,7 @@ pub async fn create_achievements_backup(
     output_path: String,
     selected_game_ids: Option<Vec<String>>,
     include_settings: Option<bool>,
+    steam_entries: Option<Vec<SteamBackupEntryInput>>,
     state: State<'_, crate::AppState>,
     app_handle: AppHandle,
 ) -> Result<BackupResult, String> {
@@ -149,7 +163,7 @@ pub async fn create_achievements_backup(
         return Err("No games or settings available for backup".to_string());
     }
 
-    let backup_games: Vec<BackupGameEntry> = filtered_games
+    let mut backup_games: Vec<BackupGameEntry> = filtered_games
         .into_iter()
         .map(|game| BackupGameEntry {
             file_format: detect_game_file_format(&game.directory, &game.game_id),
@@ -160,9 +174,36 @@ pub async fn create_achievements_backup(
         })
         .collect();
 
+    let backup_created_at = chrono::Utc::now().to_rfc3339();
+    let backup_created_at_unix = chrono::DateTime::parse_from_rfc3339(&backup_created_at)
+        .map(|d| d.timestamp())
+        .unwrap_or_else(|_| chrono::Utc::now().timestamp());
+
+    let selected_filter_active = !selected_set.is_empty();
+    let mut seen_steam = HashSet::<String>::new();
+    for steam_entry in steam_entries.unwrap_or_default() {
+        if steam_entry.game_id.trim().is_empty() {
+            continue;
+        }
+        if selected_filter_active && !selected_set.contains(&steam_entry.game_id) {
+            continue;
+        }
+        if !seen_steam.insert(steam_entry.game_id.clone()) {
+            continue;
+        }
+
+        backup_games.push(BackupGameEntry {
+            game_id: steam_entry.game_id,
+            directory: "steam://".to_string(),
+            file_format: "steam".to_string(),
+            last_modified: backup_created_at_unix,
+            achievements: steam_entry.achievements,
+        });
+    }
+
     let backup = BackupFile {
         format_version: 2,
-        created_at: chrono::Utc::now().to_rfc3339(),
+        created_at: backup_created_at,
         app_version: env!("CARGO_PKG_VERSION").to_string(),
         games: backup_games,
         settings: settings_snapshot,
@@ -192,14 +233,19 @@ pub async fn create_achievements_backup(
 pub async fn preview_achievements_restore(
     backup_path: String,
     app_handle: AppHandle,
+    state: State<'_, crate::AppState>,
 ) -> Result<RestorePreviewResult, String> {
     let backup = read_backup_file(&backup_path)?;
+    let steam_available = is_steam_available_for_restore(&state);
+    let detected_steam_games = get_detected_steam_game_ids(&state);
 
     let items = backup
         .games
         .iter()
         .enumerate()
-        .map(|(index, item)| build_preview_item(index, item))
+        .map(|(index, item)| {
+            build_preview_item(index, item, steam_available, &detected_steam_games)
+        })
         .collect::<Result<Vec<_>, String>>()?;
 
     let settings_preview = build_settings_preview(&backup.settings, &app_handle)?;
@@ -220,6 +266,7 @@ pub async fn apply_achievements_restore(
     restore_settings: Option<bool>,
     settings_strategy: Option<String>,
     app_handle: AppHandle,
+    state: State<'_, crate::AppState>,
 ) -> Result<RestoreApplyResult, String> {
     let backup = read_backup_file(&backup_path)?;
 
@@ -229,6 +276,10 @@ pub async fn apply_achievements_restore(
         .collect::<HashSet<_>>();
 
     let resolution_map = build_resolution_map(game_conflict_resolutions.unwrap_or_default())?;
+
+    let should_restore_settings = restore_settings.unwrap_or(false);
+    let steam_available = is_steam_available_for_restore(&state);
+    let detected_steam_games = get_detected_steam_game_ids(&state);
 
     let mut restored_entries = 0usize;
     let mut skipped_entries = 0usize;
@@ -244,6 +295,21 @@ pub async fn apply_achievements_restore(
             .copied()
             .unwrap_or(ConflictStrategy::Backup);
 
+        let validation = validate_restore_entry(item, steam_available, &detected_steam_games);
+        if validation.steam_unavailable {
+            skipped_entries += 1;
+            continue;
+        }
+        if validation.steam_game_not_detected {
+            skipped_entries += 1;
+            continue;
+        }
+
+        if validation.missing_base_path && !should_restore_settings {
+            skipped_entries += 1;
+            continue;
+        }
+
         let has_conflict = entry_has_conflict(item)?;
         if has_conflict && matches!(strategy, ConflictStrategy::Cancel) {
             return Err(format!(
@@ -257,11 +323,10 @@ pub async fn apply_achievements_restore(
             continue;
         }
 
-        restore_entry(item)?;
+        restore_entry(item, &state)?;
         restored_entries += 1;
     }
 
-    let should_restore_settings = restore_settings.unwrap_or(false);
     let mut restored_settings = false;
     if should_restore_settings {
         if let Some(settings) = backup.settings.as_ref() {
@@ -326,6 +391,10 @@ fn detect_game_file_format(directory: &str, game_id: &str) -> String {
 }
 
 fn read_existing_achievements(directory: &str, game_id: &str) -> Result<Vec<AchievementEntry>, String> {
+    if is_steam_directory(directory) {
+        return Ok(Vec::new());
+    }
+
     let game_dir = expand_path(directory).join(game_id);
     let ini_path = game_dir.join("achievements.ini");
     let json_path = game_dir.join("achievements.json");
@@ -345,7 +414,13 @@ fn read_existing_achievements(directory: &str, game_id: &str) -> Result<Vec<Achi
     }
 }
 
-fn build_preview_item(index: usize, item: &BackupGameEntry) -> Result<RestorePreviewItem, String> {
+fn build_preview_item(
+    index: usize,
+    item: &BackupGameEntry,
+    steam_available: bool,
+    detected_steam_games: &HashSet<String>,
+) -> Result<RestorePreviewItem, String> {
+    let validation = validate_restore_entry(item, steam_available, detected_steam_games);
     let existing = read_existing_achievements(&item.directory, &item.game_id)?;
 
     let existing_map: HashMap<&str, &AchievementEntry> =
@@ -369,6 +444,16 @@ fn build_preview_item(index: usize, item: &BackupGameEntry) -> Result<RestorePre
         }
     }
 
+    let (restore_blocked, restore_block_reason) = if validation.steam_unavailable {
+        (true, Some("steam_unavailable".to_string()))
+    } else if validation.steam_game_not_detected {
+        (true, Some("steam_game_not_detected".to_string()))
+    } else if validation.missing_base_path {
+        (true, Some("missing_base_path".to_string()))
+    } else {
+        (false, None)
+    };
+
     Ok(RestorePreviewItem {
         index,
         game_id: item.game_id.clone(),
@@ -381,6 +466,12 @@ fn build_preview_item(index: usize, item: &BackupGameEntry) -> Result<RestorePre
         unchanged_achievements: unchanged,
         new_achievements: new_count,
         will_replace: overlapping > 0,
+        is_steam_entry: validation.is_steam_entry,
+        missing_base_path: validation.missing_base_path,
+        steam_unavailable: validation.steam_unavailable,
+        steam_game_not_detected: validation.steam_game_not_detected,
+        restore_blocked,
+        restore_block_reason,
     })
 }
 
@@ -404,7 +495,11 @@ fn entry_has_conflict(item: &BackupGameEntry) -> Result<bool, String> {
     Ok(false)
 }
 
-fn restore_entry(item: &BackupGameEntry) -> Result<(), String> {
+fn restore_entry(item: &BackupGameEntry, state: &State<'_, crate::AppState>) -> Result<(), String> {
+    if is_steam_directory(&item.directory) {
+        return restore_steam_entry(item, state);
+    }
+
     let expanded_base = expand_path(&item.directory);
     let game_dir = expanded_base.join(&item.game_id);
     let ini_path = game_dir.join("achievements.ini");
@@ -427,6 +522,111 @@ fn restore_entry(item: &BackupGameEntry) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RestoreEntryValidation {
+    is_steam_entry: bool,
+    missing_base_path: bool,
+    steam_unavailable: bool,
+    steam_game_not_detected: bool,
+}
+
+fn validate_restore_entry(
+    item: &BackupGameEntry,
+    steam_available: bool,
+    detected_steam_games: &HashSet<String>,
+) -> RestoreEntryValidation {
+    let is_steam_entry = is_steam_directory(&item.directory);
+    let missing_base_path = !is_steam_entry && !expand_path(&item.directory).exists();
+    let steam_unavailable = is_steam_entry && !steam_available;
+    let steam_game_not_detected =
+        is_steam_entry && steam_available && !detected_steam_games.contains(&item.game_id);
+
+    RestoreEntryValidation {
+        is_steam_entry,
+        missing_base_path,
+        steam_unavailable,
+        steam_game_not_detected,
+    }
+}
+
+fn is_steam_directory(path: &str) -> bool {
+    path.trim_start().starts_with("steam://")
+}
+
+fn is_steam_available_for_restore(state: &State<'_, crate::AppState>) -> bool {
+    let Ok(steam_lock) = state.steam_monitor.lock() else {
+        return false;
+    };
+
+    let Some(steam_monitor) = &*steam_lock else {
+        return false;
+    };
+
+    let mut initialized_here = false;
+    if !steam_monitor.is_enabled() {
+        if steam_monitor.initialize().is_err() {
+            return false;
+        }
+        initialized_here = true;
+    }
+
+    let available = steam_monitor.is_enabled();
+
+    if initialized_here && available {
+        let _ = steam_monitor.shutdown();
+    }
+
+    available
+}
+
+fn get_detected_steam_game_ids(state: &State<'_, crate::AppState>) -> HashSet<String> {
+    let Ok(steam_lock) = state.steam_monitor.lock() else {
+        return HashSet::new();
+    };
+    let Some(steam_monitor) = &*steam_lock else {
+        return HashSet::new();
+    };
+
+    match steam_monitor.get_steam_games() {
+        Ok(games) => games.into_iter().map(|g| g.game_id).collect(),
+        Err(_) => HashSet::new(),
+    }
+}
+
+fn restore_steam_entry(item: &BackupGameEntry, state: &State<'_, crate::AppState>) -> Result<(), String> {
+    let app_id = item
+        .game_id
+        .parse::<u32>()
+        .map_err(|_| format!("Invalid Steam AppID for restore: {}", item.game_id))?;
+
+    let steam_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
+    let steam_monitor = steam_lock
+        .as_ref()
+        .ok_or_else(|| "Steam monitor not initialized".to_string())?;
+
+    let restore_result = (|| -> Result<(), String> {
+        steam_monitor.initialize().map_err(|e| e.to_string())?;
+        if !steam_monitor.is_enabled() {
+            return Err("Steam integration not available or Steam not running".to_string());
+        }
+
+        steam_monitor.switch_app_id(app_id).map_err(|e| e.to_string())?;
+
+        for achievement in &item.achievements {
+            steam_monitor
+                .set_achievement(&achievement.name, achievement.achieved)
+                .map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
+    })();
+
+    let _ = steam_monitor.switch_app_id(480);
+    let _ = steam_monitor.shutdown();
+
+    restore_result
 }
 
 fn should_write_json(base_path: &Path, ini_path: &Path, json_path: &Path, backup_format: &str) -> bool {

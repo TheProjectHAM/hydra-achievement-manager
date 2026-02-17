@@ -277,6 +277,10 @@ export const createAchievementsBackup = (
   outputPath: string,
   selectedGameIds?: string[],
   includeSettings: boolean = true,
+  steamEntries?: Array<{
+    gameId: string;
+    achievements: Array<{ name: string; achieved: boolean; unlockTime: number }>;
+  }>,
 ) =>
   invoke<{ outputPath: string; gamesCount: number; hasSettings: boolean }>(
     "create_achievements_backup",
@@ -284,6 +288,10 @@ export const createAchievementsBackup = (
       outputPath,
       selectedGameIds: selectedGameIds && selectedGameIds.length > 0 ? selectedGameIds : null,
       includeSettings,
+      steamEntries:
+        steamEntries && steamEntries.length > 0
+          ? steamEntries
+          : null,
     },
   );
 
@@ -303,6 +311,12 @@ export const previewAchievementsRestore = (backupPath: string) =>
       unchangedAchievements: number;
       newAchievements: number;
       willReplace: boolean;
+      isSteamEntry: boolean;
+      missingBasePath: boolean;
+      steamUnavailable: boolean;
+      steamGameNotDetected: boolean;
+      restoreBlocked: boolean;
+      restoreBlockReason?: string | null;
     }>;
     settings: {
       included: boolean;

@@ -35,7 +35,15 @@ declare global {
       getGameAchievements: (gameId: string) => Promise<{ gameId: string; achievements: any[] }>;
       reloadAchievements: (gameId: string, basePath: string) => Promise<{ gameId: string; achievements: any[] }>;
       unlockAchievements: (options: any) => Promise<{ success: boolean }>;
-      createAchievementsBackup: (outputPath: string, selectedGameIds?: string[], includeSettings?: boolean) => Promise<{ outputPath: string; gamesCount: number; hasSettings: boolean }>;
+      createAchievementsBackup: (
+        outputPath: string,
+        selectedGameIds?: string[],
+        includeSettings?: boolean,
+        steamEntries?: Array<{
+          gameId: string;
+          achievements: Array<{ name: string; achieved: boolean; unlockTime: number }>;
+        }>
+      ) => Promise<{ outputPath: string; gamesCount: number; hasSettings: boolean }>;
       previewAchievementsRestore: (backupPath: string) => Promise<any>;
       applyAchievementsRestore: (
         backupPath: string,

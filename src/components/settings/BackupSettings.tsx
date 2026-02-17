@@ -3,7 +3,10 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   applyAchievementsRestore,
   createAchievementsBackup,
+  getGameAchievements,
   getGameNames,
+  getSteamGames,
+  isSteamAvailable,
   requestAchievements,
   previewAchievementsRestore,
 } from "../../tauri-api";
@@ -16,6 +19,7 @@ interface BackupGame {
   gameId: string;
   directory: string;
   achievementsCount: number;
+  source: "local" | "steam";
 }
 
 interface BackupGameGroup {
@@ -37,6 +41,12 @@ interface RestorePreviewItem {
   unchangedAchievements: number;
   newAchievements: number;
   willReplace: boolean;
+  isSteamEntry: boolean;
+  missingBasePath: boolean;
+  steamUnavailable: boolean;
+  steamGameNotDetected: boolean;
+  restoreBlocked: boolean;
+  restoreBlockReason?: string | null;
 }
 
 interface RestoreSettingsPreview {
@@ -85,13 +95,17 @@ const ThemedCheckbox: React.FC<{
   onChange: (checked: boolean) => void;
   label?: string;
   className?: string;
-}> = ({ checked, onChange, label, className = "" }) => (
+  disabled?: boolean;
+}> = ({ checked, onChange, label, className = "", disabled = false }) => (
   <button
     type="button"
-    onClick={() => onChange(!checked)}
+    onClick={() => {
+      if (!disabled) onChange(!checked);
+    }}
     aria-label={label}
     aria-pressed={checked}
-    className={`w-5 h-5 rounded-[3px] border flex items-center justify-center transition-all duration-200 ${className}`}
+    aria-disabled={disabled}
+    className={`w-5 h-5 rounded-[3px] border flex items-center justify-center transition-all duration-200 ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
     style={{
       borderColor: checked ? "var(--text-main)" : "var(--border-color)",
       backgroundColor: checked ? "var(--text-main)" : "var(--input-bg)",
@@ -241,7 +255,28 @@ const BackupSettings: React.FC = () => {
   const allSelected = hasAnyGame && selectedGameIds.size === groups.length;
   const selectedBackupCount = selectedGameIds.size;
 
-  const selectedRestoreCount = selectedRestoreIndices.size;
+  const isRestoreItemBlocked = (item: RestorePreviewItem) =>
+    item.steamUnavailable ||
+    item.steamGameNotDetected ||
+    (item.missingBasePath && !restoreSettingsEnabled);
+
+  const selectableRestoreIndices = useMemo(
+    () =>
+      new Set(
+        previewItems
+          .filter((item) => !isRestoreItemBlocked(item))
+          .map((item) => item.index),
+      ),
+    [previewItems, restoreSettingsEnabled],
+  );
+
+  const selectedRestoreCount = useMemo(
+    () =>
+      Array.from(selectedRestoreIndices).filter((index) =>
+        selectableRestoreIndices.has(index),
+      ).length,
+    [selectedRestoreIndices, selectableRestoreIndices],
+  );
 
   const restoreConflicts = useMemo(
     () =>
@@ -252,11 +287,41 @@ const BackupSettings: React.FC = () => {
     [previewItems, selectedRestoreIndices, conflictStrategyByIndex],
   );
 
+  useEffect(() => {
+    setSelectedRestoreIndices((prev) => {
+      const next = new Set(
+        Array.from(prev).filter((index) => selectableRestoreIndices.has(index)),
+      );
+      if (next.size === prev.size) return prev;
+      return next;
+    });
+  }, [selectableRestoreIndices]);
+
   const loadBackupCandidates = async () => {
     setLoadingGames(true);
     try {
       const games = await requestAchievements();
+      let steamGames: any[] = [];
+      try {
+        const steamAvailable = await isSteamAvailable();
+        if (steamAvailable) {
+          steamGames = await getSteamGames();
+        }
+      } catch (error) {
+        console.warn("Steam unavailable for backup candidates:", error);
+      }
+      const steamNameById: Record<string, string> = Object.fromEntries(
+        steamGames
+          .filter((sg) => sg?.gameId && sg?.name)
+          .map((sg) => [String(sg.gameId), String(sg.name)]),
+      );
+
       const ids = Array.from(new Set((games || []).map((g: any) => g.gameId)));
+      for (const sg of steamGames) {
+        if (!ids.includes(sg.gameId)) {
+          ids.push(sg.gameId);
+        }
+      }
       const names = ids.length > 0 ? await getGameNames(ids) : {};
 
       const groupedMap = new Map<string, BackupGameGroup>();
@@ -266,16 +331,42 @@ const BackupSettings: React.FC = () => {
           gameId: g.gameId,
           directory: g.directory,
           achievementsCount: Array.isArray(g.achievements) ? g.achievements.length : 0,
+          source: "local",
         };
 
         if (!current) {
           groupedMap.set(g.gameId, {
             gameId: g.gameId,
-            name: names[g.gameId] || g.gameId,
+            name: names[g.gameId] || steamNameById[g.gameId] || g.gameId,
             entries: [entry],
             totalAchievements: entry.achievementsCount,
           });
         } else {
+          current.entries.push(entry);
+          current.totalAchievements += entry.achievementsCount;
+        }
+      }
+
+      for (const sg of steamGames) {
+        const current = groupedMap.get(sg.gameId);
+        const entry: BackupGame = {
+          gameId: sg.gameId,
+          directory: "steam://",
+          achievementsCount: Number(sg.achievementsTotal || 0),
+          source: "steam",
+        };
+
+        if (!current) {
+          groupedMap.set(sg.gameId, {
+            gameId: sg.gameId,
+            name: names[sg.gameId] || sg.name || sg.gameId,
+            entries: [entry],
+            totalAchievements: entry.achievementsCount,
+          });
+        } else if (!current.entries.some((e) => e.source === "steam")) {
+          if (!names[sg.gameId] && sg.name && current.name === current.gameId) {
+            current.name = sg.name;
+          }
           current.entries.push(entry);
           current.totalAchievements += entry.achievementsCount;
         }
@@ -332,10 +423,49 @@ const BackupSettings: React.FC = () => {
     setCreatingBackup(true);
     try {
       const selectedIds = Array.from(selectedGameIds);
+      const selectedSteamIds = groups
+        .filter((group) => selectedGameIds.has(group.gameId) && group.entries.some((e) => e.source === "steam"))
+        .map((group) => group.gameId);
+
+      let steamEntries: Array<{
+        gameId: string;
+        achievements: Array<{ name: string; achieved: boolean; unlockTime: number }>;
+      }> = [];
+
+      if (selectedSteamIds.length > 0) {
+        const steamAvailable = await isSteamAvailable().catch(() => false);
+        if (steamAvailable) {
+          const resolved = await Promise.all(
+            selectedSteamIds.map(async (gameId) => {
+              try {
+                const result = await getGameAchievements(gameId);
+                const achievements = (result?.achievements || [])
+                  .map((ach: any) => {
+                    const name = ach.name || ach.apiname;
+                    if (!name) return null;
+                    const achieved = ach.achieved === true || ach.achieved === 1;
+                    const unlockTime = Number(ach.unlockTime ?? ach.unlocktime ?? 0) || 0;
+                    return { name, achieved, unlockTime };
+                  })
+                  .filter(Boolean) as Array<{ name: string; achieved: boolean; unlockTime: number }>;
+
+                return { gameId, achievements };
+              } catch (error) {
+                console.warn(`Failed to snapshot Steam achievements for ${gameId}:`, error);
+                return null;
+              }
+            }),
+          );
+
+          steamEntries = resolved.filter((item): item is { gameId: string; achievements: Array<{ name: string; achieved: boolean; unlockTime: number }> } => Boolean(item));
+        }
+      }
+
       const result = await createAchievementsBackup(
         selectedPath,
         selectedIds,
         includeSettingsInBackup,
+        steamEntries,
       );
       setLastBackupPath(result.outputPath);
     } catch (error) {
@@ -353,8 +483,15 @@ const BackupSettings: React.FC = () => {
       setBackupPath(path);
       setPreviewItems(preview.items || []);
       setSettingsPreview(preview.settings || { included: false, totalKeys: 0, conflictingKeys: 0, missingKeys: 0 });
+      const nextRestoreSettingsEnabled = preview.settings?.included ?? false;
+      setRestoreSettingsEnabled(nextRestoreSettingsEnabled);
+      setSettingsStrategy("backup");
 
-      const allIndices = new Set((preview.items || []).map((i: RestorePreviewItem) => i.index));
+      const allIndices = new Set(
+        (preview.items || [])
+          .filter((i: RestorePreviewItem) => !i.steamUnavailable && !(i.missingBasePath && !nextRestoreSettingsEnabled))
+          .map((i: RestorePreviewItem) => i.index),
+      );
       setSelectedRestoreIndices(allIndices);
 
       const nextStrategies: Record<number, ConflictStrategy> = {};
@@ -365,10 +502,23 @@ const BackupSettings: React.FC = () => {
 
       const ids = Array.from(new Set((preview.items || []).map((i: RestorePreviewItem) => i.gameId)));
       const names = ids.length > 0 ? await getGameNames(ids) : {};
+      const previewHasSteam = (preview.items || []).some((i: RestorePreviewItem) => i.directory?.startsWith("steam://"));
+      if (previewHasSteam) {
+        try {
+          const steamAvailable = await isSteamAvailable();
+          if (steamAvailable) {
+            const steamGames = await getSteamGames();
+            for (const sg of steamGames || []) {
+              if (!names[sg.gameId] && sg.name) {
+                names[sg.gameId] = sg.name;
+              }
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to resolve Steam names for preview:", error);
+        }
+      }
       setPreviewNames(names);
-
-      setRestoreSettingsEnabled(preview.settings?.included ?? false);
-      setSettingsStrategy("backup");
     } catch (error) {
       console.error("Failed to preview backup restore:", error);
       setBackupPath("");
@@ -396,6 +546,9 @@ const BackupSettings: React.FC = () => {
   };
 
   const toggleRestoreEntry = (index: number) => {
+    const item = previewItems.find((it) => it.index === index);
+    if (item && isRestoreItemBlocked(item)) return;
+
     setSelectedRestoreIndices((prev) => {
       const next = new Set(prev);
       if (next.has(index)) next.delete(index);
@@ -405,10 +558,17 @@ const BackupSettings: React.FC = () => {
   };
 
   const toggleRestoreAll = () => {
-    if (selectedRestoreCount === previewItems.length) {
+    const available = Array.from(selectableRestoreIndices);
+    if (available.length === 0) {
+      setSelectedRestoreIndices(new Set());
+      return;
+    }
+
+    const allSelectableSelected = available.every((idx) => selectedRestoreIndices.has(idx));
+    if (allSelectableSelected) {
       setSelectedRestoreIndices(new Set());
     } else {
-      setSelectedRestoreIndices(new Set(previewItems.map((i) => i.index)));
+      setSelectedRestoreIndices(new Set(available));
     }
   };
 
@@ -417,16 +577,20 @@ const BackupSettings: React.FC = () => {
   };
 
   const handleApplyRestore = async () => {
-    if (!backupPath || selectedRestoreCount === 0) return;
+    if (!backupPath) return;
+
+    const selectedIndices = Array.from(selectedRestoreIndices).filter((index) =>
+      selectableRestoreIndices.has(index),
+    );
+    if (selectedIndices.length === 0) return;
 
     const confirmed = window.confirm(
-      t("settings.backup.restoreConfirm", { count: selectedRestoreCount }),
+      t("settings.backup.restoreConfirm", { count: selectedIndices.length }),
     );
     if (!confirmed) return;
 
     setRestoring(true);
     try {
-      const selectedIndices = Array.from(selectedRestoreIndices);
       const conflictResolutions = selectedIndices.map((index) => ({
         index,
         strategy: (conflictStrategyByIndex[index] || "backup") as ConflictStrategy,
@@ -618,7 +782,7 @@ const BackupSettings: React.FC = () => {
                 className="h-8 px-3 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all"
                 style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
               >
-                {selectedRestoreCount === previewItems.length
+                {selectedRestoreCount === selectableRestoreIndices.size
                   ? t("settings.backup.unselectAll")
                   : t("settings.backup.selectAll")}
               </button>
@@ -628,6 +792,24 @@ const BackupSettings: React.FC = () => {
               {previewItems.map((item) => {
                 const name = previewNames[item.gameId] || item.gameId;
                 const strategy = conflictStrategyByIndex[item.index] || "backup";
+                const isBlocked = isRestoreItemBlocked(item);
+                const warning =
+                  item.steamUnavailable
+                    ? t("settings.backup.restoreWarningSteamUnavailable")
+                    : item.steamGameNotDetected
+                      ? t("settings.backup.restoreWarningSteamNotDetected")
+                    : item.missingBasePath
+                      ? restoreSettingsEnabled
+                        ? t("settings.backup.restoreWarningMissingPathWithSettings")
+                        : t("settings.backup.restoreWarningMissingPathWithoutSettings")
+                      : "";
+                const blockedBadge = item.steamUnavailable
+                  ? t("settings.backup.restoreBlockedSteam")
+                  : item.steamGameNotDetected
+                    ? t("settings.backup.restoreBlockedSteamNotDetected")
+                  : item.missingBasePath && !restoreSettingsEnabled
+                    ? t("settings.backup.restoreBlockedPath")
+                    : "";
 
                 return (
                   <div
@@ -636,12 +818,13 @@ const BackupSettings: React.FC = () => {
                     style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <label className="flex items-start gap-3 cursor-pointer min-w-0 flex-1">
+                      <label className={`flex items-start gap-3 min-w-0 flex-1 ${isBlocked ? "cursor-not-allowed opacity-85" : "cursor-pointer"}`}>
                         <ThemedCheckbox
                           checked={selectedRestoreIndices.has(item.index)}
                           onChange={() => toggleRestoreEntry(item.index)}
                           label={name}
                           className="mt-0.5"
+                          disabled={isBlocked}
                         />
                         <div className="min-w-0 flex items-start gap-3">
                           <SteamGameLogo gameId={item.gameId} />
@@ -656,11 +839,18 @@ const BackupSettings: React.FC = () => {
                                 changed: item.changedAchievements,
                               })}
                             </p>
+                            {warning && (
+                              <p className="text-[10px] font-semibold mt-1" style={{ color: "var(--warning-color, #d97706)" }}>
+                                {warning}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </label>
 
-                      {item.willReplace ? (
+                      {isBlocked ? (
+                        <span className="text-[10px] font-bold opacity-80 whitespace-nowrap">{blockedBadge}</span>
+                      ) : item.willReplace ? (
                         <CompactDropdown
                           value={strategy}
                           onChange={(next) => setStrategyForIndex(item.index, next as ConflictStrategy)}

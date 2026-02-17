@@ -89,8 +89,6 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
         setSteamDllPath(details?.runtimeLibPath ?? null);
         setSteamFailureReason(details?.reason ?? null);
         maybeNotifySteamMissing(available, details?.reason ?? null);
-
-        if (!available) setSteamIntegrationEnabled(false);
       } catch (error) {
         console.error("Failed to check steam availability:", error);
         setIsSteamMissing(true);
@@ -99,7 +97,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
     };
 
     checkSteamAvailability();
-  }, [setSteamIntegrationEnabled]);
+  }, []);
 
   const saveManualPath = async (
     key: "steamManualVdfPath" | "steamManualDllPath",

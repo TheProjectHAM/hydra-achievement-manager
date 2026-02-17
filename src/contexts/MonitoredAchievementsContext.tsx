@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { GameAchievements } from '../types';
 import {
   onAchievementsUpdate,
@@ -74,6 +74,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const [steamGameAchievements, setSteamGameAchievements] = useState<Record<string, { current: number, total: number }>>({});
   const [isSteamLoaded, setIsSteamLoaded] = useState(false);
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState(false);
+  const steamUnlistenRef = useRef<(() => void) | null>(null);
 
   // Detect duplicates and filter unique games
   useEffect(() => {
@@ -141,6 +142,12 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const setupSteam = async () => {
     if (!steamIntegrationEnabled) {
       console.log('[Steam Integration] Disabled in settings');
+      setIsSteamLoaded(false);
+      setSteamGames([]);
+      if (steamUnlistenRef.current) {
+        steamUnlistenRef.current();
+        steamUnlistenRef.current = null;
+      }
       return null;
     }
 
@@ -151,12 +158,17 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
       setSteamGames(initialSteamGames);
       setIsSteamLoaded(true);
 
-      const unlisten = await onSteamGamesUpdate((updated: any[]) => {
-        setSteamGames(updated);
-      });
-      return unlisten;
+      if (!steamUnlistenRef.current) {
+        const unlisten = await onSteamGamesUpdate((updated: any[]) => {
+          setSteamGames(updated);
+        });
+        steamUnlistenRef.current = unlisten;
+      }
+      return steamUnlistenRef.current;
     } else {
       console.log('[Steam Integration] Enabled but Steam not available');
+      setIsSteamLoaded(false);
+      setSteamGames([]);
     }
     return null;
   };
@@ -165,7 +177,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     console.log('Setting up achievements listener');
     const unlistenPromise = setupListener();
     fetchInitial();
-    const steamUnlistenPromise = setupSteam();
+    setupSteam();
 
     // Listen for manual achievement updates (from unlock command)
     const achievementsUnlistenPromise = onAchievementsUpdated(() => {
@@ -180,10 +192,30 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
 
     return () => {
       unlistenPromise.then(u => u());
-      steamUnlistenPromise.then(u => u?.());
       achievementsUnlistenPromise.then(u => u());
+      if (steamUnlistenRef.current) {
+        steamUnlistenRef.current();
+        steamUnlistenRef.current = null;
+      }
     };
   }, [steamIntegrationEnabled]);
+
+  // Retry Steam auto-connect when integration is enabled but Steam starts after app launch.
+  useEffect(() => {
+    if (!steamIntegrationEnabled || isSteamLoaded) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const available = await isSteamAvailable();
+        if (!available) return;
+        await setupSteam();
+      } catch (error) {
+        console.error('[Steam Integration] Auto-retry failed:', error);
+      }
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [steamIntegrationEnabled, isSteamLoaded]);
 
   useEffect(() => {
     const loadSteamIntegrationSetting = async () => {

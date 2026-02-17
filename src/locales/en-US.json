@@ -216,6 +216,13 @@
       "restoreButton": "Restore selected",
       "restoring": "Restoring...",
       "restoreConfirm": "Restore {count} selected entries now?",
+      "restoreWarningSteamUnavailable": "Steam is disconnected. This Steam restore entry is disabled.",
+      "restoreWarningSteamNotDetected": "Steam is connected, but this game was not detected in the current library. Restore is disabled for this entry.",
+      "restoreWarningMissingPathWithoutSettings": "Path does not exist. Create the path or enable app settings restore to continue.",
+      "restoreWarningMissingPathWithSettings": "Path does not exist yet. You can continue by restoring app settings or creating the path before restore.",
+      "restoreBlockedSteam": "Steam disconnected",
+      "restoreBlockedSteamNotDetected": "Game not detected",
+      "restoreBlockedPath": "Missing path",
       "saveDialogTitle": "Save achievements backup",
       "openDialogTitle": "Select achievements backup"
     },

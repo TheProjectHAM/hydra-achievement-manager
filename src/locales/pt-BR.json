@@ -216,6 +216,13 @@
       "restoreButton": "Restaurar selecionados",
       "restoring": "Restaurando...",
       "restoreConfirm": "Restaurar {count} entradas selecionadas agora?",
+      "restoreWarningSteamUnavailable": "Steam desconectada. Este restore por Steam está desativado.",
+      "restoreWarningSteamNotDetected": "Steam conectada, mas este jogo não foi detectado na biblioteca atual. Restore desativado para esta entrada.",
+      "restoreWarningMissingPathWithoutSettings": "Caminho não existe. Crie o caminho ou ative restaurar configurações do app para prosseguir.",
+      "restoreWarningMissingPathWithSettings": "Caminho não existe no momento. Você pode prosseguir restaurando as configurações do app ou criando o caminho antes do restore.",
+      "restoreBlockedSteam": "Steam desconectada",
+      "restoreBlockedSteamNotDetected": "Jogo não detectado",
+      "restoreBlockedPath": "Caminho ausente",
       "saveDialogTitle": "Salvar backup de conquistas",
       "openDialogTitle": "Selecionar backup de conquistas"
     },
