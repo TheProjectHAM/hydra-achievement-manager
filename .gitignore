@@ -45,3 +45,4 @@ installer/
 *.tmp
 .tmp/
 tmp/
+updates.json
