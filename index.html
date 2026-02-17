@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProjectHAM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Enable class-based dark mode in Tailwind
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+  <style>
+    :root {
+      /* Dark Theme (Default) */
+      --bg-color: #0a0a0b;
+      --bg-gradient: none;
+      --sidebar-bg: #0a0a0b;
+      --card-bg: #1a1a1b;
+      --text-main: #ffffff;
+      --text-muted: #9ca3af;
+      --border-color: rgba(255, 255, 255, 0.05);
+      --input-bg: rgba(255, 255, 255, 0.02);
+      --hover-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    :root.light {
+      --bg-color: #f0f2f5;
+      --sidebar-bg: #edf1f4;
+      --card-bg: #f7f9fa;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --input-bg: rgba(0, 0, 0, 0.04);
+      --hover-bg: rgba(0, 0, 0, 0.05);
+    }
+
+    :root.nord {
+      --bg-color: #2e3440;
+      --sidebar-bg: #2e3440;
+      --card-bg: #3b4252;
+      --text-main: #eceff4;
+      --text-muted: #d8dee9;
+      --border-color: rgba(0, 0, 0, 0.2);
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --hover-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    :root.gruvbox {
+      --bg-color: #282828;
+      --sidebar-bg: #282828;
+      --card-bg: #3c3836;
+      --text-main: #ebdbb2;
+      --text-muted: #a89984;
+      --border-color: rgba(0, 0, 0, 0.2);
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --hover-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    :root.tokyo-night {
+      --bg-color: #1a1b26;
+      --sidebar-bg: #1a1b26;
+      --card-bg: #24283b;
+      --text-main: #a9b1d6;
+      --text-muted: #787c99;
+      --border-color: rgba(0, 0, 0, 0.3);
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --hover-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    :root.everforest {
+      --bg-color: #2d353b;
+      --sidebar-bg: #2d353b;
+      --card-bg: #343f44;
+      --text-main: #d3c6aa;
+      --text-muted: #859289;
+      --border-color: rgba(0, 0, 0, 0.2);
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --hover-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    :root.dracula {
+      --bg-color: #282a36;
+      --sidebar-bg: #282a36;
+      --card-bg: #44475a;
+      --text-main: #f8f8f2;
+      --text-muted: #bd93f9;
+      --border-color: rgba(255, 255, 255, 0.12);
+      --input-bg: rgba(255, 255, 255, 0.06);
+      --hover-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    :root.retrowave {
+      --bg-color: #1e1033;
+      --bg-gradient: linear-gradient(155deg, #2b1450 0%, #1e1033 48%, #3d1d66 100%);
+      --sidebar-bg: #1a0d2d;
+      --card-bg: #31195a;
+      --text-main: #ffe7ff;
+      --text-muted: #c391e9;
+      --border-color: rgba(226, 136, 255, 0.28);
+      --input-bg: rgba(255, 255, 255, 0.08);
+      --hover-bg: rgba(226, 136, 255, 0.18);
+    }
+
+    :root.github-dark,
+    :root.catppuccin {
+      --bg-color: #0d1117;
+      --sidebar-bg: #0d1117;
+      --card-bg: #161b22;
+      --text-main: #c9d1d9;
+      --text-muted: #8b949e;
+      --border-color: rgba(240, 246, 252, 0.1);
+      --input-bg: rgba(240, 246, 252, 0.05);
+      --hover-bg: rgba(88, 166, 255, 0.12);
+    }
+
+    :root.solarized-dark {
+      --bg-color: #002b36;
+      --sidebar-bg: #002b36;
+      --card-bg: #073642;
+      --text-main: #eee8d5;
+      --text-muted: #93a1a1;
+      --border-color: rgba(238, 232, 213, 0.12);
+      --input-bg: rgba(238, 232, 213, 0.06);
+      --hover-bg: rgba(238, 232, 213, 0.1);
+    }
+
+    :root.one-dark {
+      --bg-color: #282c34;
+      --sidebar-bg: #282c34;
+      --card-bg: #353b45;
+      --text-main: #abb2bf;
+      --text-muted: #7f848e;
+      --border-color: rgba(255, 255, 255, 0.09);
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --hover-bg: rgba(255, 255, 255, 0.09);
+    }
+
+    body,
+    aside,
+    main,
+    header,
+    footer,
+    button,
+    input,
+    div,
+    span,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p {
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+    }
+
+    body.resizing {
+      cursor: col-resize !important;
+      user-select: none !important;
+    }
+
+    /* Custom Scrollbar */
+    html {
+      scrollbar-width: thin;
+      scrollbar-color: var(--card-bg) var(--bg-color);
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-color);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--card-bg);
+      border: 3px solid var(--bg-color);
+      border-radius: 20px;
+      transition: background 0.3s;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Shimmer animation for progress bar */
+    @keyframes shimmer {
+      from {
+        background-position: 200% 0;
+      }
+
+      to {
+        background-position: -200% 0;
+      }
+    }
+
+    .animate-shimmer {
+      animation: shimmer 6s linear infinite;
+    }
+
+    /* Animation for platinum card glow on hover */
+    @keyframes platinum-glow {
+
+      0%,
+      100% {
+        box-shadow: inset 0 0 0 1px rgba(169, 201, 255, 0.2), 0 0 12px rgba(169, 201, 255, 0.05);
+      }
+
+      50% {
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 40px rgba(169, 201, 255, 0.2);
+      }
+    }
+
+    /* New pseudo-element approach for smoother fade in/out */
+    .animate-platinum-glow-on-hover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 0.5rem;
+      /* Corresponds to rounded-lg */
+      animation: platinum-glow 2s ease-in-out infinite;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      pointer-events: none;
+    }
+
+    .group:hover .animate-platinum-glow-on-hover::before {
+      opacity: 1;
+    }
+
+    /* Simple fade-in animation */
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.5s ease-out forwards;
+    }
+
+    /* Material Icons style */
+    .material-symbols-outlined {
+      vertical-align: middle;
+    }
+
+    /* Custom class to hide scrollbar but keep scrolling */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      /* IE and Edge */
+      scrollbar-width: none;
+      /* Firefox */
+    }
+
+    /* Marquee scroll for overflowing text */
+    @keyframes marquee-scroll {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-100%);
+      }
+    }
+
+    .marquee-container {
+      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+      overflow: hidden;
+    }
+
+    .marquee-inner {
+      display: flex;
+    }
+
+    .group:hover .marquee-inner {
+      animation: marquee-scroll 8s linear infinite;
+    }
+
+    .marquee-content {
+      flex-shrink: 0;
+      padding-right: 2rem;
+      /* spacing */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: var(--card-bg);
+      border: 1px solid var(--bg-color);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Modal fade in with scale */
+    @keyframes modal-in {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .animate-modal-in {
+      animation: modal-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/"
+  }
+}
+</script>
+</head>
+
+<body class="bg-gray-50 dark:bg-[#0a0a0b]">
+  <div id="root"></div>
+  <script type="module" src="/src/index.tsx"></script>
+</body>
+
+</html>

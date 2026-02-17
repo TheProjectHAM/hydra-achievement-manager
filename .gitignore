@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+
+# Installer and packaging artifacts
+installer/
+*.deb
+*.rpm
+*.pkg.tar.zst
+*.exe
+
+# Runtime/cache temp
+*.log
+*.tmp
+.tmp/
+tmp/

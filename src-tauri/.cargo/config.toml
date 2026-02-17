@@ -1,0 +1,3 @@
+# Do not force static CRT on Windows MSVC when cross-compiling with cargo-xwin.
+# Let the target toolchain choose the default runtime to avoid unresolved
+# symbols (floor/ceil/strlen/_wcsicmp/etc.) at link time.

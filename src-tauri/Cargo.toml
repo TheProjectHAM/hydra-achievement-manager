@@ -1,0 +1,44 @@
+[package]
+name = "project-ham"
+version = "1.0.0"
+description = "Project HAM is an open-source tool developed to assist Hydra Launcher users in managing and tracking game achievements."
+authors = ["Esther"]
+license = "GPL-3.0"
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "project_ham_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-http = { version = "2", default-features = false, features = ["native-tls", "http2", "charset", "macos-system-configuration", "cookies"] }
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls", "gzip", "brotli"] }
+notify = "6.1"
+chrono = "0.4"
+image = "0.25"
+dirs = "5.0"
+anyhow = "1.0"
+thiserror = "2.0"
+rand = "0.8"
+urlencoding = "2.1"
+steamworks = "0.11"
+dotenv = "0.15.0"
+sysinfo = "0.33"
