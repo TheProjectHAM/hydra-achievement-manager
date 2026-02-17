@@ -97,6 +97,14 @@
     "lastModified": "Last modified: {date}",
     "newTotal": "New total: {count} achievements"
   },
+  "unlockToasts": {
+    "successTitle": "Unlock completed",
+    "successMessage": "{count} achievements unlocked successfully.",
+    "errorTitle": "Unlock failed",
+    "errorMessage": "Could not unlock achievements. Please try again.",
+    "steamErrorTitle": "Steam unlock failed",
+    "steamErrorMessage": "Steam integration failed while unlocking. Make sure Steam is running and logged in."
+  },
   "directorySelectionModal": {
     "title": "Select directory for {gameName}",
     "description": "This game was found in multiple directories. Choose which one to use for unlocking achievements.",

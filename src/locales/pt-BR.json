@@ -97,6 +97,14 @@
     "lastModified": "Última modificação: {date}",
     "newTotal": "Novo total: {count} conquistas"
   },
+  "unlockToasts": {
+    "successTitle": "Desbloqueio concluído",
+    "successMessage": "{count} conquistas desbloqueadas com sucesso.",
+    "errorTitle": "Falha no desbloqueio",
+    "errorMessage": "Não foi possível desbloquear as conquistas. Tente novamente.",
+    "steamErrorTitle": "Falha no desbloqueio via Steam",
+    "steamErrorMessage": "A integração da Steam falhou durante o desbloqueio. Verifique se a Steam está aberta e logada."
+  },
   "directorySelectionModal": {
     "title": "Selecionar Diretório para {gameName}",
     "description": "Este jogo foi encontrado em múltiplos diretórios. Escolha qual usar para desbloquear conquistas.",

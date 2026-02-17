@@ -140,7 +140,14 @@ const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <button
                   key={game.gameId}
-                  onClick={() => onGameSelect({ id: parseInt(game.gameId), name: game.name, achievementsTotal: game.achievementsTotalFromAPI ?? game.achievementsTotal })}
+                  onClick={() => {
+                    if (isActive) return;
+                    onGameSelect({
+                      id: parseInt(game.gameId),
+                      name: game.name,
+                      achievementsTotal: game.achievementsTotalFromAPI ?? game.achievementsTotal
+                    });
+                  }}
                   title={isCollapsed ? game.name : undefined}
                   className={`${gameItemClasses(isActive)} ${isCollapsed ? 'rounded-2xl overflow-hidden hover:shadow-lg hover:ring-1 hover:ring-[var(--border-color)] hover:bg-[var(--hover-bg)]' : ''}`}
                 >

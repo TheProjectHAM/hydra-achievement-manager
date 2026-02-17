@@ -77,6 +77,15 @@ const App: React.FC = () => {
     setToasts((prev) => [...prev, { ...toast, id }]);
   }, []);
 
+  const getErrorMessage = (error: unknown): string => {
+    if (typeof error === 'string') return error;
+    if (error && typeof error === 'object' && 'message' in error) {
+      const msg = (error as { message?: unknown }).message;
+      return typeof msg === 'string' ? msg : String(msg ?? '');
+    }
+    return String(error ?? '');
+  };
+
   const parseSemver = (version: string): [number, number, number] => {
     const [major = '0', minor = '0', patch = '0'] = version.split('.');
     return [Number(major) || 0, Number(minor) || 0, Number(patch) || 0];
@@ -501,6 +510,7 @@ const App: React.FC = () => {
             timestamp: hasEmptyTimestamp ? generateTimestamp() : status.timestamp,
           };
         });
+    const unlockedCount = achievements.filter((a) => a.completed).length;
 
     try {
       // Optimistic update: instantly update local state
@@ -521,6 +531,12 @@ const App: React.FC = () => {
       });
 
       console.log('Achievements unlocked successfully');
+      pushToast({
+        title: t('unlockToasts.successTitle'),
+        message: t('unlockToasts.successMessage', { count: unlockedCount }),
+        durationMs: 3000,
+        type: 'success',
+      });
 
       // Reload achievements data from the saved file
       try {
@@ -561,6 +577,18 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Error unlocking achievements:', error);
+      const errorMessage = getErrorMessage(error);
+      const looksLikeSteamError = isSteam || /steam/i.test(errorMessage);
+      pushToast({
+        title: looksLikeSteamError
+          ? t('unlockToasts.steamErrorTitle')
+          : t('unlockToasts.errorTitle'),
+        message: looksLikeSteamError
+          ? t('unlockToasts.steamErrorMessage')
+          : t('unlockToasts.errorMessage'),
+        durationMs: 5000,
+        type: 'info',
+      });
       // Revert optimistic update by refreshing from backend
       forceRefresh();
     }
