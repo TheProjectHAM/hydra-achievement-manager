@@ -184,6 +184,7 @@ run_windows() {
   local nsis_script
   local icon_path
   local installer_path
+  local installer_candidates
   local steam_dll_source
 
   echo "Starting Windows build process for Project HAM..."
@@ -236,30 +237,22 @@ run_windows() {
     exit 1
   fi
 
-  mkdir -p "$nsis_out_dir"
   app_version="$(get_app_version)"
-  installer_path="$nsis_out_dir/ProjectHAM_${app_version}_windows_x64_setup.exe"
+  installer_candidates=("$nsis_out_dir"/*.exe)
 
-  if command -v makensis >/dev/null 2>&1; then
-    echo "Generating NSIS installer..."
-    makensis \
-      -DAPP_NAME="Project HAM" \
-      -DAPP_EXE="project-ham.exe" \
-      -DAPP_VERSION="$app_version" \
-      -DSOURCE_DIR="$win_release_dir" \
-      -DOUT_FILE="$installer_path" \
-      -DICON_FILE="$icon_path" \
-      "$nsis_script"
-    echo "NSIS installer created: $installer_path"
+  if [ -e "${installer_candidates[0]:-}" ]; then
+    installer_path="${installer_candidates[0]}"
+    echo "Using Tauri NSIS installer: $installer_path"
   else
-    echo "'makensis' not installed; skipping installer generation."
+    installer_path=""
+    echo "NSIS installer not found in: $nsis_out_dir"
   fi
 
   mkdir -p "$ARTIFACTS_DIR"
   cp -f "$win_exe_path" "$ARTIFACTS_DIR/project-ham_windows_x64.exe"
   cp -f "$win_dll_path" "$ARTIFACTS_DIR/steam_api64.dll"
 
-  if [ -f "$installer_path" ]; then
+  if [ -n "$installer_path" ] && [ -f "$installer_path" ]; then
     cp -f "$installer_path" "$ARTIFACTS_DIR/ProjectHAM_${app_version}_windows_x64_setup.exe"
   fi
 
@@ -271,6 +264,7 @@ run_linux() {
   local bundle_dir
   local release_dir
   local arch_workdir
+  local arch_enabled
   local bin_name
   local icon_source
   local deb_file
@@ -281,13 +275,13 @@ run_linux() {
   echo "Starting Linux build process for Project HAM..."
 
   require_cmd npm
-  require_cmd makepkg
 
   app_version="$(get_app_version)"
   bundle_dir="$ROOT_DIR/src-tauri/target/release/bundle"
   release_dir="$ROOT_DIR/src-tauri/target/release"
   arch_workdir="$ROOT_DIR/installer/linux/arch"
   bin_name="project-ham"
+  arch_enabled=0
 
   sync_icons
 
@@ -307,22 +301,23 @@ run_linux() {
     echo "Warning: libsteam_api.so not found in known locations."
   fi
 
-  echo "Building Arch package with makepkg..."
-  rm -rf "$arch_workdir"
-  mkdir -p "$arch_workdir"
+  if command -v makepkg >/dev/null 2>&1; then
+    echo "Building Arch package with makepkg..."
+    rm -rf "$arch_workdir"
+    mkdir -p "$arch_workdir"
 
-  cp -f "$release_dir/$bin_name" "$arch_workdir/$bin_name"
-  if [ -f "$release_dir/libsteam_api.so" ]; then
-    cp -f "$release_dir/libsteam_api.so" "$arch_workdir/libsteam_api.so"
-  fi
+    cp -f "$release_dir/$bin_name" "$arch_workdir/$bin_name"
+    if [ -f "$release_dir/libsteam_api.so" ]; then
+      cp -f "$release_dir/libsteam_api.so" "$arch_workdir/libsteam_api.so"
+    fi
 
-  icon_source="$ROOT_DIR/assets/icon.png"
-  if [ ! -f "$icon_source" ]; then
-    icon_source="$ROOT_DIR/src-tauri/icons/128x128.png"
-  fi
-  cp -f "$icon_source" "$arch_workdir/project-ham.png"
+    icon_source="$ROOT_DIR/assets/icon.png"
+    if [ ! -f "$icon_source" ]; then
+      icon_source="$ROOT_DIR/src-tauri/icons/128x128.png"
+    fi
+    cp -f "$icon_source" "$arch_workdir/project-ham.png"
 
-  cat > "$arch_workdir/project-ham.desktop" <<'EOF'
+    cat > "$arch_workdir/project-ham.desktop" <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=Project HAM
@@ -333,7 +328,7 @@ Terminal=false
 Categories=Utility;
 EOF
 
-  cat > "$arch_workdir/PKGBUILD" <<EOF
+    cat > "$arch_workdir/PKGBUILD" <<EOF
 pkgname=project-ham-bin
 pkgver=$app_version
 pkgrel=1
@@ -357,20 +352,31 @@ package() {
 }
 EOF
 
-  if [ -f "$arch_workdir/libsteam_api.so" ]; then
-    sed -i "s/source=('project-ham' 'project-ham.desktop' 'project-ham.png')/source=('project-ham' 'libsteam_api.so' 'project-ham.desktop' 'project-ham.png')/" "$arch_workdir/PKGBUILD"
-    sed -i "s/sha256sums=('SKIP' 'SKIP' 'SKIP')/sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')/" "$arch_workdir/PKGBUILD"
-  fi
+    if [ -f "$arch_workdir/libsteam_api.so" ]; then
+      sed -i "s/source=('project-ham' 'project-ham.desktop' 'project-ham.png')/source=('project-ham' 'libsteam_api.so' 'project-ham.desktop' 'project-ham.png')/" "$arch_workdir/PKGBUILD"
+      sed -i "s/sha256sums=('SKIP' 'SKIP' 'SKIP')/sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')/" "$arch_workdir/PKGBUILD"
+    fi
 
-  (
-    cd "$arch_workdir"
-    makepkg -f
-  )
+    if (
+      cd "$arch_workdir"
+      makepkg -f
+    ); then
+      arch_enabled=1
+    else
+      echo "Warning: Arch package build failed; skipping .pkg.tar.zst."
+    fi
+  else
+    echo "Warning: makepkg not installed; skipping Arch package."
+  fi
 
   mkdir -p "$ARTIFACTS_DIR"
 
   deb_file="$(find "$bundle_dir/deb" -type f -name "*.deb" 2>/dev/null | sort | tail -n1 || true)"
-  arch_file="$(find "$arch_workdir" -maxdepth 1 -type f -name "*.pkg.tar.zst" 2>/dev/null | sort | tail -n1 || true)"
+  if [ "$arch_enabled" -eq 1 ]; then
+    arch_file="$(find "$arch_workdir" -maxdepth 1 -type f -name "*.pkg.tar.zst" 2>/dev/null | sort | tail -n1 || true)"
+  else
+    arch_file=""
+  fi
 
   cp -f "$release_dir/$bin_name" "$ARTIFACTS_DIR/project-ham_linux_x64"
 
@@ -394,7 +400,7 @@ EOF
   if [ -n "$arch_file" ] && [ -f "$arch_file" ]; then
     cp -f "$arch_file" "$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.pkg.tar.zst"
   else
-    echo "Warning: Arch package not found."
+    echo "Warning: Arch package not generated."
   fi
 
   echo "Linux artifacts copied to: $ARTIFACTS_DIR"

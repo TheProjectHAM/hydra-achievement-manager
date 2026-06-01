@@ -31,6 +31,9 @@
     "unselectAll": "Снять выделение",
     "noDescription": "Описание отсутствует"
   },
+  "gamesPage": {
+    "completed": "ЗАВЕРШЕНО"
+  },
   "searchPage": {
     "inputPlaceholder": "Поиск игр в Steam...",
     "searchButton": "Поиск",

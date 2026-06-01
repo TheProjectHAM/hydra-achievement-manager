@@ -39,6 +39,7 @@ const SettingsContent: React.FC = () => {
   const [selectedApi, setSelectedApi] = useState<ApiSource>('hydra');
   const [steamApiKey, setSteamApiKey] = useState<string>('');
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState<boolean>(false);
+  const [hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievements] = useState<boolean>(true);
 
   // State for tracking changes
   const [savedSettings, setSavedSettings] = useState({
@@ -53,6 +54,7 @@ const SettingsContent: React.FC = () => {
     selectedApi: 'hydra' as ApiSource,
     steamApiKey: '',
     steamIntegrationEnabled: false,
+    hideSteamGamesWithoutAchievements: true,
   });
   const [isDirty, setIsDirty] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -70,6 +72,7 @@ const SettingsContent: React.FC = () => {
             if (loadedSettings.steamIntegrationEnabled !== undefined) setSteamIntegrationEnabled(loadedSettings.steamIntegrationEnabled);
             if (loadedSettings.gamesViewMode) setSelectedGamesViewMode(loadedSettings.gamesViewMode);
             if (loadedSettings.hideHiddenAchievements !== undefined) setSelectedHideHiddenAchievements(loadedSettings.hideHiddenAchievements);
+            if (loadedSettings.hideSteamGamesWithoutAchievements !== undefined) setHideSteamGamesWithoutAchievements(loadedSettings.hideSteamGamesWithoutAchievements);
 
             // Update saved settings state
             setSavedSettings({
@@ -84,6 +87,7 @@ const SettingsContent: React.FC = () => {
               selectedApi: loadedSettings.selectedApi || 'hydra',
               steamApiKey: loadedSettings.steamApiKey || '',
               steamIntegrationEnabled: loadedSettings.steamIntegrationEnabled || false,
+              hideSteamGamesWithoutAchievements: loadedSettings.hideSteamGamesWithoutAchievements ?? true,
             });
           }
         }
@@ -127,6 +131,7 @@ const SettingsContent: React.FC = () => {
       selectedApi: selectedApi,
       steamApiKey: steamApiKey,
       steamIntegrationEnabled: steamIntegrationEnabled,
+      hideSteamGamesWithoutAchievements: hideSteamGamesWithoutAchievements,
     };
     if (JSON.stringify(currentSettings) !== JSON.stringify(savedSettings)) {
       setIsDirty(true);
@@ -134,7 +139,7 @@ const SettingsContent: React.FC = () => {
     } else {
       setIsDirty(false);
     }
-  }, [selectedLanguage, selectedTheme, selectedDateFormat, selectedTimeFormat, selectedSidebarGameScale, selectedSidebarMarquee, selectedHideHiddenAchievements, selectedGamesViewMode, selectedApi, steamApiKey, steamIntegrationEnabled, savedSettings]);
+  }, [selectedLanguage, selectedTheme, selectedDateFormat, selectedTimeFormat, selectedSidebarGameScale, selectedSidebarMarquee, selectedHideHiddenAchievements, selectedGamesViewMode, selectedApi, steamApiKey, steamIntegrationEnabled, hideSteamGamesWithoutAchievements, savedSettings]);
 
 
   const handleSaveChanges = async () => {
@@ -179,6 +184,7 @@ const SettingsContent: React.FC = () => {
         selectedApi: selectedApi,
         steamApiKey: steamApiKey,
         steamIntegrationEnabled: steamIntegrationEnabled,
+        hideSteamGamesWithoutAchievements: hideSteamGamesWithoutAchievements,
       });
       setIsSaved(true);
 
@@ -233,6 +239,8 @@ const SettingsContent: React.FC = () => {
           setSteamApiKey={setSteamApiKey}
           steamIntegrationEnabled={steamIntegrationEnabled}
           setSteamIntegrationEnabled={setSteamIntegrationEnabled}
+          hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}
+          setHideSteamGamesWithoutAchievements={setHideSteamGamesWithoutAchievements}
         />;
       case 'monitored':
         return <MonitoredSettings

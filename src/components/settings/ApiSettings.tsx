@@ -12,7 +12,9 @@ interface ApiSettingsProps {
   setSteamApiKey: (key: string) => void;
   steamIntegrationEnabled: boolean;
   setSteamIntegrationEnabled: (enabled: boolean) => void;
-  onNotifyToast: (toast: Omit<ToastItemData, "id">) => void;
+  hideSteamGamesWithoutAchievements: boolean;
+  setHideSteamGamesWithoutAchievements: (enabled: boolean) => void;
+  onNotifyToast?: (toast: Omit<ToastItemData, "id">) => void;
 }
 
 const ApiSettings: React.FC<ApiSettingsProps> = ({
@@ -22,7 +24,9 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
   setSteamApiKey,
   steamIntegrationEnabled,
   setSteamIntegrationEnabled,
-  onNotifyToast,
+  hideSteamGamesWithoutAchievements,
+  setHideSteamGamesWithoutAchievements,
+  onNotifyToast = () => {},
 }) => {
   const { t } = useI18n();
   const [showApiKey, setShowApiKey] = useState(false);
@@ -289,7 +293,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 color: "var(--text-main)",
               }}
             >
-              {showApiKey ? "Hide" : "Show"}
+              {showApiKey ? t("settings.api.hideApiKey") : t("settings.api.showApiKey")}
             </button>
           </div>
         </div>
@@ -343,6 +347,37 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                   steamIntegrationEnabled ? "left-[22px]" : "left-1"
                 }`}
               />
+            </button>
+          </div>
+        </div>
+
+        <div
+          className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
+            selectedApi !== "steam" ? "opacity-70" : "hover:shadow-lg"
+          }`}
+          style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}
+        >
+          <div className="flex items-center min-w-0 flex-1">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: "var(--text-main)" }}>
+                {t("settings.api.hideSteamGamesWithoutAchievements")}
+              </p>
+              <p className="text-[10px] font-medium opacity-50 truncate" style={{ color: "var(--text-main)" }}>
+                {t("settings.api.hideSteamGamesWithoutAchievementsDesc")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-60" style={{ color: "var(--text-main)" }}>
+              {hideSteamGamesWithoutAchievements ? t("settings.api.hidden") : t("settings.api.visible")}
+            </span>
+            <button
+              onClick={() => setHideSteamGamesWithoutAchievements(!hideSteamGamesWithoutAchievements)}
+              className={`w-9 h-5 rounded-full transition-all duration-300 relative ${hideSteamGamesWithoutAchievements ? "bg-emerald-500" : "bg-gray-500/30"}`}
+              title={hideSteamGamesWithoutAchievements ? t("settings.api.hideSteamGamesWithZeroAchievements") : t("settings.api.showSteamGamesWithZeroAchievements")}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${hideSteamGamesWithoutAchievements ? "left-[22px]" : "left-1"}`} />
             </button>
           </div>
         </div>

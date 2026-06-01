@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import { getMonitoredDirectories, getSteamLibraryInfo, getAchievementIniLastModified, getSteamGames } from '../tauri-api';
+import { getSteamLibraryInfo, getAchievementIniLastModified, getSteamGames, getGameWinePaths, getMonitoredDirectories } from '../tauri-api';
 import { SteamSearchResult } from '../types';
-import { CloseIcon, FolderIcon, CheckIcon, SteamBrandIcon } from './Icons';
+import { CloseIcon, FolderIcon, SteamBrandIcon } from './Icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatDateObj } from '../formatters';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
@@ -38,28 +38,76 @@ const PathItem: React.FC<{
     const hasExistingFile = existingAchievementCount !== null && !isSteam;
     const formatUsersForDisplay = (input: string) =>
         input.replace(/(^|[\\/])users(?=[\\/])/gi, '$1Users');
-    const getPathTitle = (input: string) => {
+    const getPathTitle = (input: string, fallback: string) => {
         const normalized = input.replace(/[\\]+/g, '/');
         const parts = normalized.split('/').filter(Boolean);
-        return parts[parts.length - 1] || input;
+        return parts[parts.length - 1] || fallback;
+    };
+    const getCrackerName = (input: string) => {
+        const normalized = input.replace(/[\\]+/g, '/').toLowerCase();
+        if (normalized.includes('/codex/')) return 'CODEX';
+        if (normalized.includes('/rune/')) return 'RUNE';
+        if (normalized.includes('/goldberg steamemu saves/') || normalized.includes('/gse saves/')) return 'Goldberg';
+        if (normalized.includes('/empress/')) return 'EMPRESS';
+        if (normalized.includes('/creamapi/')) return 'CreamAPI';
+        if (normalized.includes('/smartsteamemu/')) return 'SmartSteamEmu';
+        if (normalized.includes('/skidrow/')) return 'SKIDROW';
+        if (normalized.includes('/ali213/')) return 'ALi213';
+        return null;
     };
 
-    const displayPath = path.includes('.wine') && path.includes('drive_c')
-        ? (path.split('drive_c/')[1] || path)
+    const normalizedPath = path.replace(/[\\]+/g, '/');
+    const isWinePath = !isSteam && normalizedPath.includes('/drive_c/');
+    const isHydraLauncherPrefix = isWinePath && normalizedPath.includes('/.config/hydralauncher/wine-prefixes/');
+    const isDefaultWinePrefix = isWinePath && normalizedPath.includes('/.wine/drive_c/');
+    const prefixGameId = normalizedPath.match(/\/wine-prefixes\/([^/]+)\/drive_c\//)?.[1] ?? null;
+    const wineUser = normalizedPath.match(/\/drive_c\/users\/([^/]+)\//i)?.[1] ?? null;
+    const crackerName = getCrackerName(path);
+    const prefixLabel = isHydraLauncherPrefix
+        ? 'Hydra Launcher prefix'
+        : isDefaultWinePrefix
+            ? 'Wine default prefix'
+            : isWinePath
+                ? 'Wine/Proton prefix'
+                : 'Local folder';
+    const displayPath = isWinePath
+        ? (normalizedPath.split('/drive_c/')[1] || path)
         : path;
     const displayPathFormatted = formatUsersForDisplay(displayPath);
-    const displayTitle = getPathTitle(displayPathFormatted);
+    const displayTitle = isWinePath
+        ? [crackerName, getPathTitle(displayPathFormatted, prefixLabel)].filter(Boolean).join(' · ')
+        : getPathTitle(displayPathFormatted, path);
 
     const formattedLastModified = lastModified ? formatDateObj(lastModified, dateFormat, timeFormat) : '';
     const formattedSteamVdfLastModified = steamVdfLastModified ? formatDateObj(steamVdfLastModified, dateFormat, timeFormat) : '';
+    const lastModifiedText = isSteam
+        ? t('unlockModal.lastModified', { date: formattedSteamVdfLastModified || '--' })
+        : t('unlockModal.lastModified', { date: formattedLastModified || '--' });
+    const sourceBadgeText = isSteam
+        ? 'STEAM'
+        : isWinePath
+            ? (isHydraLauncherPrefix ? 'HYDRA PREFIX' : 'WINE PREFIX')
+            : 'LOCAL PATH';
+    const pathPreview = isSteam
+        ? (steamVdfPath || 'libraryfolders.vdf not found')
+        : displayPathFormatted;
+    const metadataItems = [
+        prefixGameId ? `AppID ${prefixGameId}` : null,
+        wineUser ? `User ${wineUser}` : null,
+    ].filter(Boolean);
+    const metadataText = metadataItems.join(' · ');
+    const statusText = hasExistingFile
+        ? `${existingAchievementCount} → ${newAchievementCount}`
+        : '';
+    const isFaded = !isSteam && !hasExistingFile && !isSelected;
 
     return (
         <div
-            className={`p-3 rounded-lg border transition-all cursor-pointer ${isSelected
-                ? 'shadow-xl'
+            className={`group rounded-lg border transition-all cursor-pointer overflow-hidden ${isFaded ? 'opacity-50' : ''} ${isSelected
+                ? 'shadow-md'
                 : 'hover:bg-[var(--hover-bg)]'}`}
             style={{
-                backgroundColor: isSelected ? 'var(--input-bg)' : 'transparent',
+                backgroundColor: isSelected ? 'var(--hover-bg)' : 'transparent',
                 borderColor: isSelected ? 'var(--text-main)' : 'var(--border-color)'
             }}
             onClick={onSelect}
@@ -68,66 +116,55 @@ const PathItem: React.FC<{
             tabIndex={0}
             onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onSelect()}
         >
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3 min-w-0 flex-grow">
-                    {isSteam ? (
-                        <SteamBrandIcon className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--text-main)' }} />
-                    ) : (
-                        <FolderIcon className="text-xl flex-shrink-0 text-[var(--text-muted)]" />
-                    )}
-                    <div className="min-w-0 flex-grow mt-0.5 space-y-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                            <p className="font-bold truncate text-sm tracking-wide min-w-0" style={{ color: 'var(--text-main)' }}>
-                                {isSteam ? 'Steam' : displayTitle}
-                            </p>
-                            {!isSteam && hasExistingFile && (
-                                <>
-                                    <span className="px-1.5 py-0.5 rounded-md font-semibold border whitespace-nowrap text-[10px]" style={{ color: 'var(--text-main)', borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
-                                        {t('unlockModal.existingAchievements', { count: existingAchievementCount })}
-                                    </span>
-                                    <span className="px-1.5 py-0.5 rounded-md font-semibold border whitespace-nowrap text-[10px]" style={{ color: 'var(--text-main)', borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
-                                        {t('unlockModal.newTotal', { count: newAchievementCount })}
-                                    </span>
-                                </>
-                            )}
-                        </div>
-                        <div className="flex items-center justify-between gap-2 min-w-0">
-                            <div className="min-w-0 flex-1 flex items-center gap-1.5">
-                                {!isSteam && path.includes('.wine') && path.includes('drive_c') && (
-                                    <span className="flex-shrink-0 bg-purple-500/20 text-purple-400 text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-widest border border-purple-500/30">
-                                        WINE
-                                    </span>
-                                )}
-                                {isSteam ? (
-                                    <p className="font-semibold text-xs opacity-85 min-w-0 flex-1 truncate" style={{ color: 'var(--text-main)' }}>
-                                        {steamVdfPath || 'libraryfolders.vdf not found'}
-                                    </p>
-                                ) : hasExistingFile ? (
-                                    <p className="font-semibold text-xs opacity-85 min-w-0 flex-1 truncate" style={{ color: 'var(--text-main)' }}>
-                                        {displayPathFormatted}
-                                    </p>
-                                ) : (
-                                    <p className="font-semibold text-xs opacity-85 min-w-0 flex-1 truncate" style={{ color: 'var(--text-main)' }}>
-                                        {displayPathFormatted}
-                                    </p>
-                                )}
-                            </div>
-                            <p className="text-[9px] opacity-65 whitespace-nowrap text-right font-semibold" style={{ color: 'var(--text-muted)' }}>
-                                {isSteam
-                                    ? t('unlockModal.lastModified', { date: formattedSteamVdfLastModified || '--' })
-                                    : t('unlockModal.lastModified', { date: formattedLastModified || '--' })}
-                            </p>
-                        </div>
+            <div className="p-3 flex gap-2">
+                        <span className="flex-shrink-0 w-10 flex items-center justify-center leading-none" style={{ color: 'var(--text-main)' }}>
+                            {isSteam ? <SteamBrandIcon className="w-6 h-6" /> : <FolderIcon className="text-3xl leading-none" />}
+                        </span>
+                    <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span
+                            className="flex-shrink-0 rounded-md border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.14em]"
+                            style={{
+                                color: isHydraLauncherPrefix && !isFaded ? 'rgb(192 132 252)' : 'var(--text-muted)',
+                                borderColor: isHydraLauncherPrefix && !isFaded ? 'rgba(168, 85, 247, 0.35)' : 'var(--border-color)',
+                                backgroundColor: isHydraLauncherPrefix && !isFaded ? 'rgba(168, 85, 247, 0.10)' : 'transparent'
+                            }}
+                        >
+                            {sourceBadgeText}
+                        </span>
+                        <p className="font-bold text-sm truncate min-w-0" style={{ color: 'var(--text-main)' }}>
+                            {isSteam ? 'Steam Library' : displayTitle}
+                        </p>
+                        {statusText && (
+                            <span className="text-[10px] font-semibold whitespace-nowrap opacity-70 ml-auto" style={{ color: 'var(--text-main)' }}>
+                                {statusText}
+                            </span>
+                        )}
+                    </div>
+
+                    <p
+                        className="text-[11px] font-medium truncate opacity-60"
+                        style={{ color: 'var(--text-main)' }}
+                        title={pathPreview}
+                    >
+                        {pathPreview}
+                    </p>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-medium opacity-50 whitespace-nowrap" style={{ color: 'var(--text-main)' }}>
+                            {lastModifiedText}
+                        </span>
+                        {metadataText && (
+                            <>
+                                <span className="text-[10px] opacity-30">·</span>
+                                <span className="text-[10px] font-medium opacity-50 truncate" style={{ color: 'var(--text-main)' }}>
+                                    {metadataText}
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
-                <div className="relative">
-                    {(isSteam || hasExistingFile) && (
-                        <div className="w-5 h-5 flex-shrink-0 bg-emerald-500/10 text-emerald-500 rounded-md flex items-center justify-center mt-1" title={t('unlockModal.overwriteWarning')}>
-                            <CheckIcon className="text-sm" />
-                        </div>
-                    )}
                 </div>
-            </div>
         </div>
     );
 };
@@ -137,21 +174,43 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
     const { t } = useI18n();
     const { games: monitoredGames } = useMonitoredAchievements();
     const [selectedPath, setSelectedPath] = useState('');
-    const [settingsPaths, setSettingsPaths] = useState<string[]>([]);
+    const [gameWinePaths, setGameWinePaths] = useState<string[]>([]);
+    const [globalPaths, setGlobalPaths] = useState<string[]>([]);
+    const [activePathTab, setActivePathTab] = useState<'global' | 'hydra'>('hydra');
     const [steamVdfPath, setSteamVdfPath] = useState<string | null>(null);
     const [steamVdfLastModified, setSteamVdfLastModified] = useState<Date | null>(null);
     const [iniLastModifiedByPath, setIniLastModifiedByPath] = useState<Record<string, Date | null>>({});
     const [hasSteamPathForCurrentGame, setHasSteamPathForCurrentGame] = useState(false);
+    const isLinux = (window as any).electronAPI?.platform === 'linux';
 
     useEffect(() => {
         if (isOpen) {
             setSelectedPath('');
             setIniLastModifiedByPath({});
             setHasSteamPathForCurrentGame(false);
-            getMonitoredDirectories().then((dirs: any[]) => {
-                const paths = dirs.filter((d: any) => d.enabled).map((d: any) => d.path);
-                setSettingsPaths(paths);
-            });
+            setGameWinePaths([]);
+            setGlobalPaths([]);
+            setActivePathTab('hydra');
+            const gameId = game?.id?.toString();
+            if (isLinux) {
+                getMonitoredDirectories()
+                    .then((dirs: any[]) => {
+                        const paths = dirs
+                            .filter((d: any) => d.enabled && !d.path.includes('wine-prefixes/'))
+                            .map((d: any) => d.path);
+                        setGlobalPaths(Array.from(new Set(paths)));
+                    })
+                    .catch(() => setGlobalPaths([]));
+            }
+            // Busca paths Wine específicos do jogo (Linux)
+            if (isLinux && gameId) {
+                getGameWinePaths(gameId)
+                    .then((dirs: any[]) => {
+                        const paths = dirs.filter((d: any) => d.enabled).map((d: any) => d.path);
+                        setGameWinePaths(paths);
+                    })
+                    .catch(() => setGameWinePaths([]));
+            }
             getSteamGames()
                 .then((steamGames: any[]) => {
                     const gameId = game?.id?.toString();
@@ -179,10 +238,12 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
     useEffect(() => {
         if (!isOpen || !game) return;
 
+        const localPaths = isLinux
+            ? [...gameWinePaths, ...globalPaths]
+            : monitoredGames.filter(g => g.gameId === game.id.toString()).map(g => g.directory);
         const allPaths = Array.from(new Set([
             ...(hasSteamPathForCurrentGame ? ['steam://'] : []),
-            ...monitoredGames.filter(g => g.gameId === game.id.toString()).map(g => g.directory),
-            ...settingsPaths
+            ...localPaths
         ]));
 
         const iniPaths = allPaths.filter((p) => !p.startsWith('steam://'));
@@ -208,7 +269,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
         return () => {
             cancelled = true;
         };
-    }, [isOpen, game, settingsPaths, monitoredGames, hasSteamPathForCurrentGame]);
+    }, [isOpen, game, monitoredGames, hasSteamPathForCurrentGame, gameWinePaths, globalPaths, isLinux]);
 
     const getExistingFileInfo = (path: string) => {
         const gameInPath = monitoredGames.find(g => g.gameId === game.id.toString() && g.directory === path);
@@ -229,10 +290,16 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
     if (!isOpen) return null;
 
-    const availablePaths = Array.from(new Set([
+    const hydraPaths = gameWinePaths;
+    const globalTabPaths = Array.from(new Set([
         ...(hasSteamPathForCurrentGame ? ['steam://'] : []),
-        ...monitoredGames.filter(g => g.gameId === game.id.toString()).map(g => g.directory),
-        ...settingsPaths
+        ...globalPaths
+    ]));
+    const localPaths = isLinux
+        ? (activePathTab === 'hydra' ? hydraPaths : globalTabPaths)
+        : monitoredGames.filter(g => g.gameId === game.id.toString()).map(g => g.directory);
+    const availablePaths = Array.from(new Set([
+        ...localPaths
     ]));
 
     const showSteamCustomTimestampWarning =
@@ -273,6 +340,25 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
                 <div className="px-6 flex-grow overflow-y-auto custom-scrollbar">
                     <div className="py-5 space-y-3">
+                        {isLinux && (
+                            <div className="grid grid-cols-2 gap-2 rounded-lg border p-1" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                                <button
+                                    onClick={() => setActivePathTab('hydra')}
+                                    className={`h-9 rounded-md text-[10px] font-black uppercase tracking-[0.16em] transition-all ${activePathTab === 'hydra' ? 'shadow-sm' : 'opacity-55 hover:opacity-100'}`}
+                                    style={{ backgroundColor: activePathTab === 'hydra' ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-main)' }}
+                                >
+                                    Hydra Launcher · {hydraPaths.length}
+                                </button>
+                                <button
+                                    onClick={() => setActivePathTab('global')}
+                                    className={`h-9 rounded-md text-[10px] font-black uppercase tracking-[0.16em] transition-all ${activePathTab === 'global' ? 'shadow-sm' : 'opacity-55 hover:opacity-100'}`}
+                                    style={{ backgroundColor: activePathTab === 'global' ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-main)' }}
+                                >
+                                    Global · {globalTabPaths.length}
+                                </button>
+                            </div>
+                        )}
+
                         {availablePaths.map(path => {
                             const existingInfo = getExistingFileInfo(path);
                             return (
@@ -291,10 +377,10 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
                         })}
 
                         {availablePaths.length === 0 && (
-                            <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center" style={{ borderColor: 'var(--border-color)' }}>
-                                <FolderIcon className="text-4xl opacity-10" />
-                                <p className="text-xs font-bold opacity-30 uppercase tracking-widest">
-                                    {t('unlockModal.noPathsFound') || 'No monitored paths found for this game. Please add folders in Settings.'}
+                            <div className="p-10 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 text-center" style={{ borderColor: 'var(--border-color)' }}>
+                                <FolderIcon className="text-3xl opacity-15" />
+                                <p className="text-xs font-bold opacity-40 uppercase tracking-widest leading-relaxed" style={{ color: 'var(--text-main)' }}>
+                                    {t('unlockModal.noPathsFound')}
                                 </p>
                             </div>
                         )}

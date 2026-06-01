@@ -1,20 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '../../contexts/I18nContext';
 import { FolderIcon, CloseIcon, SteamBrandIcon } from '../Icons';
 import { ApiSource } from '../../types';
+import { getGameNames } from '../../tauri-api';
 
 interface DirectoryConfig {
     path: string;
     name: string;
     enabled: boolean;
     is_default: boolean;
+    detectionPreset?: DetectionPreset;
 }
+
+type DetectionPreset = 'auto' | 'codex_ini' | 'goldberg_json' | 'empress_json' | 'online_fix' | 'skidrow' | 'cream_api' | 'smart_steam_emu' | 'razor1911';
+
+const createDetectionPresets = (t: (key: string) => string): Array<{ value: DetectionPreset; label: string; description: string }> => [
+    { value: 'auto', label: t('settings.monitored.presets.auto.label'), description: t('settings.monitored.presets.auto.description') },
+    { value: 'codex_ini', label: t('settings.monitored.presets.codex_ini.label'), description: t('settings.monitored.presets.codex_ini.description') },
+    { value: 'goldberg_json', label: t('settings.monitored.presets.goldberg_json.label'), description: t('settings.monitored.presets.goldberg_json.description') },
+    { value: 'empress_json', label: t('settings.monitored.presets.empress_json.label'), description: t('settings.monitored.presets.empress_json.description') },
+    { value: 'online_fix', label: t('settings.monitored.presets.online_fix.label'), description: t('settings.monitored.presets.online_fix.description') },
+    { value: 'skidrow', label: t('settings.monitored.presets.skidrow.label'), description: t('settings.monitored.presets.skidrow.description') },
+    { value: 'cream_api', label: t('settings.monitored.presets.cream_api.label'), description: t('settings.monitored.presets.cream_api.description') },
+    { value: 'smart_steam_emu', label: t('settings.monitored.presets.smart_steam_emu.label'), description: t('settings.monitored.presets.smart_steam_emu.description') },
+    { value: 'razor1911', label: t('settings.monitored.presets.razor1911.label'), description: t('settings.monitored.presets.razor1911.description') },
+];
 
 interface MonitoredSettingsProps {
     selectedApi: ApiSource;
     steamIntegrationEnabled: boolean;
     setSteamIntegrationEnabled: (enabled: boolean) => void;
+}
+
+interface DirectoryGroup {
+    key: string;
+    title: string;
+    subtitle: string;
+    directories: DirectoryConfig[];
+    gameId?: string;
+    imageUrl?: string;
+    custom: boolean;
 }
 
 const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
@@ -23,9 +49,13 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     setSteamIntegrationEnabled
 }) => {
     const { t } = useI18n();
+    const DETECTION_PRESETS = useMemo(() => createDetectionPresets(t), [t]);
     const formatUsersForDisplay = (input: string) =>
         input.replace(/(^|[\\/])users(?=[\\/])/gi, '$1Users');
     const [directories, setDirectories] = useState<DirectoryConfig[]>([]);
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [activePathTab, setActivePathTab] = useState<'global' | 'hydra'>('global');
+    const [gameNames, setGameNames] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [cacheSize, setCacheSize] = useState<string>('Loading...');
     const [clearingCache, setClearingCache] = useState(false);
@@ -33,8 +63,84 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     const [steamGamesFound, setSteamGamesFound] = useState<number>(0);
     const [isSteamMissing, setIsSteamMissing] = useState(false);
     const isLinux = (window as any).electronAPI?.platform === 'linux';
-    const [winePrefixPath, setWinePrefixPath] = useState<string>('~/.wine');
+    const [winePrefixPath, setWinePrefixPath] = useState<string>('~/.config/hydralauncher/wine-prefix');
     const [isSavingWinePrefix, setIsSavingWinePrefix] = useState(false);
+    const [pendingCustomPath, setPendingCustomPath] = useState<string | null>(null);
+    const [pendingDetectionPreset, setPendingDetectionPreset] = useState<DetectionPreset>('auto');
+    const [isPresetDropdownOpen, setIsPresetDropdownOpen] = useState(false);
+    const steamCdnUrl = import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.cloudflare.steamstatic.com/steam/apps';
+
+    const getPresetLabel = (preset?: DetectionPreset) =>
+        DETECTION_PRESETS.find(item => item.value === (preset || 'auto'))?.label || t('settings.monitored.presets.auto.label');
+
+    const getGamePrefixId = (path: string) => {
+        const normalized = path.replace(/\\/g, '/');
+        return normalized.match(/wine-prefixes\/([^/]+)/)?.[1] ?? null;
+    };
+
+    const getRelativeWinePath = (path: string) => {
+        const normalized = path.replace(/\\/g, '/');
+        return normalized.includes('/drive_c/') ? normalized.split('/drive_c/')[1] : normalized;
+    };
+
+    const directoryGroups = useMemo<DirectoryGroup[]>(() => {
+        const groups = new Map<string, DirectoryGroup>();
+
+        for (const dir of directories) {
+            const gameId = getGamePrefixId(dir.path);
+            const key = gameId
+                ? `game:${gameId}`
+                : dir.is_default
+                    ? 'global:wine'
+                    : 'custom';
+
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    title: gameId ? (gameNames[gameId] || gameId) : dir.is_default ? 'Global Wine Paths' : 'Custom Paths',
+                    subtitle: gameId
+                        ? `Steam AppID ${gameId}`
+                        : dir.is_default
+                            ? 'Shared/legacy Wine prefix'
+                            : 'User-added monitored directories',
+                    directories: [],
+                    gameId: gameId || undefined,
+                    imageUrl: gameId ? `${steamCdnUrl}/${gameId}/capsule_184x69.jpg` : undefined,
+                    custom: !dir.is_default,
+                });
+            }
+
+            groups.get(key)!.directories.push(dir);
+        }
+
+        return Array.from(groups.values()).sort((a, b) => {
+            if (a.gameId && !b.gameId) return -1;
+            if (!a.gameId && b.gameId) return 1;
+            return a.title.localeCompare(b.title);
+        });
+    }, [directories, gameNames, steamCdnUrl]);
+
+    useEffect(() => {
+        const gameIds = Array.from(new Set(directories.map(d => getGamePrefixId(d.path)).filter(Boolean))) as string[];
+        const missing = gameIds.filter(id => !gameNames[id]);
+        if (missing.length === 0) return;
+
+        getGameNames(missing)
+            .then(names => setGameNames(prev => ({ ...prev, ...names })))
+            .catch(error => console.error('Error loading monitored game names:', error));
+    }, [directories, gameNames]);
+
+    const toggleGroup = (key: string) => {
+        setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const globalGroups = directoryGroups.filter(group => !group.gameId);
+    const hydraGroups = directoryGroups.filter(group => group.gameId);
+    const visibleGroups = isLinux
+        ? (activePathTab === 'global' ? globalGroups : hydraGroups)
+        : directoryGroups;
+    const globalPathCount = globalGroups.reduce((total, group) => total + group.directories.length, 0);
+    const hydraPathCount = hydraGroups.reduce((total, group) => total + group.directories.length, 0);
 
     useEffect(() => {
         const loadCacheSize = async () => {
@@ -138,9 +244,23 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
         try {
             const selectedPath = await (window as any).electronAPI.pickFolder();
             if (selectedPath) {
-                const updatedDirs = await (window as any).electronAPI.addMonitoredDirectory(selectedPath);
-                setDirectories(updatedDirs);
+                setPendingCustomPath(selectedPath);
+                setPendingDetectionPreset('auto');
             }
+        } catch (error) {
+            console.error('Error adding directory:', error);
+        }
+    };
+
+    const handleConfirmCustomDirectory = async () => {
+        if (!(window as any).electronAPI || !pendingCustomPath) return;
+
+        try {
+            const updatedDirs = await (window as any).electronAPI.addMonitoredDirectory(pendingCustomPath, pendingDetectionPreset);
+            setDirectories(updatedDirs);
++            setIsPresetDropdownOpen(false);
+             setPendingCustomPath(null);
+             setPendingDetectionPreset('auto');
         } catch (error) {
             console.error('Error adding directory:', error);
         }
@@ -196,13 +316,13 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 <div className="flex items-center gap-6">
                     <div className="space-y-1">
                         <h4 className="text-sm font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-main)' }}>
-                            App Cache
+                            {t('settings.monitored.appCacheTitle')}
                         </h4>
                         <p className="text-xs font-medium leading-relaxed max-w-md opacity-60" style={{ color: 'var(--text-main)' }}>
-                            Stores game names and total achievements to improve offline experience.
+                            {t('settings.monitored.appCacheDescription')}
                         </p>
                         <p className="text-[10px] font-bold mt-1 uppercase tracking-wide opacity-80" style={{ color: 'var(--text-main)' }}>
-                            Current Size: {cacheSize}
+                            {t('settings.monitored.currentSize')}: {cacheSize}
                         </p>
                     </div>
                 </div>
@@ -219,7 +339,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                         color: 'var(--text-main)'
                     }}
                 >
-                    {clearingCache ? 'Clearing...' : 'Clear Cache'}
+                    {clearingCache ? t('settings.monitored.clearingCache') : t('settings.monitored.clearCache')}
                 </button>
             </div>
 
@@ -259,43 +379,64 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
             )}
 
             <div className="space-y-3">
-                <div
-                    key={steamDirectory.path}
-                    className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${!steamDirectory.enabled ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
-                    style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
-                >
-                    <div className="flex items-center gap-4 min-w-0 flex-1">
-                        <div className="w-10 h-10 rounded-lg bg-[var(--hover-bg)] flex items-center justify-center flex-shrink-0">
-                            <SteamBrandIcon className="w-5 h-5 opacity-80" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                                <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>Steam</p>
-                                <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>DEFAULT</span>
-                            </div>
-                            <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{formatUsersForDisplay(steamDirectory.path)}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <p className="text-[10px] font-black uppercase tracking-wider opacity-60" style={{ color: 'var(--text-main)' }}>
-                            {steamGamesFound} games
-                        </p>
+                {isLinux && (
+                    <div className="grid grid-cols-2 gap-2 rounded-xl border p-1" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
                         <button
-                            onClick={() => setSteamIntegrationEnabled(!steamIntegrationEnabled)}
-                            disabled={selectedApi !== 'steam' || isSteamMissing}
-                            className={`w-9 h-5 rounded-full transition-all duration-300 relative ${
-                                (selectedApi !== 'steam' || isSteamMissing)
-                                    ? 'bg-gray-500/30 opacity-50 cursor-not-allowed'
-                                    : steamIntegrationEnabled
-                                        ? 'bg-emerald-500'
-                                        : 'bg-gray-500/30'
-                            }`}
-                            title={steamIntegrationEnabled ? "Disable Steam integration" : "Enable Steam integration"}
+                            onClick={() => setActivePathTab('global')}
+                            className={`h-10 rounded-lg text-[10px] font-black uppercase tracking-[0.16em] transition-all ${activePathTab === 'global' ? 'shadow-sm' : 'opacity-55 hover:opacity-100'}`}
+                            style={{ backgroundColor: activePathTab === 'global' ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-main)' }}
                         >
-                            <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${steamIntegrationEnabled ? 'left-[22px]' : 'left-1'}`} />
+                            {t('settings.monitored.globalTab')} · {globalPathCount}
+                        </button>
+                        <button
+                            onClick={() => setActivePathTab('hydra')}
+                            className={`h-10 rounded-lg text-[10px] font-black uppercase tracking-[0.16em] transition-all ${activePathTab === 'hydra' ? 'shadow-sm' : 'opacity-55 hover:opacity-100'}`}
+                            style={{ backgroundColor: activePathTab === 'hydra' ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-main)' }}
+                        >
+                            {t('settings.monitored.hydraLauncherTab')} · {hydraGroups.length}
                         </button>
                     </div>
-                </div>
+                )}
+
+                {(!isLinux || activePathTab === 'global') && (
+                    <div
+                        key={steamDirectory.path}
+                        className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${!steamDirectory.enabled ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
+                        style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
+                    >
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <div className="w-10 h-10 rounded-lg bg-[var(--hover-bg)] flex items-center justify-center flex-shrink-0">
+                                <SteamBrandIcon className="w-5 h-5 opacity-80" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                    <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{t('settings.monitored.steamLabel')}</p>
+                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>{t('settings.monitored.defaultBadge')}</span>
+                                </div>
+                                <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{formatUsersForDisplay(steamDirectory.path)}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <p className="text-[10px] font-black uppercase tracking-wider opacity-60" style={{ color: 'var(--text-main)' }}>
+                                 {steamGamesFound} {t('settings.monitored.gamesLabel')}
+                            </p>
+                            <button
+                                onClick={() => setSteamIntegrationEnabled(!steamIntegrationEnabled)}
+                                disabled={selectedApi !== 'steam' || isSteamMissing}
+                                className={`w-9 h-5 rounded-full transition-all duration-300 relative ${
+                                    (selectedApi !== 'steam' || isSteamMissing)
+                                        ? 'bg-gray-500/30 opacity-50 cursor-not-allowed'
+                                        : steamIntegrationEnabled
+                                            ? 'bg-emerald-500'
+                                            : 'bg-gray-500/30'
+                                }`}
+                                title={steamIntegrationEnabled ? t('settings.api.steamIntegrationDisable') : t('settings.api.steamIntegrationEnable')}
+                            >
+                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${steamIntegrationEnabled ? 'left-[22px]' : 'left-1'}`} />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {isLoading ? (
                     <div className="h-20 flex items-center justify-center opacity-20">
@@ -306,59 +447,208 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                         <FolderIcon className="text-4xl opacity-10" />
                         <p className="text-xs font-bold opacity-30 uppercase tracking-widest">{t('settings.monitored.noDirectories')}</p>
                     </div>
+                ) : visibleGroups.length === 0 ? (
+                    <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center" style={{ borderColor: 'var(--border-color)' }}>
+                        <FolderIcon className="text-4xl opacity-10" />
+                        <p className="text-xs font-bold opacity-30 uppercase tracking-widest">
+                            {isLinux && activePathTab === 'hydra' ? t('settings.monitored.noHydraPrefixes') : t('settings.monitored.noDirectories')}
+                        </p>
+                    </div>
                 ) : (
-                    directories.map((dir) => (
-                        <div
-                            key={dir.path}
-                            className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${!dir.enabled ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
-                            style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
-                        >
-                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                                <div className="w-10 h-10 rounded-lg bg-[var(--hover-bg)] flex items-center justify-center flex-shrink-0">
-                                    <FolderIcon className="text-xl opacity-60" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{dir.name}</p>
-                                        {dir.is_default && (
-                                            <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>DEFAULT</span>
-                                        )}
-                                    </div>
-                                    <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{formatUsersForDisplay(dir.path)}</p>
-                                </div>
-                            </div>
+                    visibleGroups.map((group) => {
+                        const enabledCount = group.directories.filter(d => d.enabled).length;
+                        const isExpanded = expandedGroups[group.key] ?? group.directories.length <= 4;
 
-                            <div className="flex items-center gap-3">
+                        return (
+                            <div
+                                key={group.key}
+                                className="rounded-xl border overflow-hidden transition-all duration-300"
+                                style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
+                            >
                                 <button
-                                    onClick={() => handleToggleDirectory(dir.path)}
-                                    className={`w-9 h-5 rounded-full transition-all duration-300 relative ${dir.enabled ? 'bg-emerald-500' : 'bg-gray-500/30'}`}
-                                    title={dir.enabled ? "Disable monitoring" : "Enable monitoring"}
+                                    onClick={() => toggleGroup(group.key)}
+                                    className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-[var(--hover-bg)] transition-colors"
                                 >
-                                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${dir.enabled ? 'left-[22px]' : 'left-1'}`} />
+                                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                                        {group.imageUrl ? (
+                                            <div className="w-20 h-11 rounded-md overflow-hidden bg-[var(--hover-bg)] border flex-shrink-0" style={{ borderColor: 'var(--border-color)' }}>
+                                                <img
+                                                    src={group.imageUrl}
+                                                    alt=""
+                                                    className="w-full h-full object-cover"
+                                                    onError={(event) => {
+                                                        event.currentTarget.style.display = 'none';
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-lg bg-[var(--hover-bg)] flex items-center justify-center flex-shrink-0">
+                                                <FolderIcon className="text-xl opacity-60" />
+                                            </div>
+                                        )}
+
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{group.title}</p>
+                                                {group.gameId && (
+                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>{t('settings.monitored.gameBadge')}</span>
+                                                )}
+                                                {!group.custom && (
+                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>{t('settings.monitored.defaultBadge')}</span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] font-medium opacity-50 truncate" style={{ color: 'var(--text-main)' }}>{group.subtitle}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                        <span className="text-[9px] font-black uppercase tracking-wider opacity-60" style={{ color: 'var(--text-main)' }}>
+                                            {enabledCount}/{group.directories.length} {t('settings.monitored.pathsLabel')}
+                                        </span>
+                                        <span className={`text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }}>▼</span>
+                                    </div>
                                 </button>
 
-                                {!dir.is_default && (
-                                    <button
-                                        onClick={() => handleRemoveDirectory(dir.path)}
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
-                                        title="Remove directory"
-                                    >
-                                        <CloseIcon className="text-lg" />
-                                    </button>
+                                {isExpanded && (
+                                    <div className="border-t divide-y" style={{ borderColor: 'var(--border-color)' }}>
+                                        {group.directories.map((dir) => (
+                                            <div
+                                                key={dir.path}
+                                                className={`group flex items-center justify-between p-3 pl-5 gap-4 transition-all ${!dir.enabled ? 'opacity-50 grayscale' : ''}`}
+                                                style={{ borderColor: 'var(--border-color)' }}
+                                            >
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <FolderIcon className="text-sm opacity-50 flex-shrink-0" />
+                                                        <p className="text-[10px] font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{dir.name.replace(/^Wine \([^)]*\) \/ /, '')}</p>
+                                                        {!dir.is_default && (dir.detectionPreset || 'auto') !== 'auto' && (
+                                                            <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter flex-shrink-0" style={neutralBadgeStyle}>{getPresetLabel(dir.detectionPreset)}</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[9px] font-medium opacity-40 truncate mt-1" style={{ color: 'var(--text-main)' }}>
+                                                        {formatUsersForDisplay(getRelativeWinePath(dir.path))}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex items-center gap-3 flex-shrink-0">
+                                                    <button
+                                                        onClick={() => handleToggleDirectory(dir.path)}
+                                                        className={`w-9 h-5 rounded-full transition-all duration-300 relative ${dir.enabled ? 'bg-emerald-500' : 'bg-gray-500/30'}`}
+                                                        title={dir.enabled ? t('settings.monitored.disableMonitoring') : t('settings.monitored.enableMonitoring')}
+                                                    >
+                                                        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${dir.enabled ? 'left-[22px]' : 'left-1'}`} />
+                                                    </button>
+
+                                                    {!dir.is_default && (
+                                                        <button
+                                                            onClick={() => handleRemoveDirectory(dir.path)}
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                                            title={t('settings.monitored.removeDirectory')}
+                                                        >
+                                                            <CloseIcon className="text-lg" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
 
-                <button
-                    onClick={handleAddDirectory}
-                    className="w-full h-14 border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:bg-[var(--hover-bg)] active:scale-[0.98]"
-                    style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
-                >
-                    <span className="text-2xl opacity-60">+</span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('settings.monitored.addDirectory')}</span>
-                </button>
+                {(!isLinux || activePathTab === 'global') && (
+                    pendingCustomPath ? (
+                        <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--text-main)' }}>{t('settings.monitored.customDetectionPreset')}</p>
+                                <p className="text-[10px] font-semibold opacity-50 truncate" style={{ color: 'var(--text-main)' }} title={pendingCustomPath}>{formatUsersForDisplay(pendingCustomPath)}</p>
+                            </div>
+
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPresetDropdownOpen(!isPresetDropdownOpen)}
+                                    className="w-full h-11 border rounded-md px-3 flex items-center justify-between transition-all duration-300"
+                                    style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
+                                >
+                                    <span className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                                        {DETECTION_PRESETS.find(p => p.value === pendingDetectionPreset)?.label}
+                                    </span>
+                                    <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-300 ${isPresetDropdownOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                {isPresetDropdownOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-30" onClick={() => setIsPresetDropdownOpen(false)} />
+                                        <ul className="absolute z-40 mt-1 w-full border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                                            {DETECTION_PRESETS.map((preset) => (
+                                                <li key={preset.value}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setPendingDetectionPreset(preset.value);
+                                                            setIsPresetDropdownOpen(false);
+                                                        }}
+                                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors ${pendingDetectionPreset === preset.value
+                                                            ? 'bg-[var(--border-color)] text-[var(--text-main)] shadow-sm'
+                                                            : 'text-[var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-main)]'
+                                                            }`}
+                                                    >
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-xs font-bold truncate">{preset.label}</p>
+                                                            <p className="text-[10px] opacity-60 truncate">{preset.description}</p>
+                                                        </div>
+                                                        {pendingDetectionPreset === preset.value && (
+                                                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-2" style={{ backgroundColor: 'var(--text-main)' }} />
+                                                        )}
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                )}
+                            </div>
+
+                                <p className="text-[10px] font-medium opacity-55 leading-relaxed" style={{ color: 'var(--text-main)' }}>
+                                 {t('settings.monitored.customDetectionPresetDesc')}
+                                </p>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => {
+                                        setIsPresetDropdownOpen(false);
+                                          setPendingCustomPath(null);
+                                          setPendingDetectionPreset('auto');
+                                      }}
+                                    className="h-10 rounded-md border text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[var(--hover-bg)]"
+                                    style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                                >
+                                    {t('common.cancel')}
+                                </button>
+                                <button
+                                    onClick={handleConfirmCustomDirectory}
+                                    className="h-10 rounded-md text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                    style={{ backgroundColor: 'var(--text-main)', color: 'var(--bg-color)' }}
+                                >
+                                    {t('settings.monitored.addPreset')}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleAddDirectory}
+                            className="w-full h-14 border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:bg-[var(--hover-bg)] active:scale-[0.98]"
+                            style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
+                        >
+                            <span className="text-2xl opacity-60">+</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('settings.monitored.addDirectory')}</span>
+                        </button>
+                    )
+                )}
             </div>
         </div >
     );

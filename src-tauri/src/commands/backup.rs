@@ -408,7 +408,7 @@ fn read_existing_achievements(directory: &str, game_id: &str) -> Result<Vec<Achi
     };
 
     if let Some(path) = target {
-        AchievementParser::parse_achievement_file(path).map_err(|e| e.to_string())
+        AchievementParser::parse_achievement_file_auto(path).map_err(|e| e.to_string())
     } else {
         Ok(Vec::new())
     }
@@ -508,16 +508,10 @@ fn restore_entry(item: &BackupGameEntry, state: &State<'_, crate::AppState>) -> 
     let use_json = should_write_json(&expanded_base, &ini_path, &json_path, &item.file_format);
 
     if use_json {
-        if ini_path.exists() {
-            let _ = AchievementWriter::delete_old_file(&ini_path);
-        }
-        AchievementWriter::write_gse_achievement_file(&json_path, &item.achievements)
+        AchievementWriter::write_goldberg_json(&json_path, &item.achievements)
             .map_err(|e| e.to_string())?;
     } else {
-        if json_path.exists() {
-            let _ = AchievementWriter::delete_old_file(&json_path);
-        }
-        AchievementWriter::write_achievement_file(&ini_path, &item.achievements)
+        AchievementWriter::write_default_ini(&ini_path, &item.achievements)
             .map_err(|e| e.to_string())?;
     }
 

@@ -1,7 +1,7 @@
 use super::language::{map_ui_language_to_hydra_lang, map_ui_language_to_steam_store_lang};
 use super::settings::{load_settings, save_settings};
 use crate::api::{HydraAPI, SteamAPI};
-use crate::models::UnlockOptions;
+use crate::models::{DirectoryConfig, DirectoryDetectionPreset, UnlockOptions};
 use crate::parser::AchievementParser;
 use crate::unlocker::AchievementUnlocker;
 use crate::utils::{AchievementExporter, CacheManager};
@@ -241,21 +241,24 @@ pub async fn get_game_achievements(
 
 /// Recarrega achievements de um arquivo
 #[tauri::command]
-pub async fn reload_achievements(game_id: String, base_path: String, app_handle: AppHandle) -> Result<Value, String> {
+pub async fn reload_achievements(
+    game_id: String,
+    base_path: String,
+    state: tauri::State<'_, crate::AppState>,
+    app_handle: AppHandle,
+) -> Result<Value, String> {
     let expanded_base_path = crate::parser::expand_path(&base_path);
-    let game_dir = expanded_base_path.join(&game_id);
-    let ini_path = game_dir.join("achievements.ini");
-    let json_path = game_dir.join("achievements.json");
-
-    let file_path = if ini_path.exists() {
-        ini_path
-    } else if json_path.exists() {
-        json_path
+    let preset = directory_preset_for_path(&state, &base_path).unwrap_or_default();
+    let file_path = if preset == DirectoryDetectionPreset::Auto {
+        let game_dir = expanded_base_path.join(&game_id);
+        AchievementParser::find_achievement_file_in_game_dir(&game_dir, &game_id)
+            .map(|(path, _)| path)
+            .unwrap_or_else(|| game_dir.join("achievements.ini"))
     } else {
-        ini_path
+        AchievementParser::achievement_file_for_config(&expanded_base_path, &game_id, preset).0
     };
 
-    let achievements = AchievementParser::parse_achievement_file(&file_path).map_err(|e| e.to_string())?;
+    let achievements = AchievementParser::parse_achievement_file_auto(&file_path).map_err(|e| e.to_string())?;
 
     let _ = CacheManager::update_game(&app_handle, game_id.clone(), None, Some(achievements.len()), None, None);
 
@@ -320,9 +323,80 @@ pub async fn unlock_achievements(
         return Err("Steam integration not available or Steam not running".into());
     }
 
-    AchievementUnlocker::unlock_achievements(&options).map_err(|e| e.to_string())?;
+    let preset = directory_preset_for_path(&state, &options.selected_path).unwrap_or_default();
+    AchievementUnlocker::unlock_achievements_with_preset(&options, preset).map_err(|e| e.to_string())?;
+
+    if let Err(e) = refresh_monitor_after_local_unlock(&state, app_handle.clone()).await {
+        log::warn!("Failed to refresh monitor after local unlock: {}", e);
+    }
 
     app_handle.emit("achievements-updated", ()).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+fn directory_preset_for_path(
+    state: &tauri::State<'_, crate::AppState>,
+    path: &str,
+) -> Option<DirectoryDetectionPreset> {
+    let monitor_lock = state.monitor.lock().ok()?;
+    let monitor = monitor_lock.as_ref()?;
+    monitor
+        .get_directories()
+        .into_iter()
+        .find(|dir| dir.path == path)
+        .map(|dir| dir.detection_preset)
+}
+
+async fn refresh_monitor_after_local_unlock(
+    state: &tauri::State<'_, crate::AppState>,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    if !cfg!(target_os = "linux") {
+        return Ok(());
+    }
+
+    let settings = load_settings(app_handle.clone())
+        .await
+        .unwrap_or_else(|_| serde_json::json!({}));
+    let saved_wine_prefix = settings
+        .get("winePrefixPath")
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
+
+    let current_games = {
+        let mut monitor_lock = state.monitor.lock().map_err(|e| e.to_string())?;
+        let monitor = monitor_lock
+            .as_mut()
+            .ok_or_else(|| "Monitor not initialized".to_string())?;
+
+        let current = monitor.get_directories();
+        let custom_dirs: Vec<DirectoryConfig> = current.iter().filter(|d| !d.is_default).cloned().collect();
+        let default_enabled: std::collections::HashMap<String, bool> = current
+            .iter()
+            .filter(|d| d.is_default)
+            .map(|d| (d.name.clone(), d.enabled))
+            .collect();
+
+        let mut next = super::directories::build_default_directory_configs(saved_wine_prefix.as_deref());
+        for dir in &mut next {
+            if let Some(enabled) = default_enabled.get(&dir.name) {
+                dir.enabled = *enabled;
+            }
+        }
+
+        next.extend(custom_dirs);
+        next.sort_by(|a, b| a.path.cmp(&b.path));
+        next.dedup_by(|a, b| a.path == b.path);
+
+        monitor.set_directories(next.clone());
+        monitor.restart_monitoring().map_err(|e| e.to_string())?;
+        monitor.get_current_achievements()
+    };
+
+    app_handle
+        .emit("achievements-update", current_games)
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }

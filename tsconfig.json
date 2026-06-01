@@ -26,5 +26,8 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "src-tauri/target"
+  ]
 }

@@ -1,5 +1,85 @@
 use serde::{Deserialize, Serialize};
 
+/// Todos os crackers/emuladores suportados conforme documentação oficial do Hydra
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Cracker {
+    Codex,
+    Rune,
+    OnlineFix,
+    Goldberg,
+    Rld,
+    Empress,
+    Skidrow,
+    CreamApi,
+    SmartSteamEmu,
+    Rle,
+    Razor1911,
+    UserStats,
+    ThreeDm,
+    Flt,
+    SteamCache,
+}
+
+impl Cracker {
+    /// Retorna todos os crackers suportados
+    pub fn all() -> &'static [Cracker] {
+        &[
+            Cracker::Codex,
+            Cracker::Rune,
+            Cracker::OnlineFix,
+            Cracker::Goldberg,
+            Cracker::Rld,
+            Cracker::Empress,
+            Cracker::Skidrow,
+            Cracker::CreamApi,
+            Cracker::SmartSteamEmu,
+            Cracker::Rle,
+            Cracker::Razor1911,
+            Cracker::SteamCache,
+        ]
+    }
+
+    /// Nome legível do cracker
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Cracker::Codex => "CODEX",
+            Cracker::Rune => "RUNE",
+            Cracker::OnlineFix => "OnlineFix",
+            Cracker::Goldberg => "Goldberg",
+            Cracker::Rld => "RLD!",
+            Cracker::Empress => "EMPRESS",
+            Cracker::Skidrow => "SKIDROW",
+            Cracker::CreamApi => "CreamAPI",
+            Cracker::SmartSteamEmu => "SmartSteamEmu",
+            Cracker::Rle => "RLE",
+            Cracker::Razor1911 => "Razor1911",
+            Cracker::UserStats => "user_stats",
+            Cracker::ThreeDm => "3DM",
+            Cracker::Flt => "FLT",
+            Cracker::SteamCache => "Steam",
+        }
+    }
+}
+
+/// Representa um arquivo de conquista encontrado no disco
+#[derive(Debug, Clone)]
+pub struct AchievementFile {
+    pub cracker: Cracker,
+    pub file_path: String,
+}
+
+/// Informações sobre o Wine prefix para um jogo
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WinePrefixInfo {
+    /// Path explícito do prefix (configurado pelo usuário)
+    pub explicit_path: Option<String>,
+    /// Object ID do jogo (usado para resolver o prefix padrão)
+    pub object_id: Option<String>,
+    /// Path do diretório de dados do Hydra (userData)
+    pub user_data_path: String,
+}
+
 /// Representa uma entrada de achievement individual
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AchievementEntry {
@@ -20,6 +100,21 @@ pub struct GameAchievements {
     pub directory: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum DirectoryDetectionPreset {
+    #[default]
+    Auto,
+    CodexIni,
+    GoldbergJson,
+    EmpressJson,
+    OnlineFix,
+    Skidrow,
+    CreamApi,
+    SmartSteamEmu,
+    Razor1911,
+}
+
 /// Configuração de diretório para monitoramento
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirectoryConfig {
@@ -27,6 +122,8 @@ pub struct DirectoryConfig {
     pub name: String,
     pub enabled: bool,
     pub is_default: bool,
+    #[serde(default, rename = "detectionPreset")]
+    pub detection_preset: DirectoryDetectionPreset,
 }
 
 /// Achievement da API Hydra
@@ -58,7 +155,6 @@ pub struct SteamAchievement {
     pub name: Option<String>,
     pub description: Option<String>,
     pub icon: Option<String>,
-
     pub icongray: Option<String>,
     #[serde(default)]
     pub percent: f64,
@@ -134,4 +230,11 @@ pub struct ExportProgress {
     pub total: usize,
     pub name: String,
     pub icon: String,
+}
+
+/// Informações de detecção de Proton
+#[derive(Debug, Clone)]
+pub struct ProtonInfo {
+    pub path: String,
+    pub version_name: String,
 }

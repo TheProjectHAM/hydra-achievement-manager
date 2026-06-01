@@ -35,6 +35,8 @@ interface ThemeContextType {
   setGamesViewMode: (mode: GamesViewMode) => void;
   hideHiddenAchievements: boolean;
   setHideHiddenAchievements: (enabled: boolean) => void;
+  hideSteamGamesWithoutAchievements: boolean;
+  setHideSteamGamesWithoutAchievements: (enabled: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -48,6 +50,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [timeFormat, setTimeFormatState] = useState<TimeFormat>('24h');
   const [gamesViewMode, setGamesViewModeState] = useState<GamesViewMode>('grid');
   const [hideHiddenAchievements, setHideHiddenAchievementsState] = useState<boolean>(true);
+  const [hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievementsState] = useState<boolean>(true);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -63,6 +66,9 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (settings.gamesViewMode) setGamesViewModeState(settings.gamesViewMode);
           if (settings.hideHiddenAchievements !== undefined) {
             setHideHiddenAchievementsState(settings.hideHiddenAchievements);
+          }
+          if (settings.hideSteamGamesWithoutAchievements !== undefined) {
+            setHideSteamGamesWithoutAchievementsState(settings.hideSteamGamesWithoutAchievements);
           }
         } else {
           const savedTheme = localStorage.getItem('app_theme') as Theme | null;
@@ -107,6 +113,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       timeFormat,
       gamesViewMode,
       hideHiddenAchievements,
+      hideSteamGamesWithoutAchievements,
       ...updates
     };
 
@@ -163,6 +170,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     saveSettings({ hideHiddenAchievements: enabled } as any);
   };
 
+  const setHideSteamGamesWithoutAchievements = (enabled: boolean) => {
+    setHideSteamGamesWithoutAchievementsState(enabled);
+    saveSettings({ hideSteamGamesWithoutAchievements: enabled } as any);
+  };
+
   return (
     <ThemeContext.Provider value={{
       theme, setTheme,
@@ -172,7 +184,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       dateFormat, setDateFormat,
       timeFormat, setTimeFormat,
       gamesViewMode, setGamesViewMode,
-      hideHiddenAchievements, setHideHiddenAchievements
+      hideHiddenAchievements, setHideHiddenAchievements,
+      hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievements
     }}>
       {children}
     </ThemeContext.Provider>

@@ -46,3 +46,6 @@ installer/
 .tmp/
 tmp/
 updates.json
+
+# Zip archives (build artifacts / backups)
+*.zip

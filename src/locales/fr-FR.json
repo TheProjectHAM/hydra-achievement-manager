@@ -31,6 +31,9 @@
     "unselectAll": "Désélectionner Tout",
     "noDescription": "Aucune description disponible"
   },
+  "gamesPage": {
+    "completed": "TERMINÉ"
+  },
   "searchPage": {
     "inputPlaceholder": "Rechercher des jeux sur Steam...",
     "searchButton": "Rechercher",

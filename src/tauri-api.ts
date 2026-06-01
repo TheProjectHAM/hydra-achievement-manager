@@ -358,8 +358,8 @@ export const getMonitoredDirectories = () =>
 export const getAchievementIniLastModified = (gameId: string, path: string) =>
   invoke<number | null>("get_achievement_ini_last_modified", { gameId, path });
 
-export const addMonitoredDirectory = (path: string) =>
-  invoke<any[]>("add_monitored_directory", { path });
+export const addMonitoredDirectory = (path: string, detectionPreset: string = "auto") =>
+  invoke<any[]>("add_monitored_directory", { path, detectionPreset });
 
 export const removeMonitoredDirectory = (path: string) =>
   invoke<any[]>("remove_monitored_directory", { path });
@@ -368,6 +368,8 @@ export const toggleMonitoredDirectory = (path: string) =>
   invoke<any[]>("toggle_monitored_directory", { path });
 export const setWinePrefixPath = (path: string) =>
   invoke<any[]>("set_wine_prefix_path", { path });
+export const getGameWinePaths = (gameId: string) =>
+  invoke<any[]>("get_game_wine_paths", { gameId });
 
 export const pickFolder = () => invoke<string | null>("pick_folder");
 export const pickSteamVdfFile = () =>
@@ -468,6 +470,7 @@ export const electronAPI = {
   removeMonitoredDirectory,
   toggleMonitoredDirectory,
   setWinePrefixPath,
+  getGameWinePaths,
   pickFolder,
   pickSteamVdfFile,
   pickSteamDllFile,
@@ -488,7 +491,9 @@ export const electronAPI = {
   onSteamGamesUpdate,
   onAchievementsUpdated,
   platform:
-    typeof window !== "undefined" && navigator.userAgent.includes("Windows")
+    typeof window !== "undefined" &&
+    (/Windows|Win32|Win64|WOW64/.test(navigator.userAgent) ||
+      navigator.platform.startsWith("Win"))
       ? "win32"
       : "linux",
   getCacheSize: () => invoke<string>("get_cache_size"),

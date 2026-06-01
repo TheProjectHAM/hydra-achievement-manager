@@ -30,6 +30,9 @@
     "selectAll": "すべて選択",
     "unselectAll": "選択解除"
   },
+  "gamesPage": {
+    "completed": "完了"
+  },
   "searchPage": {
     "inputPlaceholder": "Steamでゲームを検索...",
     "searchButton": "検索",

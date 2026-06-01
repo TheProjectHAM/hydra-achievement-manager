@@ -8,6 +8,7 @@ pub mod steam_integration;
 pub mod steam_monitor;
 pub mod unlocker;
 pub mod utils;
+pub mod wine;
 
 use monitor::AchievementMonitor;
 use std::sync::Mutex;
@@ -120,6 +121,10 @@ pub fn run() {
                     height: 768.0,
                 }));
                 let _ = window.center();
+
+                // Abre devtools automaticamente em modo de desenvolvimento
+                #[cfg(debug_assertions)]
+                window.open_devtools();
             }
 
             use crate::models::DirectoryConfig;
@@ -214,6 +219,7 @@ pub fn run() {
             commands::monitoring::remove_monitored_directory,
             commands::monitoring::toggle_monitored_directory,
             commands::monitoring::set_wine_prefix_path,
+            commands::monitoring::get_game_wine_paths,
             commands::ui::pick_folder,
             commands::steam::pick_steam_vdf_file,
             commands::steam::pick_steam_dll_file,

@@ -107,7 +107,7 @@ const MonitoredGameCard: React.FC<{
         <div className="absolute top-3 right-3 z-10 transition-all duration-500 animate-fade-in">
           <span className="bg-gradient-to-r from-[#a9c9ff] via-[#c7dfff] to-[#a9c9ff] text-black px-2 py-0.5 rounded-[2px] text-[8px] font-black shadow-[0_0_10px_rgba(169,201,255,0.2)] flex items-center gap-1 animate-shimmer bg-[length:200%_100%]">
             <PlatinumIcon className="text-[10px]" />
-            COMPLETED
+            {t('gamesPage.completed')}
           </span>
         </div>
       )}

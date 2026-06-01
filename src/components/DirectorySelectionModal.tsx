@@ -35,9 +35,9 @@ const DirectoryItem: React.FC<{
 
   return (
     <div
-      className={`p-3 rounded-lg border transition-all cursor-pointer ${isSelected ? 'shadow-lg' : 'hover:bg-[var(--hover-bg)]'}`}
+      className={`group rounded-lg border transition-all cursor-pointer overflow-hidden ${isSelected ? 'shadow-md' : 'hover:bg-[var(--hover-bg)]'}`}
       style={{
-        backgroundColor: isSelected ? 'var(--input-bg)' : 'transparent',
+        backgroundColor: isSelected ? 'var(--hover-bg)' : 'transparent',
         borderColor: isSelected ? 'var(--text-main)' : 'var(--border-color)'
       }}
       onClick={onSelect}
@@ -46,25 +46,35 @@ const DirectoryItem: React.FC<{
       tabIndex={0}
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onSelect()}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        {isSteam ? (
-          <SteamBrandIcon className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--text-main)' }} />
-        ) : (
-          <FolderIcon className="text-xl flex-shrink-0 text-[var(--text-muted)]" />
-        )}
-        <div className="flex-grow min-w-0">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold truncate" style={{ color: 'var(--text-main)' }}>{isSteam ? dir.name : displayTitle}</p>
-            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-              <span>{dir.achievementCount} {t('common.achievements').toLowerCase()}</span>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <p className="text-xs truncate opacity-60" style={{ color: 'var(--text-main)' }}>{displayPath}</p>
-            <p className="text-xs opacity-60 ml-2" style={{ color: 'var(--text-main)' }}>
-              {formattedDate}
+      <div className="p-3 flex gap-2">
+        <span className="flex-shrink-0 w-10 flex items-center justify-center leading-none" style={{ color: 'var(--text-main)' }}>
+          {isSteam ? <SteamBrandIcon className="w-6 h-6" /> : <FolderIcon className="text-3xl leading-none" />}
+        </span>
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="flex-shrink-0 rounded-md border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.14em]"
+              style={{
+                color: 'var(--text-muted)',
+                borderColor: 'var(--border-color)'
+              }}
+            >
+              {isSteam ? 'STEAM' : 'LOCAL'}
+            </span>
+            <p className="font-bold text-sm truncate min-w-0" style={{ color: 'var(--text-main)' }}>
+              {isSteam ? dir.name : displayTitle}
             </p>
+            <span className="text-[10px] font-semibold opacity-70 ml-auto flex-shrink-0 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+              {dir.achievementCount} {t('common.achievements').toLowerCase()}
+            </span>
           </div>
+          <p
+            className="text-[11px] font-medium truncate opacity-60"
+            style={{ color: 'var(--text-main)' }}
+            title={displayPath}
+          >
+            {displayPath}
+          </p>
         </div>
       </div>
     </div>

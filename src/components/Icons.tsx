@@ -23,6 +23,7 @@ export const MaximizeIcon: React.FC<IconProps> = (props) => <MaterialIcon {...pr
 export const RestoreIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="fullscreen_exit" />;
 export const TrophyIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="emoji_events" />;
 export const CheckIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="check" />;
+export const WarningIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="warning" />;
 export const LockIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="lock_open" />;
 export const ExportIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="upload" />;
 export const ApiIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="code" />;

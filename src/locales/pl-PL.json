@@ -30,6 +30,9 @@
     "selectAll": "Zaznacz wszystko",
     "unselectAll": "Odznacz wszystko"
   },
+  "gamesPage": {
+    "completed": "UKOŃCZONE"
+  },
   "searchPage": {
     "inputPlaceholder": "Szukaj gier na Steam...",
     "searchButton": "Szukaj",

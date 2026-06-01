@@ -36,6 +36,9 @@
     "noDescription": "Sem descrição disponível",
     "hiddenAchievement": "Conquista Oculta"
   },
+  "gamesPage": {
+    "completed": "PLATINADO"
+  },
   "searchPage": {
     "inputPlaceholder": "Pesquise por jogos na Steam...",
     "searchButton": "Pesquisar",
@@ -95,7 +98,8 @@
     "unlockHere": "Desbloquear Aqui",
     "existingAchievements": "{count} conquistas existentes",
     "lastModified": "Última modificação: {date}",
-    "newTotal": "Novo total: {count} conquistas"
+    "newTotal": "Novo total: {count} conquistas",
+    "noPathsFound": "Nenhum caminho monitorado encontrado para este jogo. Configure diretórios em Configurações → Caminhos."
   },
   "unlockToasts": {
     "successTitle": "Desbloqueio concluído",
@@ -142,6 +146,16 @@
       "steamNotRunningToastMessage": "Abra o cliente Steam e confirme que você está logado. Depois volte em Configurações > API e tente ativar a Integração Steam novamente.",
       "retryConnectionButton": "Tentar conexão novamente",
       "steamIntegrationFailureReason": "Motivo:",
+      "hideSteamGamesWithoutAchievements": "Ocultar jogos Steam com 0 conquistas",
+      "hideSteamGamesWithoutAchievementsDesc": "Mostra entradas da Steam na página de Jogos mesmo quando a Steam não reporta conquistas.",
+      "hideSteamGamesWithZeroAchievements": "Ocultar jogos Steam sem conquistas",
+      "showSteamGamesWithZeroAchievements": "Mostrar jogos Steam sem conquistas",
+      "hideApiKey": "Ocultar",
+      "showApiKey": "Mostrar",
+      "hidden": "Oculto",
+      "visible": "Visível",
+      "steamIntegrationEnable": "Ativar integração Steam",
+      "steamIntegrationDisable": "Desativar integração Steam",
       "steamLibraryPath": "Caminho da Biblioteca",
       "steamLibraryPathFound": "Biblioteca detectada em:",
       "steamDllPath": "Caminho do runtime da Steam",
@@ -182,6 +196,63 @@
       "title": "Diretórios Monitorados",
       "description": "O aplicativo escaneia estas pastas em busca de conquistas. Adicione sua biblioteca Steam ou pastas compatdata aqui.",
       "addDirectory": "Adicionar novo diretório",
+      "customDetectionPreset": "Preset de detecção personalizado",
+      "addPreset": "Adicionar preset",
+      "presets": {
+        "auto": {
+          "label": "Detectar automaticamente",
+          "description": "Arquivos de conquista conhecidos dentro da pasta do AppID"
+        },
+        "codex_ini": {
+          "label": "CODEX/RUNE INI",
+          "description": "<AppID>/achievements.ini"
+        },
+        "goldberg_json": {
+          "label": "Goldberg JSON",
+          "description": "<AppID>/achievements.json"
+        },
+        "empress_json": {
+          "label": "EMPRESS JSON",
+          "description": "<AppID>/remote/<AppID>/achievements.json"
+        },
+        "online_fix": {
+          "label": "OnlineFix",
+          "description": "<AppID>/Stats/Achievements.ini"
+        },
+        "skidrow": {
+          "label": "SKIDROW",
+          "description": "<AppID>/SteamEmu/UserStats/achiev.ini"
+        },
+        "cream_api": {
+          "label": "CreamAPI",
+          "description": "<AppID>/stats/CreamAPI.Achievements.cfg"
+        },
+        "smart_steam_emu": {
+          "label": "SmartSteamEmu",
+          "description": "<AppID>/User/Achievements.ini"
+        },
+        "razor1911": {
+          "label": "Razor1911",
+          "description": "<AppID>/achievement"
+        }
+      },
+      "customDetectionPresetDesc": "A pasta selecionada é tratada como um diretório base. Cada jogo deve estar dentro de uma subpasta de AppID, e o preset controla o caminho do arquivo de conquista dentro dessa subpasta.",
+      "appCacheTitle": "Cache do App",
+      "appCacheDescription": "Armazena nomes de jogos e total de conquistas para melhorar o uso offline.",
+      "currentSize": "Tamanho Atual",
+      "clearingCache": "Limpando...",
+      "clearCache": "Limpar Cache",
+      "globalTab": "Global",
+      "hydraLauncherTab": "Hydra Launcher",
+      "steamLabel": "Steam",
+      "defaultBadge": "PADRÃO",
+      "gameBadge": "JOGO",
+      "gamesLabel": "jogos",
+      "pathsLabel": "caminhos",
+      "noHydraPrefixes": "Nenhum prefixo de jogo do Hydra Launcher encontrado",
+      "disableMonitoring": "Desativar monitoramento",
+      "enableMonitoring": "Ativar monitoramento",
+      "removeDirectory": "Remover diretório",
       "noDirectories": "Nenhum diretório está sendo monitorado no momento.",
       "winePrefixTitle": "Prefixo Wine/Proton (Linux)",
       "winePrefixDescription": "Defina a raiz do prefixo Wine/Proton (sem /drive_c). O app usa esse caminho para resolver os diretórios padrão de conquistas.",

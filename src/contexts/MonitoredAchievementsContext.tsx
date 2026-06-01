@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { GameAchievements } from '../types';
+import { useTheme } from './ThemeContext';
 import {
   onAchievementsUpdate,
   requestAchievements,
@@ -63,6 +64,7 @@ const MonitoredAchievementsContext = createContext<MonitoredAchievementsContextT
 export const useMonitoredAchievements = () => useContext(MonitoredAchievementsContext);
 
 export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { hideSteamGamesWithoutAchievements } = useTheme();
   const [allGames, setAllGames] = useState<GameAchievements[]>([]);
   const [games, setGames] = useState<GameAchievements[]>([]);
   const [gameNames, setGameNames] = useState<Record<string, string>>({});
@@ -485,17 +487,19 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
 
     const combined = [...mergedHydra, ...uniqueSteam];
 
-    // Hide games with no unlockable achievements.
+    // Hide games with no unlockable achievements when the preference is enabled.
     return combined.filter((g: any) => {
       const source = g.source;
       const steamTotal = Number(g.achievementsTotal || 0);
       const localTotal = Array.isArray(g.achievements) ? g.achievements.length : 0;
+      const hasAchievements = Math.max(steamTotal, localTotal) > 0;
 
+      if (!hideSteamGamesWithoutAchievements) return true;
       if (source === 'steam') return steamTotal > 0;
-      if (source === 'both') return Math.max(steamTotal, localTotal) > 0;
+      if (source === 'both') return hasAchievements;
       return localTotal > 0;
     });
-  }, [games, steamGames, steamGameAchievements, isSteamLoaded]);
+  }, [games, steamGames, steamGameAchievements, isSteamLoaded, hideSteamGamesWithoutAchievements]);
 
   const recentGames = useMemo(() => {
     const sorted = [...mergedGames].sort((a: any, b: any) => {

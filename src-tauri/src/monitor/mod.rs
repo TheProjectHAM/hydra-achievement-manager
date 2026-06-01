@@ -2,15 +2,37 @@ use crate::models::{DirectoryConfig, GameAchievements};
 use crate::parser::AchievementParser;
 use anyhow::Result;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use tauri::Emitter;
 
+/// Todos os nomes de arquivo de conquista que devem ser monitorados.
+///
+/// Conforme documentação do Hydra, inclui:
+/// - `achievements.ini` / `Achievements.ini` (CODEX, RUNE, RLE, SmartSteamEmu, RLD!, OnlineFix)
+/// - `achievements.json` (Goldberg, EMPRESS)
+/// - `achiev.ini` (SKIDROW)
+/// - `achievement` (Razor1911)
+/// - `user_stats.ini` (user_stats)
+/// - `CreamAPI.Achievements.cfg` (CreamAPI)
+const ACHIEVEMENT_FILE_PATTERNS: &[&str] = &[
+    "achievements.ini",
+    "Achievements.ini",
+    "achievements.json",
+    "achiev.ini",
+    "achievement",
+    "user_stats.ini",
+    "CreamAPI.Achievements.cfg",
+];
+
 pub struct AchievementMonitor {
     directories: Vec<DirectoryConfig>,
     watcher: Option<RecommendedWatcher>,
     app_handle: Option<tauri::AppHandle>,
+    /// Cache de mtime por arquivo para detectar mudanças.
+    file_mtimes: HashMap<String, u64>,
 }
 
 impl AchievementMonitor {
@@ -20,6 +42,7 @@ impl AchievementMonitor {
             directories: configs,
             watcher: None,
             app_handle: None,
+            file_mtimes: HashMap::new(),
         }
     }
 
@@ -69,14 +92,10 @@ impl AchievementMonitor {
                 let mut pending_update = false;
 
                 loop {
-                    // Tenta receber eventos com timeout para implementar debounce
                     match rx.recv_timeout(std::time::Duration::from_millis(100)) {
                         Ok(Ok(event)) => {
                             if event.paths.iter().any(|p| {
-                                matches!(
-                                    p.file_name().and_then(|n| n.to_str()),
-                                    Some("achievements.ini") | Some("achievements.json")
-                                )
+                                Self::is_achievement_file(p)
                             }) {
                                 last_event_time = std::time::Instant::now();
                                 pending_update = true;
@@ -84,19 +103,18 @@ impl AchievementMonitor {
                         }
                         Ok(Err(e)) => log::error!("System Watcher error: {:?}", e),
                         Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                            // Se passou o tempo de debounce e temos um update pendente
                             if pending_update && last_event_time.elapsed() >= debounce_duration {
                                 log::info!(
                                     "Debounce period finished. Refreshing achievement data..."
                                 );
 
-                                let paths: Vec<String> = directories
+                                let enabled_directories: Vec<DirectoryConfig> = directories
                                     .iter()
                                     .filter(|d| d.enabled)
-                                    .map(|d| d.path.clone())
+                                    .cloned()
                                     .collect();
 
-                                let games = AchievementParser::parse_directories(&paths);
+                                let games = AchievementParser::parse_directory_configs(&enabled_directories);
                                 log::info!(
                                     "Refresh complete (debounced). Found {} games.",
                                     games.len()
@@ -135,17 +153,18 @@ impl AchievementMonitor {
     pub fn stop_monitoring(&mut self) {
         log::info!("Stopping achievement monitoring...");
         self.watcher = None;
+        self.file_mtimes.clear();
     }
 
     /// Obtém achievements atuais
     pub fn get_current_achievements(&self) -> Vec<GameAchievements> {
-        let paths: Vec<String> = self
+        let configs: Vec<DirectoryConfig> = self
             .directories
             .iter()
             .filter(|d| d.enabled)
-            .map(|d| d.path.clone())
+            .cloned()
             .collect();
-        AchievementParser::parse_directories(&paths)
+        AchievementParser::parse_directory_configs(&configs)
     }
 
     /// Obtém diretórios monitorados
@@ -162,5 +181,46 @@ impl AchievementMonitor {
     pub fn restart_monitoring(&mut self) -> Result<()> {
         self.stop_monitoring();
         self.start_monitoring()
+    }
+
+    /// Verifica se um arquivo é um arquivo de conquista baseado no nome.
+    ///
+    /// Suporta todos os padrões de arquivo documentados:
+    /// - `achievements.ini` / `Achievements.ini`
+    /// - `achievements.json`
+    /// - `achiev.ini`
+    /// - `achievement`
+    /// - `user_stats.ini`
+    /// - `CreamAPI.Achievements.cfg`
+    fn is_achievement_file(path: &std::path::Path) -> bool {
+        if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+            ACHIEVEMENT_FILE_PATTERNS
+                .iter()
+                .any(|pattern| filename.eq_ignore_ascii_case(pattern))
+        } else {
+            false
+        }
+    }
+
+    /// Compara o mtime de um arquivo com o cache para detectar mudanças.
+    ///
+    /// Retorna `true` se o arquivo mudou desde a última verificação.
+    pub fn has_file_changed(&mut self, file_path: &str) -> bool {
+        let current_mtime = std::fs::metadata(file_path)
+            .ok()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| {
+                t.duration_since(std::time::UNIX_EPOCH)
+                    .ok()
+                    .map(|d| d.as_secs())
+            })
+            .unwrap_or(0);
+
+        let previous_mtime = self.file_mtimes.get(file_path).copied().unwrap_or(0);
+
+        self.file_mtimes
+            .insert(file_path.to_string(), current_mtime);
+
+        current_mtime != previous_mtime
     }
 }

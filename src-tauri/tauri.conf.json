@@ -5,7 +5,7 @@
   "identifier": "com.project.ham",
   "build": {
     "frontendDist": "../dist",
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run build",
     "beforeBuildCommand": "npm run build"
   },
   "app": {

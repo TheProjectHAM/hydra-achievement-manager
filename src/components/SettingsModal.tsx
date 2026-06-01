@@ -89,6 +89,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
   const [steamApiKey, setSteamApiKey] = useState<string>("");
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] =
     useState<boolean>(false);
+  const [hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievements] =
+    useState<boolean>(true);
   const [forceFrontendFetch, setForceFrontendFetch] = useState<boolean>(false);
 
   // State for tracking changes
@@ -104,6 +106,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     selectedApi: "hydra" as ApiSource,
     steamApiKey: "",
     steamIntegrationEnabled: false,
+    hideSteamGamesWithoutAchievements: true,
     forceFrontendFetch: false,
   });
   const [isDirty, setIsDirty] = useState(false);
@@ -127,6 +130,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
             if (loadedSettings.steamIntegrationEnabled !== undefined)
               setSteamIntegrationEnabled(
                 loadedSettings.steamIntegrationEnabled,
+              );
+            if (loadedSettings.hideSteamGamesWithoutAchievements !== undefined)
+              setHideSteamGamesWithoutAchievements(
+                loadedSettings.hideSteamGamesWithoutAchievements,
               );
             if (loadedSettings.gamesViewMode)
               setSelectedGamesViewMode(loadedSettings.gamesViewMode);
@@ -153,6 +160,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
               steamApiKey: loadedSettings.steamApiKey || "",
               steamIntegrationEnabled:
                 loadedSettings.steamIntegrationEnabled || false,
+              hideSteamGamesWithoutAchievements:
+                loadedSettings.hideSteamGamesWithoutAchievements ?? true,
               forceFrontendFetch: loadedSettings.forceFrontendFetch || false,
             });
           }
@@ -202,6 +211,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       selectedApi: selectedApi,
       steamApiKey: steamApiKey,
       steamIntegrationEnabled: steamIntegrationEnabled,
+      hideSteamGamesWithoutAchievements: hideSteamGamesWithoutAchievements,
       forceFrontendFetch: forceFrontendFetch,
     };
     if (JSON.stringify(currentSettings) !== JSON.stringify(savedSettings)) {
@@ -222,6 +232,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     selectedApi,
     steamApiKey,
     steamIntegrationEnabled,
+    hideSteamGamesWithoutAchievements,
     forceFrontendFetch,
     savedSettings,
   ]);
@@ -249,6 +260,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       overrides.steamIntegrationEnabled !== undefined
         ? overrides.steamIntegrationEnabled
         : steamIntegrationEnabled;
+    const finalHideSteamGamesWithoutAchievements =
+      overrides.hideSteamGamesWithoutAchievements !== undefined
+        ? overrides.hideSteamGamesWithoutAchievements
+        : hideSteamGamesWithoutAchievements;
     const finalForceFrontendFetch =
       overrides.forceFrontendFetch !== undefined
         ? overrides.forceFrontendFetch
@@ -267,6 +282,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     }
     if (gamesViewMode !== finalGamesViewMode)
       setGamesViewMode(finalGamesViewMode);
+    if (hideSteamGamesWithoutAchievements !== finalHideSteamGamesWithoutAchievements) {
+      setHideSteamGamesWithoutAchievements(finalHideSteamGamesWithoutAchievements);
+    }
 
     const currentSettings = {
       language: finalLanguage,
@@ -281,6 +299,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       selectedApi: finalApi,
       steamApiKey: finalSteamApiKey,
       steamIntegrationEnabled: finalSteamIntegrationEnabled,
+      hideSteamGamesWithoutAchievements:
+        finalHideSteamGamesWithoutAchievements,
       forceFrontendFetch: finalForceFrontendFetch,
     };
 
@@ -300,6 +320,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
         selectedApi: finalApi,
         steamApiKey: finalSteamApiKey,
         steamIntegrationEnabled: finalSteamIntegrationEnabled,
+        hideSteamGamesWithoutAchievements:
+          finalHideSteamGamesWithoutAchievements,
         forceFrontendFetch: finalForceFrontendFetch,
       });
       setIsSaved(true);
@@ -430,6 +452,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
             setSteamApiKey={setSteamApiKey}
             steamIntegrationEnabled={steamIntegrationEnabled}
             setSteamIntegrationEnabled={setSteamIntegrationEnabled}
+            hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}
+            setHideSteamGamesWithoutAchievements={setHideSteamGamesWithoutAchievements}
             onNotifyToast={onNotifyToast}
           />
         );

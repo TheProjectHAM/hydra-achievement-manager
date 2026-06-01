@@ -30,6 +30,9 @@
     "selectAll": "全选",
     "unselectAll": "取消全选"
   },
+  "gamesPage": {
+    "completed": "已完成"
+  },
   "searchPage": {
     "inputPlaceholder": "在 Steam 上搜索游戏...",
     "searchButton": "搜索",

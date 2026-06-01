@@ -30,6 +30,9 @@
     "selectAll": "Вибрати все",
     "unselectAll": "Скасувати вибір"
   },
+  "gamesPage": {
+    "completed": "ЗАВЕРШЕНО"
+  },
   "searchPage": {
     "inputPlaceholder": "Шукати ігри в Steam...",
     "searchButton": "Пошук",

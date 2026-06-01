@@ -36,6 +36,9 @@
     "noDescription": "No description available",
     "hiddenAchievement": "Hidden Achievement"
   },
+  "gamesPage": {
+    "completed": "COMPLETED"
+  },
   "searchPage": {
     "inputPlaceholder": "Search games on Steam...",
     "searchButton": "Search",
@@ -95,7 +98,8 @@
     "unlockHere": "Unlock here",
     "existingAchievements": "{count} existing achievements",
     "lastModified": "Last modified: {date}",
-    "newTotal": "New total: {count} achievements"
+    "newTotal": "New total: {count} achievements",
+    "noPathsFound": "No monitored paths found for this game. Configure directories in Settings → Paths."
   },
   "unlockToasts": {
     "successTitle": "Unlock completed",
@@ -142,6 +146,16 @@
       "steamNotRunningToastMessage": "Open the Steam client and make sure you're logged in. Then return to Settings > API and try enabling Steam Integration again.",
       "retryConnectionButton": "Retry connection",
       "steamIntegrationFailureReason": "Reason:",
+      "hideSteamGamesWithoutAchievements": "Hide Steam games with 0 achievements",
+      "hideSteamGamesWithoutAchievementsDesc": "Show Steam entries in the Games page even when Steam reports no achievements.",
+      "hideSteamGamesWithZeroAchievements": "Hide zero-achievement Steam games",
+      "showSteamGamesWithZeroAchievements": "Show zero-achievement Steam games",
+      "hideApiKey": "Hide",
+      "showApiKey": "Show",
+      "hidden": "Hidden",
+      "visible": "Visible",
+      "steamIntegrationEnable": "Enable Steam integration",
+      "steamIntegrationDisable": "Disable Steam integration",
       "steamLibraryPath": "Library path",
       "steamLibraryPathFound": "Library detected at:",
       "steamDllPath": "Steam runtime path",
@@ -182,6 +196,63 @@
       "title": "Monitored Directories",
       "description": "The app scans these folders for game achievements. Add your Steam library or compatdata folders here.",
       "addDirectory": "Add new directory",
+      "customDetectionPreset": "Custom detection preset",
+      "addPreset": "Add preset",
+      "presets": {
+        "auto": {
+          "label": "Auto detect",
+          "description": "Known achievement files inside the AppID folder"
+        },
+        "codex_ini": {
+          "label": "CODEX/RUNE INI",
+          "description": "<AppID>/achievements.ini"
+        },
+        "goldberg_json": {
+          "label": "Goldberg JSON",
+          "description": "<AppID>/achievements.json"
+        },
+        "empress_json": {
+          "label": "EMPRESS JSON",
+          "description": "<AppID>/remote/<AppID>/achievements.json"
+        },
+        "online_fix": {
+          "label": "OnlineFix",
+          "description": "<AppID>/Stats/Achievements.ini"
+        },
+        "skidrow": {
+          "label": "SKIDROW",
+          "description": "<AppID>/SteamEmu/UserStats/achiev.ini"
+        },
+        "cream_api": {
+          "label": "CreamAPI",
+          "description": "<AppID>/stats/CreamAPI.Achievements.cfg"
+        },
+        "smart_steam_emu": {
+          "label": "SmartSteamEmu",
+          "description": "<AppID>/User/Achievements.ini"
+        },
+        "razor1911": {
+          "label": "Razor1911",
+          "description": "<AppID>/achievement"
+        }
+      },
+      "customDetectionPresetDesc": "The selected folder is treated as a base directory. Each game should be inside an AppID subfolder, and the preset controls the achievement file path inside that subfolder.",
+      "appCacheTitle": "App Cache",
+      "appCacheDescription": "Stores game names and total achievements to improve offline experience.",
+      "currentSize": "Current Size",
+      "clearingCache": "Clearing...",
+      "clearCache": "Clear Cache",
+      "globalTab": "Global",
+      "hydraLauncherTab": "Hydra Launcher",
+      "steamLabel": "Steam",
+      "defaultBadge": "DEFAULT",
+      "gameBadge": "GAME",
+      "gamesLabel": "games",
+      "pathsLabel": "paths",
+      "noHydraPrefixes": "No Hydra Launcher game prefixes found",
+      "disableMonitoring": "Disable monitoring",
+      "enableMonitoring": "Enable monitoring",
+      "removeDirectory": "Remove directory",
       "noDirectories": "No directories are currently being monitored.",
       "winePrefixTitle": "Wine/Proton Prefix (Linux)",
       "winePrefixDescription": "Set the Wine/Proton prefix root (without /drive_c). The app uses this path to resolve default achievement directories.",
