@@ -285,12 +285,8 @@ run_linux() {
 
   sync_icons
 
-  echo "Building Debian and AppImage bundles with Tauri..."
-
-  # Força extração do AppImage (evita erro de FUSE em sistemas sem libfuse)
-  export APPIMAGE_EXTRACT_AND_RUN=1
-
-  npm run tauri -- build --bundles deb,appimage
+  echo "Building Debian bundle with Tauri..."
+  npm run tauri -- build --bundles deb
 
   if [ ! -f "$release_dir/$bin_name" ]; then
     echo "Linux binary not found at: $release_dir/$bin_name"
@@ -408,13 +404,68 @@ EOF
     echo "Warning: Arch package not generated."
   fi
 
-  # Copy AppImage if available
-  appimage_file="$(find "$bundle_dir/appimage" -type f -name "*.AppImage" 2>/dev/null | sort | tail -n1 || true)"
-  if [ -n "$appimage_file" ] && [ -f "$appimage_file" ]; then
-    cp -f "$appimage_file" "$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.AppImage"
-    echo "AppImage copied to artifacts."
+  # Build AppImage manually with linuxdeploy
+  echo "Building AppImage with linuxdeploy..."
+  LINUXDEPLOY_CACHE="$HOME/.cache/tauri"
+  linuxdeploy_bin="$LINUXDEPLOY_CACHE/linuxdeploy-x86_64.AppImage"
+  linuxdeploy_gtk="$LINUXDEPLOY_CACHE/linuxdeploy-plugin-gtk.sh"
+
+  if [ -f "$linuxdeploy_bin" ]; then
+    appdir="$(mktemp -d)/AppDir"
+    mkdir -p "$appdir/usr/bin" "$appdir/usr/lib" "$appdir/usr/share/applications" "$appdir/usr/share/icons/hicolor/128x128/apps"
+
+    install -Dm755 "$release_dir/$bin_name" "$appdir/usr/bin/$bin_name"
+    if [ -f "$release_dir/libsteam_api.so" ]; then
+      install -Dm755 "$release_dir/libsteam_api.so" "$appdir/usr/lib/libsteam_api.so"
+    fi
+    if [ -f "$icon_source" ]; then
+      install -Dm644 "$icon_source" "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png"
+      cp -f "$icon_source" "$appdir/project-ham.png"
+    fi
+
+    cat > "$appdir/usr/share/applications/project-ham.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Project HAM
+Comment=Manage Hydra and Steam achievements
+Exec=$bin_name
+Icon=project-ham
+Terminal=false
+Categories=Utility;
+DESKTOP
+    cp "$appdir/usr/share/applications/project-ham.desktop" "$appdir/project-ham.desktop"
+
+    export APPIMAGE_EXTRACT_AND_RUN=1
+    export DEPLOY_GTK_VERSION=3
+
+    appimage_out="$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.AppImage"
+    if [ -f "$linuxdeploy_gtk" ]; then
+      chmod +x "$linuxdeploy_gtk"
+      "$linuxdeploy_bin" --appdir "$appdir" \
+        --executable "$appdir/usr/bin/$bin_name" \
+        --desktop-file "$appdir/usr/share/applications/project-ham.desktop" \
+        --icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png" \
+        --plugin gtk \
+        --output appimage 2>&1 || echo "Warning: AppImage build with GTK plugin failed."
+    else
+      "$linuxdeploy_bin" --appdir "$appdir" \
+        --executable "$appdir/usr/bin/$bin_name" \
+        --desktop-file "$appdir/usr/share/applications/project-ham.desktop" \
+        --icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png" \
+        --output appimage 2>&1 || echo "Warning: AppImage build failed."
+    fi
+
+    generated_appimage="$(find "$(dirname "$appdir")" -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | sort | tail -n1 || true)"
+    if [ -n "$generated_appimage" ] && [ -f "$generated_appimage" ]; then
+      mv -f "$generated_appimage" "$appimage_out"
+      echo "AppImage created: $appimage_out"
+    else
+      echo "Warning: AppImage was not generated."
+    fi
+
+    rm -rf "$(dirname "$appdir")"
   else
-    echo "Warning: AppImage not found in $bundle_dir/appimage."
+    echo "Warning: linuxdeploy not found at $linuxdeploy_bin; skipping AppImage."
   fi
 
   # Gerar .tar.gz com binário + libsteam_api.so
@@ -494,7 +545,7 @@ echo "      - Copies artifacts to: installer/builds"
 echo "      - Requires: cargo-xwin, rustup Windows target"
 echo
 echo "  [2] Linux"
-echo "      - Builds: .deb, .AppImage (Tauri), .rpm (rpmbuild), .pkg.tar.zst (makepkg), .tar.gz"
+echo "      - Builds: .deb (Tauri), .AppImage (linuxdeploy), .rpm (rpmbuild), .pkg.tar.zst (makepkg), .tar.gz"
 echo "      - Includes libsteam_api.so in Linux packages"
 echo "      - Copies artifacts to: installer/builds"
 echo "      - Requires: npm, makepkg, rpmbuild"
