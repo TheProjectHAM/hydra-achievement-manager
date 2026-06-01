@@ -286,6 +286,10 @@ run_linux() {
   sync_icons
 
   echo "Building Debian and AppImage bundles with Tauri..."
+
+  # Força extração do AppImage (evita erro de FUSE em sistemas sem libfuse)
+  export APPIMAGE_EXTRACT_AND_RUN=1
+
   npm run tauri -- build --bundles deb,appimage
 
   if [ ! -f "$release_dir/$bin_name" ]; then
