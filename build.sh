@@ -445,6 +445,7 @@ DESKTOP
     export LD_LIBRARY_PATH="$appdir/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
     appimage_out="$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.AppImage"
+    rm -f "$ROOT_DIR"/*.AppImage
     if [ -f "$linuxdeploy_gtk" ]; then
       chmod +x "$linuxdeploy_gtk"
       "$linuxdeploy_bin" --appdir "$appdir" \
@@ -461,7 +462,7 @@ DESKTOP
         --output appimage 2>&1 || echo "Warning: AppImage build failed."
     fi
 
-    generated_appimage="$(find "$(dirname "$appdir")" -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | sort | tail -n1 || true)"
+    generated_appimage="$(find "$ROOT_DIR" -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | sort | tail -n1 || true)"
     if [ -n "$generated_appimage" ] && [ -f "$generated_appimage" ]; then
       mv -f "$generated_appimage" "$appimage_out"
       echo "AppImage created: $appimage_out"
