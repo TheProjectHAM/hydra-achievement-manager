@@ -285,8 +285,8 @@ run_linux() {
 
   sync_icons
 
-  echo "Building Debian bundle with Tauri..."
-  npm run tauri -- build --bundles deb
+  echo "Building Debian and AppImage bundles with Tauri..."
+  npm run tauri -- build --bundles deb,appimage
 
   if [ ! -f "$release_dir/$bin_name" ]; then
     echo "Linux binary not found at: $release_dir/$bin_name"
@@ -301,6 +301,11 @@ run_linux() {
     echo "Warning: libsteam_api.so not found in known locations."
   fi
 
+  icon_source="$ROOT_DIR/assets/icon.png"
+  if [ ! -f "$icon_source" ]; then
+    icon_source="$ROOT_DIR/src-tauri/icons/128x128.png"
+  fi
+
   if command -v makepkg >/dev/null 2>&1; then
     echo "Building Arch package with makepkg..."
     rm -rf "$arch_workdir"
@@ -311,10 +316,6 @@ run_linux() {
       cp -f "$release_dir/libsteam_api.so" "$arch_workdir/libsteam_api.so"
     fi
 
-    icon_source="$ROOT_DIR/assets/icon.png"
-    if [ ! -f "$icon_source" ]; then
-      icon_source="$ROOT_DIR/src-tauri/icons/128x128.png"
-    fi
     cp -f "$icon_source" "$arch_workdir/project-ham.png"
 
     cat > "$arch_workdir/project-ham.desktop" <<'EOF'
@@ -403,6 +404,42 @@ EOF
     echo "Warning: Arch package not generated."
   fi
 
+  # Copy AppImage if available
+  appimage_file="$(find "$bundle_dir/appimage" -type f -name "*.AppImage" 2>/dev/null | sort | tail -n1 || true)"
+  if [ -n "$appimage_file" ] && [ -f "$appimage_file" ]; then
+    cp -f "$appimage_file" "$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.AppImage"
+    echo "AppImage copied to artifacts."
+  else
+    echo "Warning: AppImage not found in $bundle_dir/appimage."
+  fi
+
+  # Gerar .tar.gz com binário + libsteam_api.so
+  echo "Creating .tar.gz archive..."
+  tar_archive="$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.tar.gz"
+  tar_dir="project-ham-v$app_version"
+  tmp_tar="$(mktemp -d)"
+  install -Dm755 "$release_dir/$bin_name" "$tmp_tar/$tar_dir/$bin_name"
+  if [ -f "$release_dir/libsteam_api.so" ]; then
+    install -Dm755 "$release_dir/libsteam_api.so" "$tmp_tar/$tar_dir/libsteam_api.so"
+  fi
+  # desktop file
+  cat > "$tmp_tar/$tar_dir/project-ham.desktop" <<'TARDESK'
+[Desktop Entry]
+Type=Application
+Name=Project HAM
+Comment=Manage Hydra and Steam achievements
+Exec=./project-ham
+Icon=project-ham
+Terminal=false
+Categories=Utility;
+TARDESK
+  if [ -f "$icon_source" ]; then
+    cp -f "$icon_source" "$tmp_tar/$tar_dir/project-ham.png"
+  fi
+  tar -czf "$tar_archive" -C "$tmp_tar" "$tar_dir"
+  rm -rf "$tmp_tar"
+  echo "Tar archive created: $tar_archive"
+
   echo "Linux artifacts copied to: $ARTIFACTS_DIR"
 }
 
@@ -411,6 +448,7 @@ usage() {
 Usage:
   ./build.sh [windows|linux|all]
 
+Linux builds: .deb, .AppImage, .rpm, .pkg.tar.zst, .tar.gz
 If no argument is provided, an interactive menu is shown.
 EOF
 }
@@ -452,7 +490,7 @@ echo "      - Copies artifacts to: installer/builds"
 echo "      - Requires: cargo-xwin, rustup Windows target"
 echo
 echo "  [2] Linux"
-echo "      - Builds: .deb (Tauri), .rpm (rpmbuild), .pkg.tar.zst (makepkg)"
+echo "      - Builds: .deb, .AppImage (Tauri), .rpm (rpmbuild), .pkg.tar.zst (makepkg), .tar.gz"
 echo "      - Includes libsteam_api.so in Linux packages"
 echo "      - Copies artifacts to: installer/builds"
 echo "      - Requires: npm, makepkg, rpmbuild"
