@@ -418,6 +418,20 @@ EOF
     if [ -f "$release_dir/libsteam_api.so" ]; then
       install -Dm755 "$release_dir/libsteam_api.so" "$appdir/usr/lib/libsteam_api.so"
     fi
+
+    # Copiar processos do WebKitGTK para dentro do AppDir
+    webkit_dir="/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1"
+    if [ -d "$webkit_dir" ]; then
+      mkdir -p "$appdir$webkit_dir/injected-bundle"
+      for proc in WebKitNetworkProcess WebKitWebProcess WebKitGPUProcess MiniBrowser; do
+        if [ -f "$webkit_dir/$proc" ]; then
+          install -Dm755 "$webkit_dir/$proc" "$appdir$webkit_dir/$proc"
+        fi
+      done
+      if [ -f "$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so" ]; then
+        install -Dm755 "$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so" "$appdir$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so"
+      fi
+    fi
     if [ -f "$icon_source" ]; then
       appimage_icon="$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png"
       if command -v convert >/dev/null 2>&1; then
