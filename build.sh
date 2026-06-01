@@ -437,6 +437,7 @@ DESKTOP
 
     export APPIMAGE_EXTRACT_AND_RUN=1
     export DEPLOY_GTK_VERSION=3
+    export LD_LIBRARY_PATH="$appdir/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
     appimage_out="$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.AppImage"
     if [ -f "$linuxdeploy_gtk" ]; then
