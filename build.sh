@@ -419,8 +419,13 @@ EOF
       install -Dm755 "$release_dir/libsteam_api.so" "$appdir/usr/lib/libsteam_api.so"
     fi
     if [ -f "$icon_source" ]; then
-      install -Dm644 "$icon_source" "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png"
-      cp -f "$icon_source" "$appdir/project-ham.png"
+      appimage_icon="$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png"
+      if command -v convert >/dev/null 2>&1; then
+        convert "$icon_source" -resize 128x128 "$appimage_icon"
+      else
+        install -Dm644 "$icon_source" "$appimage_icon"
+      fi
+      cp -f "$appimage_icon" "$appdir/project-ham.png"
     fi
 
     cat > "$appdir/usr/share/applications/project-ham.desktop" <<DESKTOP
