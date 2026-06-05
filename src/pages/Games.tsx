@@ -126,10 +126,10 @@ const MonitoredGameCard: React.FC<{
             {isSteam && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-70" />}
             <span className="truncate">{gameName}</span>
           </h3>
-          <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-200 flex-shrink-0 drop-shadow-md">
-            <span className={isCompleted ? 'text-primary' : ''}>{achievementsCurrent}</span>
-            <span className="opacity-30">/</span>
-            <span>{finalTotal}</span>
+          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-[0_1px_2px_rgba(0,0,0,0.85)] backdrop-blur-[2px] flex-shrink-0">
+            <span className={isCompleted ? 'text-primary' : 'text-white/95'}>{achievementsCurrent}</span>
+            <span className="opacity-40">/</span>
+            <span className="text-white/90">{finalTotal}</span>
           </div>
         </div>
 
