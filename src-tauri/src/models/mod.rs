@@ -36,6 +36,9 @@ impl Cracker {
             Cracker::SmartSteamEmu,
             Cracker::Rle,
             Cracker::Razor1911,
+            Cracker::UserStats,
+            Cracker::ThreeDm,
+            Cracker::Flt,
             Cracker::SteamCache,
         ]
     }
@@ -81,7 +84,7 @@ pub struct WinePrefixInfo {
 }
 
 /// Representa uma entrada de achievement individual
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AchievementEntry {
     pub name: String,
     pub achieved: bool,

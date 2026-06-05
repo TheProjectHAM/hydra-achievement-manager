@@ -308,7 +308,7 @@ impl AchievementWriter {
         // Seção Time
         content.push_str("\n[Time]\n");
         for ach in achievements {
-            let time_hex = format!("{:08X}", ach.unlock_time as u32);
+            let time_hex = u32_to_hex_le(ach.unlock_time as u32);
             content.push_str(&format!("{}={}\n", ach.name, time_hex));
         }
 

@@ -13,6 +13,84 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 
+fn extract_xml_tag_value(line: &str, tag: &str) -> Option<String> {
+    let open = format!("<{}>", tag);
+    let close = format!("</{}>", tag);
+    let start = line.find(&open)? + open.len();
+    let end = line[start..].find(&close)? + start;
+    Some(line[start..end].trim().to_string())
+}
+
+fn flush_current_steam_achievement(
+    map: &mut HashMap<String, (i32, i64)>,
+    current_name: &mut Option<String>,
+    current_achieved: &mut Option<i32>,
+    current_unlock_time: &mut Option<i64>,
+) {
+    if let (Some(name), Some(achieved), Some(unlock_time)) = (
+        current_name.take(),
+        current_achieved.take(),
+        current_unlock_time.take(),
+    ) {
+        map.insert(name, (achieved, unlock_time));
+    }
+}
+
+fn parse_steam_community_achievement_xml(xml_content: &str) -> HashMap<String, (i32, i64)> {
+    let mut map = HashMap::new();
+    let mut current_name: Option<String> = None;
+    let mut current_achieved: Option<i32> = None;
+    let mut current_unlock_time: Option<i64> = None;
+    let mut in_achievement = false;
+
+    for line in xml_content.lines() {
+        let trimmed = line.trim();
+
+        if trimmed.starts_with("<achievement") {
+            in_achievement = true;
+            current_name = None;
+            current_achieved = None;
+            current_unlock_time = None;
+            continue;
+        }
+
+        if trimmed.starts_with("</achievement>") {
+            flush_current_steam_achievement(
+                &mut map,
+                &mut current_name,
+                &mut current_achieved,
+                &mut current_unlock_time,
+            );
+            in_achievement = false;
+            continue;
+        }
+
+        if !in_achievement {
+            continue;
+        }
+
+        if let Some(name) = extract_xml_tag_value(trimmed, "apiname") {
+            current_name = Some(name);
+        }
+
+        if let Some(achieved) = extract_xml_tag_value(trimmed, "achieved") {
+            current_achieved = Some(achieved.parse().unwrap_or(0));
+        }
+
+        if let Some(unlock_time) = extract_xml_tag_value(trimmed, "unlocktime") {
+            current_unlock_time = Some(unlock_time.parse().unwrap_or(0));
+        }
+    }
+
+    flush_current_steam_achievement(
+        &mut map,
+        &mut current_name,
+        &mut current_achieved,
+        &mut current_unlock_time,
+    );
+    map
+}
+
 /// Obtém achievements de um jogo
 #[tauri::command]
 pub async fn get_game_achievements(
@@ -152,8 +230,7 @@ pub async fn get_game_achievements(
                 let response = xml_client.get(&url).send().await.map_err(|e| e.to_string())?;
 
                 let xml_content: String = response.text().await.map_err(|e| e.to_string())?;
-
-                for _line in xml_content.lines() {}
+                steam_status_map = parse_steam_community_achievement_xml(&xml_content);
             }
 
             if !steam_status_map.is_empty() {
@@ -237,6 +314,34 @@ pub async fn get_game_achievements(
         "gameId": game_id,
         "achievements": achievements_array
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_steam_community_achievement_xml;
+
+    #[test]
+    fn parses_steam_community_achievement_xml_blocks() {
+        let xml = r#"
+            <stats>
+              <achievement>
+                <apiname>FIRST_BLOOD</apiname>
+                <achieved>1</achieved>
+                <unlocktime>1710000000</unlocktime>
+              </achievement>
+              <achievement>
+                <apiname>SECOND_WIND</apiname>
+                <achieved>0</achieved>
+                <unlocktime>0</unlocktime>
+              </achievement>
+            </stats>
+        "#;
+
+        let parsed = parse_steam_community_achievement_xml(xml);
+
+        assert_eq!(parsed.get("FIRST_BLOOD"), Some(&(1, 1_710_000_000)));
+        assert_eq!(parsed.get("SECOND_WIND"), Some(&(0, 0)));
+    }
 }
 
 /// Recarrega achievements de um arquivo

@@ -1011,3 +1011,87 @@ pub fn detect_cracker_from_path(file_path: &str) -> Cracker {
         Cracker::Codex // Fallback
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AchievementParser;
+    use crate::models::{AchievementEntry, Cracker};
+    use crate::unlocker::AchievementWriter;
+    use std::fs;
+    use std::path::PathBuf;
+
+    fn unique_temp_dir(name: &str) -> PathBuf {
+        let suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock before unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("ham_{name}_{suffix}"))
+    }
+
+    #[test]
+    fn cracker_all_includes_user_stats_three_dm_and_flt() {
+        let all = Cracker::all();
+        assert!(all.contains(&Cracker::UserStats));
+        assert!(all.contains(&Cracker::ThreeDm));
+        assert!(all.contains(&Cracker::Flt));
+    }
+
+    #[test]
+    fn roundtrip_user_stats_and_3dm_writers() {
+        let temp_dir = unique_temp_dir("roundtrip");
+        fs::create_dir_all(&temp_dir).expect("create temp dir");
+
+        let user_stats_path = temp_dir.join("user_stats.ini");
+        let three_dm_path = temp_dir.join("achievements_3dm.ini");
+        let achievements = vec![AchievementEntry {
+            name: "FIRST_BLOOD".to_string(),
+            achieved: true,
+            unlock_time: 1_710_000_000,
+        }];
+
+        AchievementWriter::write_user_stats_ini(&user_stats_path, &achievements)
+            .expect("write user_stats");
+        AchievementWriter::write_3dm_ini(&three_dm_path, &achievements).expect("write 3dm");
+
+        let parsed_user_stats = AchievementParser::parse_achievement_file(&user_stats_path, Cracker::UserStats)
+            .expect("parse user_stats");
+        let parsed_three_dm = AchievementParser::parse_achievement_file(&three_dm_path, Cracker::ThreeDm)
+            .expect("parse 3dm");
+
+        assert_eq!(parsed_user_stats, achievements);
+        assert_eq!(parsed_three_dm, achievements);
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn parses_flt_directories_as_unlocked_achievements() {
+        let temp_dir = unique_temp_dir("flt");
+        fs::create_dir_all(&temp_dir).expect("create temp dir");
+
+        fs::write(temp_dir.join("ACH_ONE"), "").expect("write file");
+        fs::write(temp_dir.join("ACH_TWO"), "").expect("write file");
+
+        let mut parsed = AchievementParser::parse_achievement_file(&temp_dir, Cracker::Flt)
+            .expect("parse flt directory");
+        parsed.sort_by(|a, b| a.name.cmp(&b.name));
+
+        assert_eq!(
+            parsed,
+            vec![
+                AchievementEntry {
+                    name: "ACH_ONE".to_string(),
+                    achieved: true,
+                    unlock_time: 0,
+                },
+                AchievementEntry {
+                    name: "ACH_TWO".to_string(),
+                    achieved: true,
+                    unlock_time: 0,
+                },
+            ]
+        );
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+}

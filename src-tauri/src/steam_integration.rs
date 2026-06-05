@@ -253,21 +253,46 @@ impl SteamIntegration {
         let client = &*guard;
 
         let user_stats = client.user_stats();
-        
-        // Solicita estatísticas do usuário
         user_stats.request_current_stats();
-        
-        // Aguarda um pouco para as stats serem carregadas
-        std::thread::sleep(std::time::Duration::from_millis(500));
 
-        let achievements = Vec::new();
+        if let Some(single_client_lock) = &self.single_client {
+            if let Ok(single_client) = single_client_lock.lock() {
+                single_client.run_callbacks();
+            }
+        }
 
-        // Nota: steamworks-rs não fornece uma maneira fácil de listar todas as conquistas
-        // Precisamos conhecer os nomes das conquistas antecipadamente
-        // Vamos usar a API web para isso
-        
+        let Some(achievement_names) = user_stats.get_achievement_names() else {
+            drop(guard);
+            return Ok(Vec::new());
+        };
+
+        let mut achievements = Vec::with_capacity(achievement_names.len());
+
+        for name in achievement_names {
+            let helper = user_stats.achievement(&name);
+            let achieved = helper.get().unwrap_or(false);
+            let display_name = helper
+                .get_achievement_display_attribute("name")
+                .unwrap_or("")
+                .to_string();
+            let description = helper
+                .get_achievement_display_attribute("desc")
+                .unwrap_or("")
+                .to_string();
+
+            achievements.push(SteamAchievementData {
+                name,
+                display_name,
+                description,
+                achieved,
+                unlock_time: 0,
+                icon: String::new(),
+                icon_gray: String::new(),
+            });
+        }
+
         drop(guard);
-        
+
         Ok(achievements)
     }
 
