@@ -432,6 +432,7 @@ EOF
         install -Dm755 "$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so" "$appdir$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so"
       fi
     fi
+
     if [ -f "$icon_source" ]; then
       appimage_icon="$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png"
       if command -v convert >/dev/null 2>&1; then
@@ -467,21 +468,41 @@ DESKTOP
         --desktop-file "$appdir/usr/share/applications/project-ham.desktop" \
         --icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png" \
         --plugin gtk \
-        --output appimage 2>&1 || echo "Warning: AppImage build with GTK plugin failed."
+        --output appdir 2>&1 || echo "Warning: AppImage AppDir preparation with GTK plugin failed."
     else
       "$linuxdeploy_bin" --appdir "$appdir" \
         --executable "$appdir/usr/bin/$bin_name" \
         --desktop-file "$appdir/usr/share/applications/project-ham.desktop" \
         --icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png" \
-        --output appimage 2>&1 || echo "Warning: AppImage build failed."
+        --output appdir 2>&1 || echo "Warning: AppImage AppDir preparation failed."
     fi
 
-    generated_appimage="$(find "$ROOT_DIR" -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | sort | tail -n1 || true)"
-    if [ -n "$generated_appimage" ] && [ -f "$generated_appimage" ]; then
-      mv -f "$generated_appimage" "$appimage_out"
-      echo "AppImage created: $appimage_out"
+    # Fix WebKitGTK subprocess path: the library has relative path ././/lib/... baked in
+    # which resolves from CWD. We need CWD to be $APPDIR/usr for it to work.
+    # Symlink lib -> usr/lib so the path resolves from AppDir root.
+    ln -sf usr/lib "$appdir/lib"
+
+    # Patch AppRun to cd into $APPDIR/usr so relative paths in libwebkit2gtk resolve correctly
+    if [ -f "$appdir/AppRun" ]; then
+      sed -i '3i cd "$(dirname "$0")/usr"' "$appdir/AppRun"
+    fi
+
+    # Create AppImage with appimagetool
+    appimagetool_bin="$LINUXDEPLOY_CACHE/appimagetool-x86_64.AppImage"
+    if [ ! -f "$appimagetool_bin" ]; then
+      echo "Downloading appimagetool..."
+      curl -fLo "$appimagetool_bin" "https://github.com/AppImage/type2-runtime/releases/download/continuous/appimagetool-x86_64.AppImage" 2>&1 || true
+      chmod +x "$appimagetool_bin"
+    fi
+    if [ -f "$appimagetool_bin" ]; then
+      "$appimagetool_bin" "$appdir" "$appimage_out" 2>&1 || echo "Warning: appimagetool failed."
+      if [ -f "$appimage_out" ]; then
+        echo "AppImage created: $appimage_out"
+      else
+        echo "Warning: AppImage was not generated."
+      fi
     else
-      echo "Warning: AppImage was not generated."
+      echo "Warning: appimagetool not found; skipping AppImage."
     fi
 
     rm -rf "$(dirname "$appdir")"
