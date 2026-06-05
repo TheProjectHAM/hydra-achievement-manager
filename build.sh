@@ -404,112 +404,6 @@ EOF
     echo "Warning: Arch package not generated."
   fi
 
-  # Build AppImage manually with linuxdeploy
-  echo "Building AppImage with linuxdeploy..."
-  LINUXDEPLOY_CACHE="$HOME/.cache/tauri"
-  linuxdeploy_bin="$LINUXDEPLOY_CACHE/linuxdeploy-x86_64.AppImage"
-  linuxdeploy_gtk="$LINUXDEPLOY_CACHE/linuxdeploy-plugin-gtk.sh"
-
-  if [ -f "$linuxdeploy_bin" ]; then
-    appdir="$(mktemp -d)/AppDir"
-    mkdir -p "$appdir/usr/bin" "$appdir/usr/lib" "$appdir/usr/share/applications" "$appdir/usr/share/icons/hicolor/128x128/apps"
-
-    install -Dm755 "$release_dir/$bin_name" "$appdir/usr/bin/$bin_name"
-    if [ -f "$release_dir/libsteam_api.so" ]; then
-      install -Dm755 "$release_dir/libsteam_api.so" "$appdir/usr/lib/libsteam_api.so"
-    fi
-
-    # Copiar processos do WebKitGTK para dentro do AppDir
-    webkit_dir="/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1"
-    if [ -d "$webkit_dir" ]; then
-      mkdir -p "$appdir$webkit_dir/injected-bundle"
-      for proc in WebKitNetworkProcess WebKitWebProcess WebKitGPUProcess MiniBrowser; do
-        if [ -f "$webkit_dir/$proc" ]; then
-          install -Dm755 "$webkit_dir/$proc" "$appdir$webkit_dir/$proc"
-        fi
-      done
-      if [ -f "$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so" ]; then
-        install -Dm755 "$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so" "$appdir$webkit_dir/injected-bundle/libwebkit2gtkinjectedbundle.so"
-      fi
-    fi
-
-    if [ -f "$icon_source" ]; then
-      appimage_icon="$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png"
-      if command -v convert >/dev/null 2>&1; then
-        convert "$icon_source" -resize 128x128 "$appimage_icon"
-      else
-        install -Dm644 "$icon_source" "$appimage_icon"
-      fi
-      cp -f "$appimage_icon" "$appdir/project-ham.png"
-    fi
-
-    cat > "$appdir/usr/share/applications/project-ham.desktop" <<DESKTOP
-[Desktop Entry]
-Type=Application
-Name=Project HAM
-Comment=Manage Hydra and Steam achievements
-Exec=$bin_name
-Icon=project-ham
-Terminal=false
-Categories=Utility;
-DESKTOP
-    cp "$appdir/usr/share/applications/project-ham.desktop" "$appdir/project-ham.desktop"
-
-    export APPIMAGE_EXTRACT_AND_RUN=1
-    export DEPLOY_GTK_VERSION=3
-    export LD_LIBRARY_PATH="$appdir/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-
-    appimage_out="$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.AppImage"
-    rm -f "$ROOT_DIR"/*.AppImage
-    if [ -f "$linuxdeploy_gtk" ]; then
-      chmod +x "$linuxdeploy_gtk"
-      "$linuxdeploy_bin" --appdir "$appdir" \
-        --executable "$appdir/usr/bin/$bin_name" \
-        --desktop-file "$appdir/usr/share/applications/project-ham.desktop" \
-        --icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png" \
-        --plugin gtk \
-        --output appdir 2>&1 || echo "Warning: AppImage AppDir preparation with GTK plugin failed."
-    else
-      "$linuxdeploy_bin" --appdir "$appdir" \
-        --executable "$appdir/usr/bin/$bin_name" \
-        --desktop-file "$appdir/usr/share/applications/project-ham.desktop" \
-        --icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/project-ham.png" \
-        --output appdir 2>&1 || echo "Warning: AppImage AppDir preparation failed."
-    fi
-
-    # Fix WebKitGTK subprocess path: the library has relative path ././/lib/... baked in
-    # which resolves from CWD. We need CWD to be $APPDIR/usr for it to work.
-    # Symlink lib -> usr/lib so the path resolves from AppDir root.
-    ln -sf usr/lib "$appdir/lib"
-
-    # Patch AppRun to cd into $APPDIR/usr so relative paths in libwebkit2gtk resolve correctly
-    if [ -f "$appdir/AppRun" ]; then
-      sed -i '3i cd "$(dirname "$0")/usr"' "$appdir/AppRun"
-    fi
-
-    # Create AppImage with appimagetool
-    appimagetool_bin="$LINUXDEPLOY_CACHE/appimagetool-x86_64.AppImage"
-    if [ ! -f "$appimagetool_bin" ]; then
-      echo "Downloading appimagetool..."
-      curl -fLo "$appimagetool_bin" "https://github.com/AppImage/type2-runtime/releases/download/continuous/appimagetool-x86_64.AppImage" 2>&1 || true
-      chmod +x "$appimagetool_bin"
-    fi
-    if [ -f "$appimagetool_bin" ]; then
-      "$appimagetool_bin" "$appdir" "$appimage_out" 2>&1 || echo "Warning: appimagetool failed."
-      if [ -f "$appimage_out" ]; then
-        echo "AppImage created: $appimage_out"
-      else
-        echo "Warning: AppImage was not generated."
-      fi
-    else
-      echo "Warning: appimagetool not found; skipping AppImage."
-    fi
-
-    rm -rf "$(dirname "$appdir")"
-  else
-    echo "Warning: linuxdeploy not found at $linuxdeploy_bin; skipping AppImage."
-  fi
-
   # Gerar .tar.gz com binário + libsteam_api.so
   echo "Creating .tar.gz archive..."
   tar_archive="$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_x86_64.tar.gz"
@@ -545,7 +439,7 @@ usage() {
 Usage:
   ./build.sh [windows|linux|all]
 
-Linux builds: .deb, .AppImage, .rpm, .pkg.tar.zst, .tar.gz
+Linux builds: .deb, .rpm, .pkg.tar.zst, .tar.gz
 If no argument is provided, an interactive menu is shown.
 EOF
 }
@@ -587,7 +481,7 @@ echo "      - Copies artifacts to: installer/builds"
 echo "      - Requires: cargo-xwin, rustup Windows target"
 echo
 echo "  [2] Linux"
-echo "      - Builds: .deb (Tauri), .AppImage (linuxdeploy), .rpm (rpmbuild), .pkg.tar.zst (makepkg), .tar.gz"
+echo "      - Builds: .deb (Tauri), .rpm (rpmbuild), .pkg.tar.zst (makepkg), .tar.gz"
 echo "      - Includes libsteam_api.so in Linux packages"
 echo "      - Copies artifacts to: installer/builds"
 echo "      - Requires: npm, makepkg, rpmbuild"
