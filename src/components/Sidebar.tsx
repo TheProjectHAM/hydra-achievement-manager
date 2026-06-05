@@ -64,6 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }), []);
 
   const gameItemStyle = scaleStyles[sidebarGameScale];
+  const iconColumnClass = isCollapsed ? '' : 'w-8';
   const visibleRecentGames = useMemo(() => {
     const query = recentSearch.trim().toLowerCase();
 
@@ -92,8 +93,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const wClass = hClass.replace('h-', 'w-');
 
   const gameItemClasses = (isActive: boolean) => `
-    flex items-center transition-all duration-300 rounded-md group relative
-    ${isCollapsed ? `${hClass} ${wClass} aspect-square justify-center` : `w-full ${hClass} px-4 gap-4`}
+    flex items-center transition-all duration-300 rounded-md group relative box-border
+    ${isCollapsed ? `${hClass} ${wClass} aspect-square justify-center` : `w-full self-stretch ${hClass} px-4 gap-4`}
     ${isActive
       ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-lg'
       : 'text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent'
@@ -109,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Top section: Main Navigation */}
         <div className={`flex-shrink-0 mb-6 w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-start'}`}>
-          <nav className={`space-y-1 w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-start'}`}>
+          <nav className={`space-y-1 w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-stretch'}`}>
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -119,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   title={isCollapsed ? t(tab.label) : undefined}
                   className={itemClasses(isActive)}
                 >
-                  <div className={`${isCollapsed ? '' : 'w-7'} flex items-center justify-start flex-shrink-0`}>
+                  <div className={`${iconColumnClass} flex items-center justify-start flex-shrink-0`}>
                     <span className={`text-2xl transition-colors ${isActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground group-hover:text-sidebar-accent-foreground'}`}>
                       {tab.icon}
                     </span>
@@ -137,11 +138,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Divider + Recent Games Filter */}
         {!isCollapsed ? (
-          <div className="px-1 mb-4 space-y-2">
-            <h3 className="text-[11px] font-semibold text-sidebar-foreground opacity-30 whitespace-nowrap">
+          <div className="mb-4 space-y-2 w-full">
+            <h3 className="w-full text-[11px] font-semibold text-sidebar-foreground opacity-30 whitespace-nowrap">
               {t('sidebar.recentGames')}
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_2.25rem] items-center gap-2">
               <input
                 value={recentSearch}
                 onChange={(event) => setRecentSearch(event.target.value)}
@@ -151,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={() => setRecentSortDirection((current) => current === 'desc' ? 'asc' : 'desc')}
-                className="h-9 w-10 rounded-md border border-transparent bg-sidebar-accent text-sidebar-accent-foreground transition-all hover:ring-1 hover:ring-sidebar-ring/40 flex items-center justify-center"
+                className="h-9 w-9 rounded-md border border-transparent bg-sidebar-accent text-sidebar-accent-foreground transition-all hover:ring-1 hover:ring-sidebar-ring/40 flex items-center justify-center"
                 title={recentSortDirection === 'desc' ? 'Mais recentes primeiro' : 'Menos recentes primeiro'}
                 aria-label={recentSortDirection === 'desc' ? 'Mais recentes primeiro' : 'Menos recentes primeiro'}
               >
@@ -164,12 +165,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         ) : (
-          <div className="border-t border-sidebar-border w-8 mb-6" />
+          <div className="border-t border-sidebar-border w-11 mb-6" />
         )}
 
         {/* Middle section: Recent Games */}
-        <div className="flex-grow overflow-y-auto no-scrollbar -mx-1 px-1 w-full">
-          <div className={`space-y-1 w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-start'}`}>
+        <div className="flex-grow overflow-y-auto no-scrollbar w-full">
+          <div className={`space-y-1 w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-stretch'}`}>
             {visibleRecentGames.map((game) => {
               const isActive = selectedGameId === parseInt(game.gameId) && activeTab === 'conquistas';
               const isSteamSource = game.source === 'steam' || game.source === 'both';
@@ -270,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             title={isCollapsed ? t(SETTINGS_TAB.label) : undefined}
             className={itemClasses(activeTab === SETTINGS_TAB.id)}
           >
-            <div className={`${isCollapsed ? '' : 'w-7'} flex items-center justify-start flex-shrink-0`}>
+            <div className={`${iconColumnClass} flex items-center justify-start flex-shrink-0`}>
               <span className={`text-2xl transition-colors ${activeTab === SETTINGS_TAB.id ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground group-hover:text-sidebar-accent-foreground'}`}>
                 {SETTINGS_TAB.icon}
               </span>
