@@ -40,3 +40,17 @@ pub async fn open_devtools(window: tauri::WebviewWindow) {
     }
     let _ = window;
 }
+
+#[tauri::command]
+pub async fn get_window_decoration_info(window: tauri::WebviewWindow) -> Result<serde_json::Value, String> {
+    let decorated = window.is_decorated().map_err(|e| e.to_string())?;
+    let session_type = std::env::var("XDG_SESSION_TYPE").ok();
+    let current_desktop = std::env::var("XDG_CURRENT_DESKTOP").ok();
+
+    Ok(serde_json::json!({
+        "decorated": decorated,
+        "sessionType": session_type,
+        "currentDesktop": current_desktop,
+        "platform": std::env::consts::OS
+    }))
+}

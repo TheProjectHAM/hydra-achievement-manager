@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Timestamp, DateFormat, TimeFormat } from '../types';
 import { CloseIcon, UpdateIcon } from './Icons';
 import { useI18n } from '../contexts/I18nContext';
+import { Button } from '@/components/ui/button';
 
 interface TimestampSelectorProps {
   timestamp: Timestamp;
@@ -12,28 +13,6 @@ interface TimestampSelectorProps {
   dateFormat: DateFormat;
   timeFormat: TimeFormat;
 }
-
-const ActionButton: React.FC<{
-  onClick: () => void;
-  disabled: boolean;
-  children: React.ReactNode;
-  'aria-label': string;
-}> = ({ onClick, disabled, children, 'aria-label': ariaLabel }) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick();
-    }}
-    disabled={disabled}
-    className="flex items-center justify-center w-8 h-8 rounded-sm transition-all duration-300 disabled:opacity-0 disabled:pointer-events-none group"
-    style={{ backgroundColor: 'var(--hover-bg)', color: 'var(--text-muted)' }}
-    aria-label={ariaLabel}
-  >
-    <div className="group-hover:text-[var(--text-main)] transition-colors">
-      {children}
-    </div>
-  </button>
-);
 
 const TimestampSelector: React.FC<TimestampSelectorProps> = ({ timestamp, onChange, onClear, onSetCurrent, disabled, dateFormat, timeFormat }) => {
   const { t } = useI18n();
@@ -75,7 +54,6 @@ const TimestampSelector: React.FC<TimestampSelectorProps> = ({ timestamp, onChan
     const dateParts = dateFormat.split(dateSeparator);
 
     let lenCounter = 0;
-    // Date part
     for (let i = 0; i < dateParts.length; i++) {
       const part = dateParts[i];
       const partLen = part === 'YYYY' ? 4 : 2;
@@ -88,24 +66,20 @@ const TimestampSelector: React.FC<TimestampSelectorProps> = ({ timestamp, onChan
       }
     }
 
-    // Space separator
     if (val.length > lenCounter) {
       result += ' ';
     }
 
-    // Hour part
     const hourPartLen = 2;
     if (val.length > lenCounter) {
       result += val.substring(lenCounter, lenCounter + hourPartLen);
       lenCounter += hourPartLen;
     }
 
-    // Minute separator
     if (val.length > lenCounter) {
       result += ':';
     }
 
-    // Minute part
     const minutePartLen = 2;
     if (val.length > lenCounter) {
       result += val.substring(lenCounter, lenCounter + minutePartLen);
@@ -127,40 +101,33 @@ const TimestampSelector: React.FC<TimestampSelectorProps> = ({ timestamp, onChan
       cursor += part.len;
     }
 
-    // --- Start: Input Validation ---
-    // Validate month (01-12)
     if (newTimestamp.month && newTimestamp.month.length === 2) {
       const monthNum = parseInt(newTimestamp.month, 10);
       if (monthNum > 12) newTimestamp.month = '12';
       if (monthNum === 0) newTimestamp.month = '01';
     }
 
-    // Validate day (01-31)
     if (newTimestamp.day && newTimestamp.day.length === 2) {
       const dayNum = parseInt(newTimestamp.day, 10);
       if (dayNum > 31) newTimestamp.day = '31';
       if (dayNum === 0) newTimestamp.day = '01';
     }
 
-    // Validate hour based on time format
     if (newTimestamp.hour && newTimestamp.hour.length === 2) {
       const hourNum = parseInt(newTimestamp.hour, 10);
       if (timeFormat === '12h') {
         if (hourNum > 12) newTimestamp.hour = '12';
         if (hourNum === 0) newTimestamp.hour = '01';
-      } else { // 24h
+      } else {
         if (hourNum > 23) newTimestamp.hour = '23';
       }
     }
 
-    // Validate minute (00-59)
     if (newTimestamp.minute && newTimestamp.minute.length === 2) {
       const minuteNum = parseInt(newTimestamp.minute, 10);
       if (minuteNum > 59) newTimestamp.minute = '59';
     }
-    // --- End: Input Validation ---
 
-    // Call onChange for every part that has changed
     orderedParts.forEach(part => {
       const key = part.key;
       const newValue = (newTimestamp[key] || '').slice(0, part.len);
@@ -182,35 +149,48 @@ const TimestampSelector: React.FC<TimestampSelectorProps> = ({ timestamp, onChan
             onChange={handleInputChange}
             onClick={(e) => e.stopPropagation()}
             disabled={disabled}
-            className="w-full text-left text-[11px] font-bold tracking-widest rounded-sm px-3 py-1.5 h-8 outline-none border border-transparent focus:border-[var(--text-muted)] focus:opacity-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-main)' }}
+            className="w-full text-left text-[11px] font-bold tracking-widest rounded-sm px-3 py-1.5 h-8 outline-none border border-transparent focus:border-ring focus:opacity-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-accent text-foreground"
             aria-label={t('timestampSelector.enterTimestamp')}
           />
 
           {timeFormat === '12h' && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onChange('ampm', (timestamp.ampm || 'AM') === 'AM' ? 'PM' : 'AM');
               }}
               disabled={disabled}
-              className="w-12 h-8 flex-shrink-0 flex items-center justify-center text-center text-[10px] font-black tracking-widest rounded-sm outline-none transition-all disabled:opacity-0 disabled:pointer-events-none"
-              style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-main)' }}
+              className="w-12 h-8 text-[10px] font-black tracking-widest"
               aria-label={t('timestampSelector.toggleAmPm')}
             >
               {timestamp.ampm || 'AM'}
-            </button>
+            </Button>
           )}
         </div>
 
         <div className="flex items-center gap-2 ml-2">
-          <ActionButton onClick={onSetCurrent} disabled={disabled} aria-label={t('timestampSelector.setCurrentTimestamp')}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={(e) => { e.stopPropagation(); onSetCurrent(); }}
+            disabled={disabled}
+            className="size-8 bg-accent hover:bg-accent/80"
+            aria-label={t('timestampSelector.setCurrentTimestamp')}
+          >
             <UpdateIcon className="text-lg" />
-          </ActionButton>
-          <ActionButton onClick={onClear} disabled={disabled} aria-label={t('timestampSelector.clearTimestamp')}>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            disabled={disabled}
+            className="size-8 bg-accent hover:bg-accent/80"
+            aria-label={t('timestampSelector.clearTimestamp')}
+          >
             <CloseIcon className="text-lg" />
-          </ActionButton>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,10 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Tab, SteamSearchResult } from '../types';
 import { SETTINGS_TAB } from '../constants';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
-import { SteamBrandIcon } from './Icons';
+import { SortAscendingIcon, SortDescendingIcon, SteamBrandIcon } from './Icons';
+import { invoke } from "@tauri-apps/api/core";
+
+interface DecorationInfo {
+  decorated: boolean;
+  sessionType: string | null;
+  currentDesktop: string | null;
+  platform: string;
+}
 
 interface SidebarProps {
   tabs: Tab[];
@@ -37,21 +45,46 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { t } = useI18n();
   const { sidebarGameScale, sidebarMarquee } = useTheme();
   const { recentGames } = useMonitoredAchievements();
+  const [recentSearch, setRecentSearch] = useState('');
+  const [recentSortDirection, setRecentSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [titlebarVisible, setTitlebarVisible] = useState(true);
+
+  useEffect(() => {
+    invoke<DecorationInfo>("get_window_decoration_info")
+      .then((info) => {
+        setTitlebarVisible(!(info.decorated || info.sessionType === "wayland"));
+      })
+      .catch(() => setTitlebarVisible(true));
+  }, []);
 
   const scaleStyles = useMemo(() => ({
-    sm: { button: 'h-11', image: 'w-8 h-8', name: 'text-[11px]', count: 'text-[9px]' },
-    md: { button: 'h-14', image: 'w-10 h-10', name: 'text-xs', count: 'text-[10px]' },
-    lg: { button: 'h-16', image: 'w-12 h-12', name: 'text-sm', count: 'text-[11px]' },
+    sm: { button: 'h-11', image: 'w-8 h-8', name: 'text-xs', count: 'text-[10px]' },
+    md: { button: 'h-14', image: 'w-10 h-10', name: 'text-sm', count: 'text-[10px]' },
+    lg: { button: 'h-16', image: 'w-12 h-12', name: 'text-[0.95rem]', count: 'text-[11px]' },
   }), []);
 
   const gameItemStyle = scaleStyles[sidebarGameScale];
+  const visibleRecentGames = useMemo(() => {
+    const query = recentSearch.trim().toLowerCase();
+
+    return [...recentGames]
+      .filter((game) => {
+        if (!query) return true;
+        return game.name.toLowerCase().includes(query) || game.gameId.includes(query);
+      })
+      .sort((a, b) => {
+        const timeA = typeof a.lastModified === 'number' ? a.lastModified * 1000 : new Date(a.lastModified).getTime();
+        const timeB = typeof b.lastModified === 'number' ? b.lastModified * 1000 : new Date(b.lastModified).getTime();
+        return recentSortDirection === 'desc' ? timeB - timeA : timeA - timeB;
+      });
+  }, [recentGames, recentSearch, recentSortDirection]);
 
   const itemClasses = (isActive: boolean) => `
     flex items-center rounded-md transition-all duration-300 group relative
-    ${isCollapsed ? 'h-11 w-11 justify-center' : 'w-full h-11 px-4 gap-4'}
+    ${isCollapsed ? 'h-11 w-11 justify-center' : 'w-full h-11 px-4 gap-3 justify-start'}
     ${isActive
-      ? 'bg-[var(--border-color)] text-[var(--text-main)] shadow-lg'
-      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)]'
+      ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-lg'
+      : 'text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent'
     }
   `;
 
@@ -62,15 +95,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     flex items-center transition-all duration-300 rounded-md group relative
     ${isCollapsed ? `${hClass} ${wClass} aspect-square justify-center` : `w-full ${hClass} px-4 gap-4`}
     ${isActive
-      ? 'bg-[var(--border-color)] text-[var(--text-main)] shadow-lg'
-      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)]'
+      ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-lg'
+      : 'text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent'
     }
   `;
 
   return (
     <aside
-      style={{ width: `${isCollapsed ? 72 : width}px`, backgroundColor: 'var(--sidebar-bg)' }}
-      className="flex flex-col fixed top-10 left-0 bottom-0 z-40 select-none transition-all duration-300 ease-in-out border-r border-[var(--border-color)]"
+      style={{ width: `${isCollapsed ? 72 : width}px` }}
+      className={`flex flex-col fixed left-0 bottom-0 z-40 select-none transition-all duration-300 ease-in-out border-r border-sidebar-border bg-sidebar-background ${titlebarVisible ? 'top-10' : 'top-0'}`}
     >
       <div className={`flex flex-col h-full w-full p-4 overflow-hidden ${isCollapsed ? 'items-center' : 'items-stretch'}`}>
 
@@ -86,13 +119,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                   title={isCollapsed ? t(tab.label) : undefined}
                   className={itemClasses(isActive)}
                 >
-                  <div className={`${isCollapsed ? '' : gameItemStyle.image} flex items-center justify-center flex-shrink-0`}>
-                    <span className={`text-xl transition-colors ${isActive ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]'}`}>
+                  <div className={`${isCollapsed ? '' : 'w-7'} flex items-center justify-start flex-shrink-0`}>
+                    <span className={`text-2xl transition-colors ${isActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground group-hover:text-sidebar-accent-foreground'}`}>
                       {tab.icon}
                     </span>
                   </div>
                   {!isCollapsed && (
-                    <span className="text-[10px] font-black uppercase tracking-widest truncate">
+                    <span className="text-[0.95rem] font-semibold truncate">
                       {t(tab.label)}
                     </span>
                   )}
@@ -102,26 +135,47 @@ const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* Divider + Recent Games Title */}
+        {/* Divider + Recent Games Filter */}
         {!isCollapsed ? (
-          <div className="px-4 mb-4">
-            <h3 className="text-[10px] font-black text-[var(--text-muted)] opacity-30 uppercase tracking-[0.2em] whitespace-nowrap">
+          <div className="px-1 mb-4 space-y-2">
+            <h3 className="text-[11px] font-semibold text-sidebar-foreground opacity-30 whitespace-nowrap">
               {t('sidebar.recentGames')}
             </h3>
+            <div className="flex items-center gap-2">
+              <input
+                value={recentSearch}
+                onChange={(event) => setRecentSearch(event.target.value)}
+                placeholder={`${t('sidebar.search')}...`}
+                className="h-9 min-w-0 flex-1 rounded-md border border-transparent bg-sidebar-accent px-3 text-[0.95rem] font-semibold text-sidebar-accent-foreground placeholder:text-sidebar-foreground/60 outline-none transition-all focus:ring-2 focus:ring-sidebar-ring/40"
+              />
+              <button
+                type="button"
+                onClick={() => setRecentSortDirection((current) => current === 'desc' ? 'asc' : 'desc')}
+                className="h-9 w-10 rounded-md border border-transparent bg-sidebar-accent text-sidebar-accent-foreground transition-all hover:ring-1 hover:ring-sidebar-ring/40 flex items-center justify-center"
+                title={recentSortDirection === 'desc' ? 'Mais recentes primeiro' : 'Menos recentes primeiro'}
+                aria-label={recentSortDirection === 'desc' ? 'Mais recentes primeiro' : 'Menos recentes primeiro'}
+              >
+                {recentSortDirection === 'desc' ? (
+                  <SortDescendingIcon className="text-lg opacity-80" style={{ fontVariationSettings: "'wght' 300" }} />
+                ) : (
+                  <SortAscendingIcon className="text-lg opacity-80" style={{ fontVariationSettings: "'wght' 300" }} />
+                )}
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="border-t border-[var(--border-color)] w-8 mb-6" />
+          <div className="border-t border-sidebar-border w-8 mb-6" />
         )}
 
         {/* Middle section: Recent Games */}
         <div className="flex-grow overflow-y-auto no-scrollbar -mx-1 px-1 w-full">
           <div className={`space-y-1 w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-start'}`}>
-            {recentGames.map((game) => {
+            {visibleRecentGames.map((game) => {
               const isActive = selectedGameId === parseInt(game.gameId) && activeTab === 'conquistas';
               const isSteamSource = game.source === 'steam' || game.source === 'both';
-              const gameNameClasses = `font-black uppercase tracking-tight ${gameItemStyle.name} ${isActive
-                ? 'text-[var(--text-main)]'
-                : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]'
+              const gameNameClasses = `font-semibold ${gameItemStyle.name} ${isActive
+                ? 'text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground group-hover:text-sidebar-accent-foreground'
                 }`;
 
               const steamCdn = import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps';
@@ -149,7 +203,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     });
                   }}
                   title={isCollapsed ? game.name : undefined}
-                  className={`${gameItemClasses(isActive)} ${isCollapsed ? 'rounded-2xl overflow-hidden hover:shadow-lg hover:ring-1 hover:ring-[var(--border-color)] hover:bg-[var(--hover-bg)]' : ''}`}
+                  className={`${gameItemClasses(isActive)} ${isCollapsed ? 'rounded-2xl overflow-hidden hover:shadow-lg hover:ring-1 hover:ring-sidebar-border hover:bg-sidebar-accent' : ''}`}
                 >
                   <div className={`relative flex-shrink-0 transition-transform duration-300 ${isCollapsed ? 'w-8 h-8 group-hover:scale-105' : gameItemStyle.image}`}>
                     <img
@@ -173,17 +227,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                       {sidebarMarquee ? (
                         <div className="relative w-full overflow-hidden h-[1.2em]">
                           <p className={`truncate group-hover:opacity-0 transition-opacity duration-150 text-left flex items-center gap-1.5 ${gameNameClasses}`}>
-                            {isSteamSource && <SteamBrandIcon className="w-3.5 h-3.5 shrink-0 opacity-60" />}
+                            {isSteamSource && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-60" />}
                             <span className="truncate">{game.name}</span>
                           </p>
                           <div className="marquee-container absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-left">
                             <div className="marquee-inner flex items-center gap-1.5">
                               <span className={`marquee-content text-left flex items-center gap-1.5 ${gameNameClasses}`}>
-                                {isSteamSource && <SteamBrandIcon className="w-3.5 h-3.5 shrink-0 opacity-60" />}
+                                {isSteamSource && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-60" />}
                                 <span>{game.name}</span>
                               </span>
                               <span aria-hidden="true" className={`marquee-content text-left flex items-center gap-1.5 ${gameNameClasses}`}>
-                                {isSteamSource && <SteamBrandIcon className="w-3.5 h-3.5 shrink-0 opacity-60" />}
+                                {isSteamSource && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-60" />}
                                 <span>{game.name}</span>
                               </span>
                             </div>
@@ -191,13 +245,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                       ) : (
                         <p className={`truncate w-full text-left flex items-center gap-1.5 ${gameNameClasses}`}>
-                          {isSteamSource && <SteamBrandIcon className="w-3.5 h-3.5 shrink-0 opacity-60" />}
+                          {isSteamSource && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-60" />}
                           <span className="truncate">{game.name}</span>
                         </p>
                       )}
-                      <p className={`${gameItemStyle.count} font-bold uppercase tracking-widest transition-colors duration-300 ${isActive
-                        ? 'text-[var(--text-muted)]'
-                        : 'text-[var(--text-muted)] opacity-60 group-hover:opacity-100'
+                      <p className={`${gameItemStyle.count} font-medium transition-colors duration-300 ${isActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground'} ${isActive
+                        ? ''
+                        : 'opacity-60 group-hover:opacity-100'
                         }`}>
                         {game.achievementsCurrent}/{game.achievementsTotalFromAPI ?? game.achievementsTotal}
                       </p>
@@ -210,19 +264,19 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Bottom section: Settings */}
-        <div className={`flex-shrink-0 mt-4 pt-4 border-t border-[var(--border-color)] w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-start'}`}>
+        <div className={`flex-shrink-0 mt-4 pt-4 border-t border-sidebar-border w-full flex flex-col ${isCollapsed ? 'items-center' : 'items-start'}`}>
           <button
             onClick={() => setActiveTab(SETTINGS_TAB.id)}
             title={isCollapsed ? t(SETTINGS_TAB.label) : undefined}
             className={itemClasses(activeTab === SETTINGS_TAB.id)}
           >
-            <div className={`${isCollapsed ? '' : gameItemStyle.image} flex items-center justify-center flex-shrink-0`}>
-              <span className={`text-xl transition-colors ${activeTab === SETTINGS_TAB.id ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]'}`}>
+            <div className={`${isCollapsed ? '' : 'w-7'} flex items-center justify-start flex-shrink-0`}>
+              <span className={`text-2xl transition-colors ${activeTab === SETTINGS_TAB.id ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground group-hover:text-sidebar-accent-foreground'}`}>
                 {SETTINGS_TAB.icon}
               </span>
             </div>
             {!isCollapsed && (
-              <span className="text-[10px] font-black uppercase tracking-widest truncate">
+              <span className="text-[0.95rem] font-semibold truncate">
                 {t(SETTINGS_TAB.label)}
               </span>
             )}

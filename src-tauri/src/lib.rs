@@ -237,6 +237,7 @@ pub fn run() {
             commands::steam::get_steam_library_path,
             commands::steam::get_steam_library_info,
             commands::ui::open_devtools,
+            commands::ui::get_window_decoration_info,
             commands::cache_system::get_cache_size,
             commands::cache_system::clear_cache,
             commands::cache_system::get_system_info,

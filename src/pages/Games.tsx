@@ -6,6 +6,9 @@ import { useI18n } from '../contexts/I18nContext';
 import { GameAchievements } from '../types';
 import { PlatinumIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon } from '../components/Icons';
 import { getGameAchievements } from '../tauri-api';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const LIST_VIEW_GRID_COLUMNS = '48px minmax(180px, 2fr) minmax(90px, 0.8fr) minmax(180px, 2.2fr) minmax(110px, 0.7fr) minmax(260px, 1.9fr)';
 
@@ -18,7 +21,6 @@ const MonitoredGameCard: React.FC<{
   const gameId = game.gameId;
   const source = (game as any).source;
   const isSteam = source === 'steam' || source === 'both';
-  const isBoth = source === 'both';
   const achievementsCurrent = isSteam ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const gameName = gameNames[gameId] || (game as any).name || gameId;
   const [totalAchievements, setTotalAchievements] = useState<number | null>(isSteam ? (game as any).achievementsTotal : null);
@@ -60,7 +62,7 @@ const MonitoredGameCard: React.FC<{
       }
     };
     fetchTotalAchievements();
-  }, [gameId, isSteam, (game as any).achievementsTotal]);
+  }, [gameId, isSteam]);
 
   const finalTotal = totalAchievements ?? game.achievements.length;
   const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
@@ -71,12 +73,11 @@ const MonitoredGameCard: React.FC<{
       setImageIndex(nextIndex);
       setImageUrl(fallbackImages[nextIndex]);
     } else {
-      setIsImageLoaded(true); // Stop loading even if all fail
+      setIsImageLoaded(true);
     }
   };
 
   useEffect(() => {
-    // Safety timeout: if images take too long, just show the card (maybe with a fallback bg)
     const timer = setTimeout(() => {
       if (!isImageLoaded) setIsImageLoaded(true);
     }, 1200);
@@ -86,8 +87,7 @@ const MonitoredGameCard: React.FC<{
   return (
     <div
       onClick={() => onGameSelect({ id: parseInt(gameId), name: gameName, achievementsTotal: finalTotal })}
-      className="group relative aspect-[16/9] rounded-md overflow-hidden shadow-2xl cursor-pointer transition-[transform,shadow,opacity] duration-300 hover:scale-[1.01] active:scale-[0.99] border border-[var(--border-color)] will-change-transform transform-gpu"
-      style={{ backgroundColor: 'var(--card-bg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
+      className={`group monitored-game-card relative aspect-[16/9] rounded-md overflow-hidden shadow-2xl cursor-pointer transition-all duration-300 border bg-card ${isCompleted ? 'completed-game-card' : 'border-border hover:border-foreground/30'}`}
     >
       <div
         className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${isImageLoaded ? 'opacity-100' : 'opacity-80'}`}
@@ -95,41 +95,38 @@ const MonitoredGameCard: React.FC<{
       />
       <img src={imageUrl} onError={handleImageError} onLoad={() => setIsImageLoaded(true)} style={{ display: 'none' }} alt="" />
 
-      {!isImageLoaded && (
-        <div className="absolute inset-0 bg-black/20" />
-      )}
+      {!isImageLoaded && <div className="absolute inset-0 bg-black/20" />}
 
-      {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
 
-      {/* COMPLETED Badge */}
       {isCompleted && (
-        <div className="absolute top-3 right-3 z-10 transition-all duration-500 animate-fade-in">
-          <span className="bg-gradient-to-r from-[#a9c9ff] via-[#c7dfff] to-[#a9c9ff] text-black px-2 py-0.5 rounded-[2px] text-[8px] font-black shadow-[0_0_10px_rgba(169,201,255,0.2)] flex items-center gap-1 animate-shimmer bg-[length:200%_100%]">
-            <PlatinumIcon className="text-[10px]" />
-            {t('gamesPage.completed')}
+        <div className="absolute top-2.5 right-2.5 z-10 animate-fade-in">
+          <span className="completed-game-badge inline-flex h-5 items-center gap-1 rounded-full border border-white/30 bg-[#dceaff]/90 px-2 text-[10px] font-semibold leading-none text-[#111827] shadow-[0_2px_10px_rgba(169,201,255,0.22)] backdrop-blur-sm">
+            <PlatinumIcon
+              className="shrink-0 leading-none opacity-80"
+              style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
+            />
+            <span>{t('gamesPage.completed')}</span>
           </span>
         </div>
       )}
 
-      {/* Content wrapper */}
-      <div className="relative flex flex-col justify-end h-full p-4 text-white transition-opacity duration-300">
+      <div className="relative flex flex-col justify-end h-full p-4 text-white">
         <div className="flex items-center justify-between mb-2 gap-3 min-w-0">
-          <h3 className="font-black text-sm uppercase tracking-tight truncate min-w-0 leading-tight drop-shadow-md flex items-center gap-2">
+          <h3 className="font-semibold text-sm truncate min-w-0 leading-tight drop-shadow-md flex items-center gap-2">
             {isSteam && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-70" />}
             <span className="truncate">{gameName}</span>
           </h3>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-200 flex-shrink-0 drop-shadow-md">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-200 flex-shrink-0 drop-shadow-md">
             <span className={isCompleted ? 'text-[#a9c9ff]' : ''}>{achievementsCurrent}</span>
             <span className="opacity-30">/</span>
             <span>{finalTotal}</span>
           </div>
         </div>
 
-        {/* Progress Bar */}
         <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
           <div
-            className={`h-full transition-all duration-500 ease-out fill-mode-forwards ${isCompleted
+            className={`game-card-progress-fill h-full transition-all duration-500 ease-out ${isCompleted
               ? 'bg-gradient-to-r from-[#a9c9ff] via-[#c7dfff] to-[#a9c9ff] shadow-[0_0_15px_rgba(169,201,255,0.2)] animate-shimmer bg-[length:200%_100%]'
               : 'bg-white/40 group-hover:bg-white/60'
               }`}
@@ -138,7 +135,7 @@ const MonitoredGameCard: React.FC<{
         </div>
       </div>
 
-      <div className="absolute inset-0 rounded-md pointer-events-none transition-[box-shadow] duration-300 group-hover:ring-1 group-hover:ring-inset group-hover:ring-white/5"></div>
+      <div className="absolute inset-0 rounded-md pointer-events-none transition-shadow duration-300 group-hover:ring-1 group-hover:ring-inset group-hover:ring-white/5"></div>
     </div>
   );
 };
@@ -151,7 +148,6 @@ const MonitoredGameRow: React.FC<{
   const gameId = game.gameId;
   const source = (game as any).source;
   const isSteam = source === 'steam' || source === 'both';
-  const isBoth = source === 'both';
   const achievementsCurrent = isSteam ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const [totalAchievements, setTotalAchievements] = useState<number | null>(isSteam ? (game as any).achievementsTotal : null);
 
@@ -176,7 +172,7 @@ const MonitoredGameRow: React.FC<{
       }
     };
     fetchData();
-  }, [gameId, isSteam, (game as any).achievementsTotal]);
+  }, [gameId, isSteam]);
 
   const finalTotal = totalAchievements ?? game.achievements.length;
   const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
@@ -184,8 +180,8 @@ const MonitoredGameRow: React.FC<{
   return (
     <div
       onClick={() => onGameSelect({ id: parseInt(gameId), name: gameName, achievementsTotal: finalTotal })}
-      className="group grid gap-6 items-center p-4 rounded-md transition-all duration-300 cursor-pointer border border-[var(--border-color)]"
-      style={{ backgroundColor: 'var(--input-bg)', gridTemplateColumns: LIST_VIEW_GRID_COLUMNS }}
+      className="group grid gap-6 items-center p-4 rounded-md transition-all duration-300 cursor-pointer border border-border bg-muted/30"
+      style={{ gridTemplateColumns: LIST_VIEW_GRID_COLUMNS }}
     >
       <div className="w-12 h-12 flex items-center justify-center">
         <img
@@ -199,34 +195,34 @@ const MonitoredGameRow: React.FC<{
       </div>
 
       <div className="min-w-0">
-        <h3 className="font-black text-xs uppercase tracking-widest truncate flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+        <h3 className="font-semibold text-xs truncate flex items-center gap-2 text-foreground">
           <span className="truncate">{gameName}</span>
         </h3>
-        <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-main)' }}>AppID: {gameId}</p>
+        <p className="text-[9px] font-medium opacity-30 mt-0.5 text-foreground">AppID: {gameId}</p>
       </div>
 
       <div className="flex items-center justify-center">
-        {isBoth ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-[var(--hover-bg)] border border-[var(--border-color)] w-24 justify-center">
-            <SteamBrandIcon className="w-3.5 h-3.5 opacity-60" style={{ color: 'var(--text-main)' }} />
-            <span className="text-[9px] font-black opacity-60 uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Both</span>
-          </div>
+        {(source === 'both') ? (
+          <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1.5">
+            <SteamBrandIcon className="w-3.5 h-3.5 opacity-60" />
+            Both
+          </Badge>
         ) : isSteam ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-[var(--hover-bg)] border border-[var(--border-color)] w-24 justify-center">
-            <SteamBrandIcon className="w-3.5 h-3.5 opacity-60" style={{ color: 'var(--text-main)' }} />
-            <span className="text-[9px] font-black opacity-60 uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Steam</span>
-          </div>
+          <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1.5">
+            <SteamBrandIcon className="w-3.5 h-3.5 opacity-60" />
+            Steam
+          </Badge>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-[var(--hover-bg)] border border-[var(--border-color)] w-24 justify-center">
-            <span className="text-[9px] font-black opacity-60 uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Local</span>
-          </div>
+          <Badge variant="outline" className="flex items-center gap-2 px-3 py-1.5">
+            Local
+          </Badge>
         )}
       </div>
 
       <div className="hidden lg:flex items-center justify-start gap-2 overflow-hidden" title={allPaths}>
-        <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{game.directory}</span>
+        <span className="text-[10px] font-medium opacity-40 truncate text-foreground">{game.directory}</span>
         {otherDirsCount > 0 && (
-          <span className="px-1.5 py-0.5 rounded-sm bg-[var(--hover-bg)] text-[9px] font-black opacity-50 whitespace-nowrap" style={{ color: 'var(--text-main)' }}>
+          <span className="px-1.5 py-0.5 rounded-sm bg-muted/50 text-[9px] font-semibold opacity-50 whitespace-nowrap text-foreground">
             +{otherDirsCount}
           </span>
         )}
@@ -234,26 +230,26 @@ const MonitoredGameRow: React.FC<{
 
       <div className="justify-self-center w-full max-w-[110px] text-center">
         {isCompleted ? (
-          <span className="text-[9px] font-black text-[#a9c9ff] uppercase tracking-widest flex items-center justify-center gap-1">
-            <PlatinumIcon className="text-sm" />
+          <span className="text-[9px] font-semibold text-[#a9c9ff] flex items-center justify-center gap-1">
+            <PlatinumIcon className="text-[11px] leading-none" style={{ fontVariationSettings: "'wght' 300" }} />
             100%
           </span>
         ) : (
-          <span className="text-[9px] font-black opacity-30 uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+          <span className="text-[9px] font-semibold opacity-30 text-foreground">
             {finalTotal > 0 ? Math.round((achievementsCurrent / finalTotal) * 100) : 0}%
           </span>
         )}
       </div>
 
       <div className="justify-self-end w-full max-w-[260px] pl-2 flex flex-col items-end gap-1.5">
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
-          <span className={isCompleted ? 'text-[#a9c9ff]' : 'text-[var(--text-main)]'}>{achievementsCurrent}</span>
-          <span className="opacity-20" style={{ color: 'var(--text-main)' }}>/</span>
-          <span className="opacity-40" style={{ color: 'var(--text-main)' }}>{finalTotal}</span>
+        <div className="flex items-center gap-2 text-[10px] font-semibold">
+          <span className={isCompleted ? 'text-[#a9c9ff]' : 'text-foreground'}>{achievementsCurrent}</span>
+          <span className="opacity-20 text-foreground">/</span>
+          <span className="opacity-40 text-foreground">{finalTotal}</span>
         </div>
-        <div className="w-full bg-[var(--hover-bg)] h-1.5 rounded-full overflow-hidden">
+        <div className="w-full bg-muted/50 h-1.5 rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-gradient-to-r from-[#a9c9ff] via-[#c7dfff] to-[#a9c9ff] animate-shimmer bg-[length:200%_100%] shadow-[0_0_15px_rgba(169,201,255,0.3)]' : 'bg-[var(--text-muted)] opacity-20'}`}
+            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-gradient-to-r from-[#a9c9ff] via-[#c7dfff] to-[#a9c9ff] animate-shimmer bg-[length:200%_100%] shadow-[0_0_15px_rgba(169,201,255,0.3)]' : 'bg-muted-foreground opacity-20'}`}
             style={{ width: finalTotal > 0 ? `${(achievementsCurrent / finalTotal) * 100}%` : '0%' }}
           />
         </div>
@@ -343,48 +339,39 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 w-full mb-8 animate-fade-in flex items-center gap-4">
+      <header className="flex-shrink-0 w-full mb-8 animate-fade-in">
         <div className="relative group flex-1">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <SearchIcon className={`text-lg transition-colors duration-300 ${searchQuery ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)] group-focus-within:text-[var(--text-main)]'}`} />
+            <SearchIcon className={`text-lg transition-colors duration-300 ${searchQuery ? 'text-foreground' : 'text-muted-foreground group-focus-within:text-foreground'}`} />
           </div>
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={`${t('sidebar.search')}...`}
-            className="w-full h-12 border rounded-md pl-12 pr-4 text-sm font-medium tracking-normal placeholder:normal-case placeholder:tracking-normal outline-none transition-all shadow-inner"
-            style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+            className="w-full h-12 pl-12 pr-14 text-[0.95rem] font-semibold"
           />
-        </div>
 
-        <div className="flex p-1 rounded-lg border h-12 shadow-inner" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}>
-          <button
-            onClick={() => setGamesViewMode('grid')}
-            className={`w-10 h-full flex items-center justify-center rounded-md transition-all duration-300 ${gamesViewMode === 'grid'
-              ? 'bg-[var(--text-main)] text-[var(--bg-color)] shadow-lg scale-95'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)]'
-              }`}
-            title="Grade"
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setGamesViewMode(gamesViewMode === 'grid' ? 'list' : 'grid')}
+            className="absolute inset-y-1 right-2 h-auto w-10 rounded-md bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground"
+            title={gamesViewMode === 'grid' ? 'Alternar para lista' : 'Alternar para grade'}
+            aria-label={gamesViewMode === 'grid' ? 'Alternar para lista' : 'Alternar para grade'}
           >
-            <GridViewIcon className="text-lg" />
-          </button>
-          <button
-            onClick={() => setGamesViewMode('list')}
-            className={`w-10 h-full flex items-center justify-center rounded-md transition-all duration-300 ${gamesViewMode === 'list'
-              ? 'bg-[var(--text-main)] text-[var(--bg-color)] shadow-lg scale-95'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)]'
-              }`}
-            title="Lista"
-          >
-            <ListViewIcon className="text-lg" />
-          </button>
+            {gamesViewMode === 'grid' ? (
+              <ListViewIcon className="text-lg" />
+            ) : (
+              <GridViewIcon className="text-lg" />
+            )}
+          </Button>
         </div>
       </header>
 
       <div className="flex-grow overflow-y-auto no-scrollbar pb-10 custom-scrollbar">
         {gamesViewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8 px-2 py-5 overflow-visible">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 py-5 overflow-visible">
             {filteredAndSortedGames.map(game => (
               <MonitoredGameCard
                 key={game.gameId}
@@ -395,32 +382,36 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <div className="grid gap-6 items-center py-3 text-[10px] font-black opacity-30 uppercase tracking-[0.2em] border-b sticky top-0 z-10" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-main)', gridTemplateColumns: LIST_VIEW_GRID_COLUMNS }}>
+            <div
+              className="grid gap-6 items-center py-3 text-[10px] font-semibold opacity-30 border-b sticky top-0 z-10 bg-background border-border text-foreground"
+              style={{ gridTemplateColumns: LIST_VIEW_GRID_COLUMNS }}
+            >
               <div className="w-12"></div>
-              <button onClick={() => handleSort('name')} className="group flex items-center hover:opacity-100 transition-colors uppercase truncate text-left">
+              <Button variant="ghost" onClick={() => handleSort('name')} className="group flex items-center hover:opacity-100 truncate text-left h-auto p-0 text-[10px] font-semibold">
                 Game <SortIndicator column="name" />
-              </button>
+              </Button>
 
               <div className="flex items-center justify-center">
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     const filters: ('all' | 'steam' | 'local')[] = ['all', 'steam', 'local'];
                     const next = filters[(filters.indexOf(platformFilter) + 1) % filters.length];
                     setPlatformFilter(next);
                   }}
-                  className={`group flex items-center hover:opacity-100 transition-colors uppercase tracking-[0.2em] ${platformFilter !== 'all' ? 'text-[var(--text-main)] opacity-100' : ''}`}
+                  className={`group flex items-center hover:opacity-100 h-auto p-0 text-[10px] font-semibold ${platformFilter !== 'all' ? 'opacity-100' : ''}`}
                 >
                   {platformFilter === 'all' ? 'All' : platformFilter}
-                </button>
+                </Button>
               </div>
 
-              <button onClick={() => handleSort('path')} className="group hidden lg:flex items-center justify-start hover:opacity-100 transition-colors uppercase truncate">
+              <Button variant="ghost" onClick={() => handleSort('path')} className="group hidden lg:flex items-center justify-start hover:opacity-100 truncate h-auto p-0 text-[10px] font-semibold">
                 Path <SortIndicator column="path" />
-              </button>
+              </Button>
               <div className="justify-self-center w-full max-w-[110px] text-center">Status</div>
-              <button onClick={() => handleSort('progress')} className="group justify-self-end w-full max-w-[260px] pl-2 flex items-center justify-end hover:opacity-100 transition-colors uppercase">
+              <Button variant="ghost" onClick={() => handleSort('progress')} className="group justify-self-end w-full max-w-[260px] pl-2 flex items-center justify-end hover:opacity-100 h-auto p-0 text-[10px] font-semibold">
                 Progress <SortIndicator column="progress" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-1 mt-2">
               {filteredAndSortedGames.map(game => (
