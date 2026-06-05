@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { ApiSource } from "../../types";
 import { SteamBrandIcon, HydraIcon } from "../Icons";
 import { useI18n } from "../../contexts/I18nContext";
-import { ToastItemData } from "../ToastContainer";
+
 
 interface ApiSettingsProps {
   selectedApi: ApiSource;
@@ -14,7 +14,7 @@ interface ApiSettingsProps {
   setSteamIntegrationEnabled: (enabled: boolean) => void;
   hideSteamGamesWithoutAchievements: boolean;
   setHideSteamGamesWithoutAchievements: (enabled: boolean) => void;
-  onNotifyToast?: (toast: Omit<ToastItemData, "id">) => void;
+  onNotifyToast?: (toast: { title: string; message: string; durationMs?: number; type?: string }) => void;
 }
 
 const ApiSettings: React.FC<ApiSettingsProps> = ({
@@ -174,11 +174,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
       : t("settings.api.steamIntegrationDisabled");
   }, [selectedApi, isSteamMissing, steamIntegrationEnabled, t]);
 
-  const neutralBadgeStyle = {
-    backgroundColor: "var(--hover-bg)",
-    borderColor: "var(--border-color)",
-    color: "var(--text-main)",
-  };
+  const neutralBadgeStyle = "bg-accent border-border text-foreground";
 
   const apiOptions: Array<{
     id: ApiSource;
@@ -204,12 +200,12 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
 
   return (
     <div className="space-y-1 animate-modal-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b" style={{ borderColor: "var(--border-color)" }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b border-border">
         <div className="flex-1">
-          <h4 className="text-sm font-black tracking-[0.15em] uppercase mb-1.5" style={{ color: "var(--text-main)" }}>
+          <h4 className="text-sm font-semibold mb-1.5 text-foreground">
             {t("settings.api.title")}
           </h4>
-          <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md" style={{ color: "var(--text-main)" }}>
+          <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md text-foreground">
             {t("settings.api.description")}
           </p>
         </div>
@@ -217,16 +213,15 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
         <div className="relative w-full sm:w-60 flex-shrink-0">
           <button
             onClick={() => setIsApiDropdownOpen(!isApiDropdownOpen)}
-            className="w-full h-12 border rounded-md px-5 flex items-center justify-between transition-all duration-300 group shadow-sm hover:shadow-md"
-            style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}
+            className="w-full h-12 border border-border rounded-md px-5 flex items-center justify-between transition-all duration-300 group shadow-sm hover:shadow-md bg-muted"
           >
             <div className="flex items-center gap-3 min-w-0">
               {selectedApiOption?.icon}
-              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-main)" }}>
+              <span className="text-xs font-semibold text-foreground">
                 {selectedApiOption?.label}
               </span>
             </div>
-            <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${isApiDropdownOpen ? "rotate-180" : ""}`} style={{ color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className={`w-3.5 h-3.5 transition-transform duration-300 text-muted-foreground ${isApiDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
@@ -234,7 +229,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
           {isApiDropdownOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setIsApiDropdownOpen(false)} />
-              <ul className="absolute z-40 mt-1 w-full border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }}>
+              <ul className="absolute z-40 mt-1 w-full border border-border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in bg-card">
                 {apiOptions.map((option) => (
                   <li key={option.id}>
                     <button
@@ -243,13 +238,13 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                         setIsApiDropdownOpen(false);
                       }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${selectedApi === option.id
-                        ? "bg-[var(--border-color)] text-[var(--text-main)] shadow-sm"
-                        : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-main)]"
+                        ? "bg-border text-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         }`}
                   >
                     {option.icon}
-                    <span className="text-xs font-bold uppercase tracking-widest flex-grow text-left">{option.label}</span>
-                      {selectedApi === option.id && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--text-main)" }} />}
+                    <span className="text-xs font-semibold flex-grow text-left">{option.label}</span>
+                      {selectedApi === option.id && <div className="w-1.5 h-1.5 rounded-full bg-foreground" />}
                   </button>
                 </li>
                 ))}
@@ -260,12 +255,12 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
       </div>
 
       {selectedApi === "steam" && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b" style={{ borderColor: "var(--border-color)" }}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b border-border">
           <div className="flex-1">
-            <h4 className="text-sm font-black tracking-[0.15em] uppercase mb-1.5" style={{ color: "var(--text-main)" }}>
+            <h4 className="text-sm font-semibold mb-1.5 text-foreground">
               {t("settings.api.apiKeyLabel")}
             </h4>
-            <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md" style={{ color: "var(--text-main)" }}>
+            <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md text-foreground">
               {t("settings.api.apiKeyPlaceholder")}
             </p>
           </div>
@@ -276,22 +271,12 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
               value={steamApiKey}
               onChange={(e) => setSteamApiKey(e.target.value)}
               placeholder={t("settings.api.apiKeyPlaceholder")}
-              className="w-full h-12 border rounded-md pl-4 pr-20 text-sm font-semibold outline-none shadow-inner placeholder:text-[var(--text-muted)]"
-              style={{
-                backgroundColor: "var(--input-bg)",
-                borderColor: "var(--border-color)",
-                color: "var(--text-main)",
-              }}
+              className="w-full h-12 border border-border rounded-md pl-4 pr-20 text-sm font-semibold outline-none shadow-inner placeholder:text-muted-foreground bg-muted text-foreground"
             />
             <button
               type="button"
               onClick={() => setShowApiKey(!showApiKey)}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 px-3 rounded-md border text-[10px] font-black uppercase tracking-wider"
-              style={{
-                borderColor: "var(--border-color)",
-                backgroundColor: "var(--hover-bg)",
-                color: "var(--text-main)",
-              }}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 px-3 rounded-md border border-border text-[10px] font-semibold bg-accent text-foreground"
             >
               {showApiKey ? t("settings.api.hideApiKey") : t("settings.api.showApiKey")}
             </button>
@@ -301,32 +286,28 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
 
       <div className="space-y-3 pt-3">
         <div
-          className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
+          className={`group flex items-center justify-between p-4 rounded-xl border border-border transition-all duration-300 bg-muted ${
             !steamIntegrationEnabled ? "opacity-70" : "hover:shadow-lg"
           }`}
-          style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}
         >
           <div className="flex items-center min-w-0 flex-1">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: "var(--text-main)" }}>
+                <p className="text-xs font-semibold truncate text-foreground">
                   {t("settings.api.steamIntegrationTitle")}
                 </p>
-                <span
-                  className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter"
-                  style={neutralBadgeStyle}
-                >
-                  BETA
+                <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border bg-accent border-border text-foreground">
+                  Beta
                 </span>
               </div>
-              <p className="text-[10px] font-medium opacity-50 truncate" style={{ color: "var(--text-main)" }}>
+              <p className="text-[10px] font-medium opacity-50 truncate text-foreground">
                 {t("settings.api.steamIntegrationBetaNotice")}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black uppercase tracking-wider opacity-60" style={{ color: "var(--text-main)" }}>
+            <span className="text-[10px] font-semibold opacity-60 text-foreground">
               {integrationStatus}
             </span>
             <button
@@ -352,24 +333,23 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
         </div>
 
         <div
-          className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
+          className={`group flex items-center justify-between p-4 rounded-xl border border-border transition-all duration-300 bg-muted ${
             selectedApi !== "steam" ? "opacity-70" : "hover:shadow-lg"
           }`}
-          style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}
         >
           <div className="flex items-center min-w-0 flex-1">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: "var(--text-main)" }}>
+              <p className="text-xs font-semibold truncate text-foreground">
                 {t("settings.api.hideSteamGamesWithoutAchievements")}
               </p>
-              <p className="text-[10px] font-medium opacity-50 truncate" style={{ color: "var(--text-main)" }}>
+              <p className="text-[10px] font-medium opacity-50 truncate text-foreground">
                 {t("settings.api.hideSteamGamesWithoutAchievementsDesc")}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black uppercase tracking-wider opacity-60" style={{ color: "var(--text-main)" }}>
+            <span className="text-[10px] font-semibold opacity-60 text-foreground">
               {hideSteamGamesWithoutAchievements ? t("settings.api.hidden") : t("settings.api.visible")}
             </span>
             <button
@@ -383,16 +363,13 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div
-            className="group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 hover:shadow-lg"
-            style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}
-          >
+          <div className="group flex items-center justify-between p-4 rounded-xl border border-border transition-all duration-300 hover:shadow-lg bg-muted">
             <div className="flex items-center min-w-0 flex-1">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--text-main)" }}>
+                <p className="text-[10px] font-semibold text-foreground">
                   {t("settings.api.steamLibraryPath")}
                 </p>
-                <p className="text-[10px] font-medium opacity-50 truncate" style={{ color: "var(--text-main)" }}>
+                <p className="text-[10px] font-medium opacity-50 truncate text-foreground">
                   {steamLibPath || "--"}
                 </p>
               </div>
@@ -400,27 +377,19 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
             <button
               onClick={handlePickVdf}
               disabled={isSelectingVdf}
-              className="h-8 px-3 rounded-md border text-[10px] font-black uppercase tracking-wider disabled:opacity-60"
-              style={{
-                borderColor: "var(--border-color)",
-                backgroundColor: "var(--hover-bg)",
-                color: "var(--text-main)",
-              }}
+              className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-60 bg-accent text-foreground"
             >
               {isSelectingVdf ? t("settings.api.selecting") : t("settings.api.selectSteamVdf")}
             </button>
           </div>
 
-          <div
-            className="group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 hover:shadow-lg"
-            style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}
-          >
+          <div className="group flex items-center justify-between p-4 rounded-xl border border-border transition-all duration-300 hover:shadow-lg bg-muted">
             <div className="flex items-center min-w-0 flex-1">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--text-main)" }}>
+                <p className="text-[10px] font-semibold text-foreground">
                   {t("settings.api.steamDllPath")}
                 </p>
-                <p className="text-[10px] font-medium opacity-50 truncate" style={{ color: "var(--text-main)" }}>
+                <p className="text-[10px] font-medium opacity-50 truncate text-foreground">
                   {steamDllPath || "--"}
                 </p>
               </div>
@@ -428,12 +397,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
             <button
               onClick={handlePickDll}
               disabled={isSelectingDll}
-              className="h-8 px-3 rounded-md border text-[10px] font-black uppercase tracking-wider disabled:opacity-60"
-              style={{
-                borderColor: "var(--border-color)",
-                backgroundColor: "var(--hover-bg)",
-                color: "var(--text-main)",
-              }}
+              className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-60 bg-accent text-foreground"
             >
               {isSelectingDll ? t("settings.api.selecting") : t("settings.api.selectSteamDll")}
             </button>
@@ -441,8 +405,8 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
         </div>
 
         {selectedApi !== "steam" && (
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--border-color)", backgroundColor: "var(--input-bg)" }}>
-            <p className="text-xs font-medium opacity-70" style={{ color: "var(--text-main)" }}>
+          <div className="rounded-xl border border-border p-4 bg-muted">
+            <p className="text-xs font-medium opacity-70 text-foreground">
               {t("settings.api.steamIntegrationWarning")}
             </p>
           </div>
@@ -450,14 +414,14 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
 
         {selectedApi === "steam" && isSteamMissing && (
           <div className="rounded-xl border p-4" style={{ borderColor: "rgba(239,68,68,0.35)", backgroundColor: "rgba(239,68,68,0.08)" }}>
-            <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-main)" }}>
+            <p className="text-xs font-semibold mb-1 text-foreground">
               {t("settings.api.steamIntegrationMissing")}
             </p>
-            <p className="text-xs font-medium opacity-85" style={{ color: "var(--text-main)" }}>
+            <p className="text-xs font-medium opacity-85 text-foreground">
               {t("settings.api.steamIntegrationMissingWarning")}
             </p>
             {steamFailureReason && (
-              <p className="text-[11px] font-semibold mt-2 break-words" style={{ color: "var(--text-main)" }}>
+              <p className="text-[11px] font-semibold mt-2 break-words text-foreground">
                 {t("settings.api.steamIntegrationFailureReason")} {steamFailureReason}
               </p>
             )}
@@ -469,12 +433,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                   setIsRetryingConnection(false);
                 }}
                 disabled={isRetryingConnection}
-                className="h-8 px-3 rounded-md border text-[10px] font-black uppercase tracking-wider disabled:opacity-60"
-                style={{
-                  borderColor: "var(--border-color)",
-                  backgroundColor: "var(--hover-bg)",
-                  color: "var(--text-main)",
-                }}
+                className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-60 bg-accent text-foreground"
               >
                 {isRetryingConnection
                   ? t("settings.api.selecting")

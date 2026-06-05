@@ -172,21 +172,12 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
         results={testResults}
       />
 
-      <div
-        className="pt-2 pb-8 border-b"
-        style={{ borderColor: "var(--border-color)" }}
-      >
+      <div className="pt-2 pb-8 border-b border-border">
         <div className="flex-1 mb-6">
-          <h4
-            className="text-sm font-black tracking-[0.15em] uppercase mb-1.5"
-            style={{ color: "var(--text-main)" }}
-          >
+          <h4 className="text-sm font-semibold mb-1.5 text-foreground">
             Debug Settings
           </h4>
-          <p
-            className="text-xs font-medium leading-relaxed w-full opacity-70"
-            style={{ color: "var(--text-muted)" }}
-          >
+          <p className="text-xs font-medium leading-relaxed w-full opacity-70 text-muted-foreground">
             Developer tools and debug configurations.
           </p>
         </div>
@@ -195,16 +186,10 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
           {/* Connection Tests */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h4
-                className="text-sm font-black tracking-[0.15em] uppercase mb-1.5"
-                style={{ color: "var(--text-main)" }}
-              >
+              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
                 Connection Tests
               </h4>
-              <p
-                className="text-xs font-medium leading-relaxed w-full"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
                 Run connectivity tests against Steam and Hydra APIs (Frontend vs
                 Backend).
               </p>
@@ -213,21 +198,11 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
             <button
               onClick={runConnectionTests}
               disabled={isTestRunning}
-              className={`h-9 px-4 rounded-md text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 border flex items-center gap-2 ${isTestRunning ? "opacity-50 cursor-wait" : "hover:bg-[var(--hover-bg)]"}`}
-              style={{
-                borderColor: "var(--border-color)",
-                color: "var(--text-main)",
-              }}
+              className={`h-9 px-4 rounded-md text-[10px] font-semibold transition-all duration-300 border border-border flex items-center gap-2 text-foreground ${isTestRunning ? "opacity-50 cursor-wait" : "hover:bg-accent"}`}
             >
               {isTestRunning ? (
                 <>
-                  <div
-                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{
-                      borderColor: "var(--text-muted)",
-                      borderTopColor: "var(--text-main)",
-                    }}
-                  />
+                  <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin border-muted-foreground border-t-foreground" />
                   <span>Testing...</span>
                 </>
               ) : (
@@ -239,62 +214,36 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
           {/* Force Frontend Fetch */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h4
-                className="text-sm font-black tracking-[0.15em] uppercase mb-1.5"
-                style={{ color: "var(--text-main)" }}
-              >
+              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
                 {t("settings.api.forceFrontendFetch")}
               </h4>
-              <p
-                className="text-xs font-medium leading-relaxed w-full"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
                 {t("settings.api.forceFrontendFetchDescription")}
               </p>
             </div>
 
             <button
               onClick={() => setForceFrontendFetch(!forceFrontendFetch)}
-              className="relative w-14 h-7 rounded-full transition-all duration-300 mt-1 shrink-0 cursor-pointer"
-              style={{
-                backgroundColor: forceFrontendFetch
-                  ? "var(--text-main)"
-                  : "var(--border-color)",
-              }}
+              className={`relative w-14 h-7 rounded-full transition-all duration-300 mt-1 shrink-0 cursor-pointer ${forceFrontendFetch ? "bg-foreground" : "bg-border"}`}
             >
-              <div
-                className={`absolute top-1 left-1 w-5 h-5 rounded-full transition-all duration-300 ${
-                  forceFrontendFetch ? "translate-x-7" : "translate-x-0"
-                }`}
-                style={{ backgroundColor: "var(--bg-color)" }}
-              />
+              <div className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-background transition-all duration-300 ${forceFrontendFetch ? "translate-x-7" : "translate-x-0"}`} />
             </button>
           </div>
 
           {/* Open DevTools */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h4
-                className="text-sm font-black tracking-[0.15em] uppercase mb-1.5"
-                style={{ color: "var(--text-main)" }}
-              >
+              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
                 DevTools
               </h4>
-              <p
-                className="text-xs font-medium leading-relaxed w-full"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
                 Open the application developer tools.
               </p>
             </div>
 
             <button
               onClick={openDevTools}
-              className="h-9 px-4 rounded-md text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 border hover:bg-[var(--hover-bg)]"
-              style={{
-                borderColor: "var(--border-color)",
-                color: "var(--text-main)",
-              }}
+              className="h-9 px-4 rounded-md text-[10px] font-semibold transition-all duration-300 border border-border text-foreground hover:bg-accent"
             >
               Open
             </button>
@@ -303,16 +252,10 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
           {/* Restart Wizard */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h4
-                className="text-sm font-black tracking-[0.15em] uppercase mb-1.5"
-                style={{ color: "var(--text-main)" }}
-              >
+              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
                 Onboarding Wizard
               </h4>
-              <p
-                className="text-xs font-medium leading-relaxed w-full"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
                 Reopen the initial setup wizard on next launch.
               </p>
             </div>
@@ -320,11 +263,7 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
             <button
               onClick={restartOnboardingWizard}
               disabled={isRestartingWizard}
-              className="h-9 px-4 rounded-md text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 border hover:bg-[var(--hover-bg)] disabled:opacity-50 disabled:cursor-wait"
-              style={{
-                borderColor: "var(--border-color)",
-                color: "var(--text-main)",
-              }}
+              className="h-9 px-4 rounded-md text-[10px] font-semibold transition-all duration-300 border border-border text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-wait"
             >
               {isRestartingWizard ? "Restarting..." : "Run Wizard"}
             </button>

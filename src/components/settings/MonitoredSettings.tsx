@@ -294,34 +294,30 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
         is_default: true,
     };
 
-    const neutralBadgeStyle = {
-        backgroundColor: 'var(--hover-bg)',
-        borderColor: 'var(--border-color)',
-        color: 'var(--text-main)',
-    };
+    const neutralBadgeStyle = "bg-accent border-border text-foreground";
 
     return (
         <div className="space-y-6 animate-modal-in">
             <div className="flex flex-col gap-2">
-                <h4 className="text-sm font-black tracking-[0.15em] uppercase" style={{ color: 'var(--text-main)' }}>
+                <h4 className="text-sm font-semibold text-foreground">
                     {t('settings.monitored.title')}
                 </h4>
-                <p className="text-xs font-medium opacity-60 leading-relaxed" style={{ color: 'var(--text-main)' }}>
+                <p className="text-xs font-medium opacity-60 leading-relaxed text-foreground">
                     {t('settings.monitored.description')}
                 </p>
             </div>
 
             {/* Cache Management Section */}
-            <div className="border rounded-md p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}>
+            <div className="border border-border rounded-md p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm bg-muted">
                 <div className="flex items-center gap-6">
                     <div className="space-y-1">
-                        <h4 className="text-sm font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-main)' }}>
+                        <h4 className="text-sm font-semibold text-foreground">
                             {t('settings.monitored.appCacheTitle')}
                         </h4>
-                        <p className="text-xs font-medium leading-relaxed max-w-md opacity-60" style={{ color: 'var(--text-main)' }}>
+                        <p className="text-xs font-medium leading-relaxed max-w-md opacity-60 text-foreground">
                             {t('settings.monitored.appCacheDescription')}
                         </p>
-                        <p className="text-[10px] font-bold mt-1 uppercase tracking-wide opacity-80" style={{ color: 'var(--text-main)' }}>
+                        <p className="text-[10px] font-medium mt-1 opacity-80 text-foreground">
                             {t('settings.monitored.currentSize')}: {cacheSize}
                         </p>
                     </div>
@@ -330,26 +326,22 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 <button
                     onClick={handleClearCache}
                     disabled={clearingCache}
-                    className={`flex items-center justify-center gap-3 px-6 py-3 rounded-md text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${clearingCache
+                    className={`flex items-center justify-center gap-3 px-6 py-3 rounded-md text-[10px] font-semibold transition-all border border-border shadow-sm text-foreground ${clearingCache
                         ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-[var(--hover-bg)] active:scale-95'
+                        : 'hover:bg-accent active:scale-95'
                         }`}
-                    style={{
-                        borderColor: 'var(--border-color)',
-                        color: 'var(--text-main)'
-                    }}
                 >
                     {clearingCache ? t('settings.monitored.clearingCache') : t('settings.monitored.clearCache')}
                 </button>
             </div>
 
             {isLinux && (
-                <div className="border rounded-md p-6 flex flex-col gap-4 shadow-sm" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}>
+                <div className="border border-border rounded-md p-6 flex flex-col gap-4 shadow-sm bg-muted">
                     <div className="space-y-1">
-                        <h4 className="text-sm font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-main)' }}>
+                        <h4 className="text-sm font-semibold text-foreground">
                             {t('settings.monitored.winePrefixTitle')}
                         </h4>
-                        <p className="text-xs font-medium leading-relaxed opacity-60" style={{ color: 'var(--text-main)' }}>
+                        <p className="text-xs font-medium leading-relaxed opacity-60 text-foreground">
                             {t('settings.monitored.winePrefixDescription')}
                         </p>
                     </div>
@@ -359,18 +351,12 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                             value={winePrefixPath}
                             onChange={(e) => setWinePrefixPath(e.target.value)}
                             placeholder={t('settings.monitored.winePrefixPlaceholder')}
-                            className="flex-1 h-11 px-4 rounded-md border text-xs font-semibold placeholder:text-[var(--text-muted)]"
-                            style={{
-                                backgroundColor: 'var(--input-bg)',
-                                borderColor: 'var(--border-color)',
-                                color: 'var(--text-main)'
-                            }}
+                            className="flex-1 h-11 px-4 rounded-md border border-border text-xs font-semibold placeholder:text-muted-foreground bg-muted text-foreground"
                         />
                         <button
                             onClick={handleSaveWinePrefix}
                             disabled={isSavingWinePrefix || !winePrefixPath.trim()}
-                            className={`h-11 px-5 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all ${isSavingWinePrefix || !winePrefixPath.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--hover-bg)] active:scale-95'}`}
-                            style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                            className={`h-11 px-5 rounded-md text-[10px] font-semibold border border-border transition-all text-foreground ${isSavingWinePrefix || !winePrefixPath.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent active:scale-95'}`}
                         >
                             {isSavingWinePrefix ? t('settings.monitored.savingPrefix') : t('settings.monitored.savePrefix')}
                         </button>
@@ -380,18 +366,16 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
 
             <div className="space-y-3">
                 {isLinux && (
-                    <div className="grid grid-cols-2 gap-2 rounded-xl border p-1" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                    <div className="grid grid-cols-2 gap-2 rounded-xl border border-border p-1 bg-muted">
                         <button
                             onClick={() => setActivePathTab('global')}
-                            className={`h-10 rounded-lg text-[10px] font-black uppercase tracking-[0.16em] transition-all ${activePathTab === 'global' ? 'shadow-sm' : 'opacity-55 hover:opacity-100'}`}
-                            style={{ backgroundColor: activePathTab === 'global' ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-main)' }}
+                            className={`h-10 rounded-lg text-[10px] font-semibold transition-all ${activePathTab === 'global' ? 'shadow-sm bg-accent' : 'opacity-55 hover:opacity-100 bg-transparent'} text-foreground`}
                         >
                             {t('settings.monitored.globalTab')} · {globalPathCount}
                         </button>
                         <button
                             onClick={() => setActivePathTab('hydra')}
-                            className={`h-10 rounded-lg text-[10px] font-black uppercase tracking-[0.16em] transition-all ${activePathTab === 'hydra' ? 'shadow-sm' : 'opacity-55 hover:opacity-100'}`}
-                            style={{ backgroundColor: activePathTab === 'hydra' ? 'var(--hover-bg)' : 'transparent', color: 'var(--text-main)' }}
+                            className={`h-10 rounded-lg text-[10px] font-semibold transition-all ${activePathTab === 'hydra' ? 'shadow-sm bg-accent' : 'opacity-55 hover:opacity-100 bg-transparent'} text-foreground`}
                         >
                             {t('settings.monitored.hydraLauncherTab')} · {hydraGroups.length}
                         </button>
@@ -401,23 +385,22 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 {(!isLinux || activePathTab === 'global') && (
                     <div
                         key={steamDirectory.path}
-                        className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${!steamDirectory.enabled ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
-                        style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
+                        className={`group flex items-center justify-between p-4 rounded-xl border border-border transition-all duration-300 bg-muted ${!steamDirectory.enabled ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
                     >
                         <div className="flex items-center gap-4 min-w-0 flex-1">
-                            <div className="w-10 h-10 rounded-lg bg-[var(--hover-bg)] flex items-center justify-center flex-shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
                                 <SteamBrandIcon className="w-5 h-5 opacity-80" />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
-                                    <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{t('settings.monitored.steamLabel')}</p>
-                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>{t('settings.monitored.defaultBadge')}</span>
+                                    <p className="text-xs font-semibold truncate text-foreground">{t('settings.monitored.steamLabel')}</p>
+                                    <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border bg-accent border-border text-foreground">{t('settings.monitored.defaultBadge')}</span>
                                 </div>
-                                <p className="text-[10px] font-medium opacity-40 truncate" style={{ color: 'var(--text-main)' }}>{formatUsersForDisplay(steamDirectory.path)}</p>
+                                <p className="text-[10px] font-medium opacity-40 truncate text-foreground">{formatUsersForDisplay(steamDirectory.path)}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <p className="text-[10px] font-black uppercase tracking-wider opacity-60" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[10px] font-semibold opacity-60 text-foreground">
                                  {steamGamesFound} {t('settings.monitored.gamesLabel')}
                             </p>
                             <button
@@ -440,17 +423,17 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
 
                 {isLoading ? (
                     <div className="h-20 flex items-center justify-center opacity-20">
-                        <div className="animate-pulse font-black uppercase tracking-widest text-xs">Loading...</div>
+                        <div className="animate-pulse font-semibold text-xs">Loading...</div>
                     </div>
                 ) : directories.length === 0 ? (
-                    <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center" style={{ borderColor: 'var(--border-color)' }}>
+                    <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center border-border">
                         <FolderIcon className="text-4xl opacity-10" />
-                        <p className="text-xs font-bold opacity-30 uppercase tracking-widest">{t('settings.monitored.noDirectories')}</p>
+                        <p className="text-xs font-medium opacity-30">{t('settings.monitored.noDirectories')}</p>
                     </div>
                 ) : visibleGroups.length === 0 ? (
-                    <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center" style={{ borderColor: 'var(--border-color)' }}>
+                    <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center border-border">
                         <FolderIcon className="text-4xl opacity-10" />
-                        <p className="text-xs font-bold opacity-30 uppercase tracking-widest">
+                        <p className="text-xs font-medium opacity-30">
                             {isLinux && activePathTab === 'hydra' ? t('settings.monitored.noHydraPrefixes') : t('settings.monitored.noDirectories')}
                         </p>
                     </div>
@@ -462,16 +445,15 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                         return (
                             <div
                                 key={group.key}
-                                className="rounded-xl border overflow-hidden transition-all duration-300"
-                                style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
+                                className="rounded-xl border border-border overflow-hidden transition-all duration-300 bg-muted"
                             >
                                 <button
                                     onClick={() => toggleGroup(group.key)}
-                                    className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-[var(--hover-bg)] transition-colors"
+                                    className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-accent transition-colors"
                                 >
                                     <div className="flex items-center gap-4 min-w-0 flex-1">
                                         {group.imageUrl ? (
-                                            <div className="w-20 h-11 rounded-md overflow-hidden bg-[var(--hover-bg)] border flex-shrink-0" style={{ borderColor: 'var(--border-color)' }}>
+                                            <div className="w-20 h-11 rounded-md overflow-hidden bg-accent border border-border flex-shrink-0">
                                                 <img
                                                     src={group.imageUrl}
                                                     alt=""
@@ -482,50 +464,49 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="w-11 h-11 rounded-lg bg-[var(--hover-bg)] flex items-center justify-center flex-shrink-0">
+                                            <div className="w-11 h-11 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
                                                 <FolderIcon className="text-xl opacity-60" />
                                             </div>
                                         )}
 
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <p className="text-xs font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{group.title}</p>
+                                                <p className="text-xs font-semibold truncate text-foreground">{group.title}</p>
                                                 {group.gameId && (
-                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>{t('settings.monitored.gameBadge')}</span>
+                                                    <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border bg-accent border-border text-foreground">{t('settings.monitored.gameBadge')}</span>
                                                 )}
                                                 {!group.custom && (
-                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter" style={neutralBadgeStyle}>{t('settings.monitored.defaultBadge')}</span>
+                                                    <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border bg-accent border-border text-foreground">{t('settings.monitored.defaultBadge')}</span>
                                                 )}
                                             </div>
-                                            <p className="text-[10px] font-medium opacity-50 truncate" style={{ color: 'var(--text-main)' }}>{group.subtitle}</p>
+                                            <p className="text-[10px] font-medium opacity-50 truncate text-foreground">{group.subtitle}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-3 flex-shrink-0">
-                                        <span className="text-[9px] font-black uppercase tracking-wider opacity-60" style={{ color: 'var(--text-main)' }}>
+                                        <span className="text-[9px] font-semibold opacity-60 text-foreground">
                                             {enabledCount}/{group.directories.length} {t('settings.monitored.pathsLabel')}
                                         </span>
-                                        <span className={`text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }}>▼</span>
+                                        <span className={`text-xs transition-transform text-muted-foreground ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
                                     </div>
                                 </button>
 
                                 {isExpanded && (
-                                    <div className="border-t divide-y" style={{ borderColor: 'var(--border-color)' }}>
+                                    <div className="border-t border-border divide-y divide-border">
                                         {group.directories.map((dir) => (
                                             <div
                                                 key={dir.path}
                                                 className={`group flex items-center justify-between p-3 pl-5 gap-4 transition-all ${!dir.enabled ? 'opacity-50 grayscale' : ''}`}
-                                                style={{ borderColor: 'var(--border-color)' }}
                                             >
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-2">
                                                         <FolderIcon className="text-sm opacity-50 flex-shrink-0" />
-                                                        <p className="text-[10px] font-black uppercase tracking-widest truncate" style={{ color: 'var(--text-main)' }}>{dir.name.replace(/^Wine \([^)]*\) \/ /, '')}</p>
+                                                         <p className="text-[10px] font-semibold truncate text-foreground">{dir.name.replace(/^Wine \([^)]*\) \/ /, '')}</p>
                                                         {!dir.is_default && (dir.detectionPreset || 'auto') !== 'auto' && (
-                                                            <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm border tracking-tighter flex-shrink-0" style={neutralBadgeStyle}>{getPresetLabel(dir.detectionPreset)}</span>
+                                                            <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border flex-shrink-0 bg-accent border-border text-foreground">{getPresetLabel(dir.detectionPreset)}</span>
                                                         )}
                                                     </div>
-                                                    <p className="text-[9px] font-medium opacity-40 truncate mt-1" style={{ color: 'var(--text-main)' }}>
+                                                    <p className="text-[9px] font-medium opacity-40 truncate mt-1 text-foreground">
                                                         {formatUsersForDisplay(getRelativeWinePath(dir.path))}
                                                     </p>
                                                 </div>
@@ -542,7 +523,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                                     {!dir.is_default && (
                                                         <button
                                                             onClick={() => handleRemoveDirectory(dir.path)}
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
                                                             title={t('settings.monitored.removeDirectory')}
                                                         >
                                                             <CloseIcon className="text-lg" />
@@ -560,23 +541,22 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
 
                 {(!isLinux || activePathTab === 'global') && (
                     pendingCustomPath ? (
-                        <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                        <div className="rounded-xl border border-border p-4 space-y-3 bg-muted">
                             <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: 'var(--text-main)' }}>{t('settings.monitored.customDetectionPreset')}</p>
-                                <p className="text-[10px] font-semibold opacity-50 truncate" style={{ color: 'var(--text-main)' }} title={pendingCustomPath}>{formatUsersForDisplay(pendingCustomPath)}</p>
+                                <p className="text-[10px] font-semibold text-foreground">{t('settings.monitored.customDetectionPreset')}</p>
+                                <p className="text-[10px] font-semibold opacity-50 truncate text-foreground" title={pendingCustomPath}>{formatUsersForDisplay(pendingCustomPath)}</p>
                             </div>
 
                             <div className="relative">
                                 <button
                                     type="button"
                                     onClick={() => setIsPresetDropdownOpen(!isPresetDropdownOpen)}
-                                    className="w-full h-11 border rounded-md px-3 flex items-center justify-between transition-all duration-300"
-                                    style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
+                                    className="w-full h-11 border border-border rounded-md px-3 flex items-center justify-between transition-all duration-300 bg-muted"
                                 >
-                                    <span className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                                    <span className="text-xs font-bold truncate text-foreground">
                                         {DETECTION_PRESETS.find(p => p.value === pendingDetectionPreset)?.label}
                                     </span>
-                                    <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-300 ${isPresetDropdownOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-300 text-muted-foreground ${isPresetDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </button>
@@ -584,7 +564,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                 {isPresetDropdownOpen && (
                                     <>
                                         <div className="fixed inset-0 z-30" onClick={() => setIsPresetDropdownOpen(false)} />
-                                        <ul className="absolute z-40 mt-1 w-full border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                                        <ul className="absolute z-40 mt-1 w-full border border-border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in bg-card">
                                             {DETECTION_PRESETS.map((preset) => (
                                                 <li key={preset.value}>
                                                     <button
@@ -594,8 +574,8 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                                             setIsPresetDropdownOpen(false);
                                                         }}
                                                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors ${pendingDetectionPreset === preset.value
-                                                            ? 'bg-[var(--border-color)] text-[var(--text-main)] shadow-sm'
-                                                            : 'text-[var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-main)]'
+                                                            ? 'bg-border text-foreground shadow-sm'
+                                                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                                                             }`}
                                                     >
                                                         <div className="min-w-0 flex-1">
@@ -603,7 +583,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                                             <p className="text-[10px] opacity-60 truncate">{preset.description}</p>
                                                         </div>
                                                         {pendingDetectionPreset === preset.value && (
-                                                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-2" style={{ backgroundColor: 'var(--text-main)' }} />
+                                                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-2 bg-foreground" />
                                                         )}
                                                     </button>
                                                 </li>
@@ -613,7 +593,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                 )}
                             </div>
 
-                                <p className="text-[10px] font-medium opacity-55 leading-relaxed" style={{ color: 'var(--text-main)' }}>
+                                <p className="text-[10px] font-medium opacity-55 leading-relaxed text-foreground">
                                  {t('settings.monitored.customDetectionPresetDesc')}
                                 </p>
 
@@ -624,15 +604,13 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                           setPendingCustomPath(null);
                                           setPendingDetectionPreset('auto');
                                       }}
-                                    className="h-10 rounded-md border text-[10px] font-black uppercase tracking-widest transition-all hover:bg-[var(--hover-bg)]"
-                                    style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                                    className="h-10 rounded-md border border-border text-[10px] font-semibold transition-all hover:bg-accent text-foreground"
                                 >
                                     {t('common.cancel')}
                                 </button>
                                 <button
                                     onClick={handleConfirmCustomDirectory}
-                                    className="h-10 rounded-md text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
-                                    style={{ backgroundColor: 'var(--text-main)', color: 'var(--bg-color)' }}
+                                    className="h-10 rounded-md text-[10px] font-semibold transition-all shadow-sm bg-foreground text-background"
                                 >
                                     {t('settings.monitored.addPreset')}
                                 </button>
@@ -641,11 +619,10 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                     ) : (
                         <button
                             onClick={handleAddDirectory}
-                            className="w-full h-14 border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:bg-[var(--hover-bg)] active:scale-[0.98]"
-                            style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
+                            className="w-full h-14 border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:bg-accent active:scale-[0.98] border-border text-muted-foreground"
                         >
                             <span className="text-2xl opacity-60">+</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('settings.monitored.addDirectory')}</span>
+                            <span className="text-[10px] font-semibold">{t('settings.monitored.addDirectory')}</span>
                         </button>
                     )
                 )}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Timestamp, DateFormat, TimeFormat } from '../types';
@@ -6,6 +5,7 @@ import TimestampSelector from './TimestampSelector';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { ChevronLeftIcon } from './Icons';
+import { Button } from '@/components/ui/button';
 
 export type UnlockMode = 'random' | 'current' | 'custom';
 
@@ -15,31 +15,6 @@ interface GlobalTimestampManagerProps {
   timestamp: Timestamp;
   setTimestamp: (timestamp: Timestamp) => void;
 }
-
-const ModeButton: React.FC<{
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-  isFirst?: boolean;
-}> = ({ label, isActive, onClick, isFirst }) => {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 px-4 h-11 text-[10px] font-black uppercase tracking-widest transition-all ${!isFirst ? 'border-l' : ''}`}
-      style={{
-        backgroundColor: isActive ? 'var(--text-main)' : 'transparent',
-        color: isActive ? 'var(--bg-color)' : 'var(--text-muted)',
-        borderColor: 'var(--border-color)',
-        boxShadow: isActive ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : 'none'
-      }}
-    >
-      <span className={!isActive ? "hover:text-[var(--text-main)] transition-colors" : ""}>
-        {label}
-      </span>
-    </button>
-  );
-};
-
 
 const GlobalTimestampManager: React.FC<GlobalTimestampManagerProps> = ({ mode, setMode, timestamp, setTimestamp }) => {
   const { dateFormat, timeFormat } = useTheme();
@@ -78,26 +53,26 @@ const GlobalTimestampManager: React.FC<GlobalTimestampManagerProps> = ({ mode, s
     setTimestamp(newTimestamp);
   };
 
+  const modes: { key: UnlockMode; label: string }[] = [
+    { key: 'random', label: t('globalTimestampManager.random') },
+    { key: 'current', label: t('globalTimestampManager.current') },
+    { key: 'custom', label: t('globalTimestampManager.custom') },
+  ];
+
   return (
     <div className="relative">
-      <div
-        className={`flex items-center rounded-md border transition-all w-full md:w-[420px] ${isEditingCustom ? 'p-1.5' : 'overflow-hidden'}`}
-        style={{
-          backgroundColor: isEditingCustom ? 'var(--input-bg)' : 'transparent',
-          borderColor: 'var(--border-color)'
-        }}
-      >
+      <div className="flex items-center rounded-md border border-border transition-all w-full md:w-[420px] overflow-hidden">
         {isEditingCustom ? (
-          <>
-            <button
+          <div className="flex items-center w-full p-1.5 bg-muted/30">
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={handleBackClick}
-              className="flex-shrink-0 flex items-center justify-center w-8 h-8 mx-1 rounded-sm transition-all"
-              style={{ color: 'var(--text-muted)' }}
               aria-label={t('common.back')}
             >
-              <ChevronLeftIcon className="text-xl hover:text-[var(--text-main)] transition-colors" />
-            </button>
-            <div className="border-l h-6 mx-2" style={{ borderColor: 'var(--border-color)' }}></div>
+              <ChevronLeftIcon className="text-xl" />
+            </Button>
+            <div className="border-l h-6 mx-2 border-border"></div>
             <TimestampSelector
               timestamp={timestamp}
               onChange={handleTimestampChange}
@@ -107,13 +82,20 @@ const GlobalTimestampManager: React.FC<GlobalTimestampManagerProps> = ({ mode, s
               dateFormat={dateFormat}
               timeFormat={timeFormat}
             />
-          </>
+          </div>
         ) : (
-          <>
-            <ModeButton label={t('globalTimestampManager.random')} isActive={mode === 'random'} onClick={() => handleModeClick('random')} isFirst />
-            <ModeButton label={t('globalTimestampManager.current')} isActive={mode === 'current'} onClick={() => handleModeClick('current')} />
-            <ModeButton label={t('globalTimestampManager.custom')} isActive={mode === 'custom'} onClick={() => handleModeClick('custom')} />
-          </>
+          <div className="flex w-full">
+            {modes.map((m, i) => (
+              <Button
+                key={m.key}
+                variant={mode === m.key ? 'default' : 'ghost'}
+                onClick={() => handleModeClick(m.key)}
+                className={`flex-1 h-11 text-[10px] font-black uppercase tracking-widest rounded-none ${i > 0 ? 'border-l border-border' : ''}`}
+              >
+                {m.label}
+              </Button>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -84,6 +84,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     loadSettings();
   }, []);
 
+  const isDarkTheme = (t: Theme): boolean => t !== 'light';
+
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove(
@@ -101,6 +103,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       'one-dark'
     );
     root.classList.add(theme);
+    root.classList.toggle('dark', isDarkTheme(theme));
   }, [theme]);
 
   const saveSettings = async (updates: Partial<ThemeContextType>) => {

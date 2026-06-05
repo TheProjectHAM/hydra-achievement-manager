@@ -28,20 +28,19 @@ const ToggleRow: React.FC<{
   onChange: (enabled: boolean) => void;
   disabled?: boolean;
 }> = ({ label, description, enabled, onChange, disabled = false }) => (
-  <div className={`flex items-center justify-between gap-6 py-8 border-b last:border-0 ${disabled ? 'opacity-50' : ''}`} style={{ borderColor: 'var(--border-color)' }}>
+  <div className={`flex items-center justify-between gap-6 py-8 border-b border-border last:border-0 ${disabled ? 'opacity-50' : ''}`}>
     <div className="flex-1">
-      <h4 className="text-sm font-black tracking-[0.15em] uppercase mb-1.5" style={{ color: 'var(--text-main)' }}>{label}</h4>
-      <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md" style={{ color: 'var(--text-main)' }}>{description}</p>
+       <h4 className="text-sm font-semibold mb-1.5 text-foreground">{label}</h4>
+      <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md text-foreground">{description}</p>
     </div>
     <button
       onClick={() => {
         if (!disabled) onChange(!enabled);
       }}
       disabled={disabled}
-      className={`relative w-12 h-6 rounded-full transition-all duration-300 p-1 ${enabled ? 'bg-[var(--text-main)]' : 'bg-[var(--hover-bg)]'
-        }`}
+      className={`relative w-12 h-6 rounded-full transition-all duration-300 p-1 ${enabled ? 'bg-foreground' : 'bg-accent'}`}
     >
-      <div className={`w-4 h-4 rounded-full transition-all duration-300 shadow-sm ${enabled ? 'translate-x-6' : 'translate-x-0'}`} style={{ backgroundColor: 'var(--bg-color)' }} />
+      <div className={`w-4 h-4 rounded-full bg-background transition-all duration-300 shadow-sm ${enabled ? 'translate-x-6' : 'translate-x-0'}`} />
     </button>
   </div>
 );
@@ -54,20 +53,20 @@ const ModernSelector: React.FC<{
   onSelect: (id: any) => void;
 }> = ({ label, description, options, selectedId, onSelect }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b last:border-0" style={{ borderColor: 'var(--border-color)' }}>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b border-border last:border-0">
       <div className="flex-1">
-        <h4 className="text-sm font-black tracking-[0.15em] uppercase mb-1.5" style={{ color: 'var(--text-main)' }}>{label}</h4>
-        <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md" style={{ color: 'var(--text-main)' }}>{description}</p>
+        <h4 className="text-sm font-semibold mb-1.5 text-foreground">{label}</h4>
+        <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md text-foreground">{description}</p>
       </div>
 
-      <div className="flex p-1.5 rounded-lg border overflow-hidden shadow-inner" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}>
+      <div className="flex p-1.5 rounded-lg border border-border overflow-hidden shadow-inner bg-muted">
         {options.map((opt) => (
           <button
             key={opt.id}
             onClick={() => onSelect(opt.id)}
-            className={`px-5 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-all duration-300 ${selectedId === opt.id
-              ? 'bg-[var(--text-main)] text-[var(--bg-color)] shadow-xl'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)]'
+            className={`px-5 py-2 rounded-md text-xs font-semibold transition-all duration-300 ${selectedId === opt.id
+              ? 'bg-foreground text-background shadow-xl'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
               }`}
           >
             {opt.name}
@@ -89,23 +88,22 @@ const ModernDropdown: React.FC<{
   const selected = options.find(o => o.id === selectedId);
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b last:border-0" style={{ borderColor: 'var(--border-color)' }}>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 py-8 border-b border-border last:border-0">
       <div className="flex-1">
-        <h4 className="text-sm font-black tracking-[0.15em] uppercase mb-1.5" style={{ color: 'var(--text-main)' }}>{label}</h4>
-        <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md" style={{ color: 'var(--text-main)' }}>{description}</p>
+        <h4 className="text-sm font-semibold mb-1.5 text-foreground">{label}</h4>
+        <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md text-foreground">{description}</p>
       </div>
 
       <div className="relative w-full sm:w-60 flex-shrink-0">
         <button
           onClick={() => setOpen(!open)}
-          className="w-full h-12 border rounded-md px-5 flex items-center justify-between transition-all duration-300 group shadow-sm hover:shadow-md"
-          style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}
+          className="w-full h-12 border border-border rounded-md px-5 flex items-center justify-between transition-all duration-300 group shadow-sm hover:shadow-md bg-muted"
         >
           <div className="flex items-center gap-3">
             {selected?.palette && <PalettePreview colors={selected.palette} />}
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>{selected?.name}</span>
+            <span className="text-xs font-semibold text-foreground">{selected?.name}</span>
           </div>
-          <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className={`w-3.5 h-3.5 transition-transform duration-300 text-muted-foreground ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
@@ -113,19 +111,19 @@ const ModernDropdown: React.FC<{
         {open && (
           <>
             <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-            <ul className="absolute z-40 mt-1 w-full border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+            <ul className="absolute z-40 mt-1 w-full border border-border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in bg-card">
               {options.map(opt => (
                 <li key={opt.id}>
                   <button
                     onClick={() => { onSelect(opt.id); setOpen(false); }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${selectedId === opt.id
-                      ? 'bg-[var(--border-color)] text-[var(--text-main)] shadow-sm'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-main)]'
+                      ? 'bg-border text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                       }`}
                   >
                     {opt.palette && <PalettePreview colors={opt.palette} />}
-                    <span className="text-xs font-bold uppercase tracking-widest flex-grow text-left">{opt.name}</span>
-                    {selectedId === opt.id && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--text-main)' }} />}
+                    <span className="text-xs font-semibold flex-grow text-left">{opt.name}</span>
+                    {selectedId === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-foreground" />}
                   </button>
                 </li>
               ))}
@@ -143,15 +141,14 @@ const ActionRow: React.FC<{
   actionLabel: string;
   onClick: () => void;
 }> = ({ label, description, actionLabel, onClick }) => (
-  <div className="flex items-center justify-between gap-6 py-8 border-b last:border-0" style={{ borderColor: 'var(--border-color)' }}>
+  <div className="flex items-center justify-between gap-6 py-8 border-b border-border last:border-0">
     <div className="flex-1">
-      <h4 className="text-sm font-black tracking-[0.15em] uppercase mb-1.5" style={{ color: 'var(--text-main)' }}>{label}</h4>
-      <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md" style={{ color: 'var(--text-main)' }}>{description}</p>
+      <h4 className="text-sm font-semibold mb-1.5 text-foreground">{label}</h4>
+      <p className="text-xs opacity-60 font-medium leading-relaxed max-w-md text-foreground">{description}</p>
     </div>
     <button
       onClick={onClick}
-      className="h-12 px-6 rounded-md text-[10px] font-black uppercase tracking-[0.2em] border transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] flex items-center gap-2.5"
-      style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+      className="h-12 px-6 rounded-md text-[10px] font-semibold border border-border transition-all duration-300 shadow-sm hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] flex items-center gap-2.5 bg-muted text-foreground"
     >
       <UpdateIcon className="text-base opacity-70" />
       {actionLabel}

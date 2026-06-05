@@ -62,30 +62,24 @@ const ToggleRow: React.FC<{
   enabled: boolean;
   onChange: (enabled: boolean) => void;
 }> = ({ label, description, enabled, onChange }) => (
-  <div
-    className="flex items-center justify-between gap-4 rounded-lg border p-3"
-    style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-color)" }}
-  >
+  <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3 bg-background">
     <div className="min-w-0">
-      <p className="text-xs font-bold" style={{ color: "var(--text-main)" }}>
+      <p className="text-xs font-bold text-foreground">
         {label}
       </p>
       {description && (
-        <p className="text-[10px] opacity-65 mt-1" style={{ color: "var(--text-main)" }}>
+        <p className="text-[10px] opacity-65 mt-1 text-foreground">
           {description}
         </p>
       )}
     </div>
     <button
       onClick={() => onChange(!enabled)}
-      className={`relative w-11 h-6 rounded-full transition-all duration-300 p-1 ${enabled ? "bg-[var(--text-main)]" : "bg-[var(--hover-bg)]"}`}
+      className={`relative w-11 h-6 rounded-full transition-all duration-300 p-1 ${enabled ? "bg-foreground" : "bg-accent"}`}
       aria-label={label}
       aria-pressed={enabled}
     >
-      <div
-        className={`w-4 h-4 rounded-full transition-all duration-300 shadow-sm ${enabled ? "translate-x-5" : "translate-x-0"}`}
-        style={{ backgroundColor: "var(--bg-color)" }}
-      />
+      <div className={`w-4 h-4 rounded-full bg-background transition-all duration-300 shadow-sm ${enabled ? "translate-x-5" : "translate-x-0"}`} />
     </button>
   </div>
 );
@@ -105,12 +99,7 @@ const ThemedCheckbox: React.FC<{
     aria-label={label}
     aria-pressed={checked}
     aria-disabled={disabled}
-    className={`w-5 h-5 rounded-[3px] border flex items-center justify-center transition-all duration-200 ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
-    style={{
-      borderColor: checked ? "var(--text-main)" : "var(--border-color)",
-      backgroundColor: checked ? "var(--text-main)" : "var(--input-bg)",
-      color: checked ? "var(--bg-color)" : "transparent",
-    }}
+    className={`w-5 h-5 rounded-[3px] border flex items-center justify-center transition-all duration-200 ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${checked ? "bg-foreground text-background border-foreground" : "bg-muted border-border text-transparent"} ${className}`}
   >
     <svg
       viewBox="0 0 24 24"
@@ -148,8 +137,7 @@ const SteamGameLogo: React.FC<{ gameId: string; className?: string }> = ({
 
   return (
     <div
-      className={`${className} rounded-md border overflow-hidden shrink-0`}
-      style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-color)" }}
+      className={`${className} rounded-md border border-border overflow-hidden shrink-0 bg-background`}
     >
       <img
         src={`${steamCdn}/${gameId}/logo.png`}
@@ -187,13 +175,12 @@ const CompactDropdown = <T extends string>({
     <div className={`relative ${fullWidth ? "w-full" : "w-44"}`}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full h-9 border rounded-md px-3 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-md"
-        style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}
+        className="w-full h-9 border border-border rounded-md px-3 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-md bg-muted"
       >
-        <span className="text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: "var(--text-main)" }}>
+        <span className="text-[10px] font-semibold truncate text-foreground">
           {selected?.label}
         </span>
-        <svg className={`w-3.5 h-3.5 transition-transform duration-300 ${open ? "rotate-180" : ""}`} style={{ color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className={`w-3.5 h-3.5 transition-transform duration-300 text-muted-foreground ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -201,7 +188,7 @@ const CompactDropdown = <T extends string>({
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <ul className="absolute z-40 mt-1 w-full border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }}>
+          <ul className="absolute z-40 mt-1 w-full border border-border rounded-md shadow-2xl overflow-hidden p-1.5 animate-modal-in bg-card">
             {options.map((opt) => (
               <li key={opt.id}>
                 <button
@@ -209,9 +196,9 @@ const CompactDropdown = <T extends string>({
                     onChange(opt.id);
                     setOpen(false);
                   }}
-                  className={`w-full px-3 py-2 rounded-md transition-colors text-left ${value === opt.id ? "bg-[var(--border-color)] text-[var(--text-main)] shadow-sm" : "text-[var(--text-muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-main)]"}`}
+                  className={`w-full px-3 py-2 rounded-md transition-colors text-left ${value === opt.id ? "bg-border text-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-wider">{opt.label}</span>
+                  <span className="text-[10px] font-semibold">{opt.label}</span>
                 </button>
               </li>
             ))}
@@ -617,16 +604,15 @@ const BackupSettings: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-modal-in">
-      <div className="border rounded-xl p-6 shadow-sm space-y-4" style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}>
+      <div className="border border-border rounded-xl p-6 shadow-sm space-y-4 bg-muted">
         <div className="flex items-center justify-between gap-3">
-          <h5 className="text-xs font-black uppercase tracking-widest" style={{ color: "var(--text-main)" }}>
+          <h5 className="text-xs font-semibold text-foreground">
             {t("settings.backup.createSection")}
           </h5>
           <button
             onClick={loadBackupCandidates}
             disabled={loadingGames}
-            className="h-9 px-4 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-50"
-            style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
+            className="h-9 px-4 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-50 text-foreground"
           >
             {loadingGames ? t("settings.backup.loading") : t("settings.backup.refresh")}
           </button>
@@ -640,30 +626,28 @@ const BackupSettings: React.FC = () => {
         />
 
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold opacity-70" style={{ color: "var(--text-main)" }}>
+          <p className="text-[11px] font-semibold opacity-70 text-foreground">
             {t("settings.backup.selectedGames", { count: selectedBackupCount })}
           </p>
           <button
             onClick={toggleSelectAllBackup}
             disabled={!hasAnyGame}
-            className="h-8 px-3 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-40"
-            style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
+            className="h-8 px-3 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-40 text-foreground"
           >
             {allSelected ? t("settings.backup.unselectAll") : t("settings.backup.selectAll")}
           </button>
         </div>
 
-        <div className="max-h-56 overflow-y-auto rounded-md border" style={{ borderColor: "var(--border-color)" }}>
+        <div className="max-h-56 overflow-y-auto rounded-md border border-border">
           {groups.length === 0 ? (
-            <div className="p-4 text-[11px] opacity-60" style={{ color: "var(--text-main)" }}>
+            <div className="p-4 text-[11px] opacity-60 text-foreground">
               {t("settings.backup.noGames")}
             </div>
           ) : (
             groups.map((group) => (
               <label
                 key={group.gameId}
-                className="flex items-center justify-between gap-3 p-3 border-b last:border-b-0 cursor-pointer"
-                style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
+                className="flex items-center justify-between gap-3 p-3 border-b border-border last:border-b-0 cursor-pointer text-foreground"
               >
                 <div className="min-w-0 flex items-center gap-3">
                   <SteamGameLogo gameId={group.gameId} />
@@ -684,19 +668,16 @@ const BackupSettings: React.FC = () => {
           )}
         </div>
 
-        <div
-          className="border rounded-lg p-3 flex items-center justify-between gap-4"
-          style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-color)" }}
-        >
+        <div className="border border-border rounded-lg p-3 flex items-center justify-between gap-4 bg-background">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-70" style={{ color: "var(--text-main)" }}>
+            <p className="text-[10px] font-semibold opacity-70 text-foreground">
               {t("settings.backup.createSection")}
             </p>
-            <p className="text-[11px] font-semibold opacity-80" style={{ color: "var(--text-main)" }}>
+            <p className="text-[11px] font-semibold opacity-80 text-foreground">
               {t("settings.backup.selectedGames", { count: selectedBackupCount })}
             </p>
             {lastBackupPath && (
-              <p className="text-[10px] opacity-60 truncate max-w-[420px]" style={{ color: "var(--text-main)" }}>
+              <p className="text-[10px] opacity-60 truncate max-w-[420px] text-foreground">
                 {t("settings.backup.lastBackupPath")}: {lastBackupPath}
               </p>
             )}
@@ -705,43 +686,37 @@ const BackupSettings: React.FC = () => {
           <button
             onClick={handleCreateBackup}
             disabled={creatingBackup || (selectedBackupCount === 0 && !includeSettingsInBackup)}
-            className="h-11 px-5 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-50 shrink-0"
-            style={{
-              borderColor: "var(--text-main)",
-              backgroundColor: "var(--text-main)",
-              color: "var(--bg-color)",
-            }}
+            className="h-11 px-5 rounded-md text-[10px] font-semibold border bg-foreground text-background border-foreground transition-all disabled:opacity-50 shrink-0"
           >
             {creatingBackup ? t("settings.backup.creating") : t("settings.backup.createButton")}
           </button>
         </div>
       </div>
 
-      <div className="border rounded-xl p-6 shadow-sm space-y-4" style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}>
+      <div className="border border-border rounded-xl p-6 shadow-sm space-y-4 bg-muted">
         <div className="flex items-center justify-between gap-3">
-          <h5 className="text-xs font-black uppercase tracking-widest" style={{ color: "var(--text-main)" }}>
+          <h5 className="text-xs font-semibold text-foreground">
             {t("settings.backup.restoreSection")}
           </h5>
           <button
             onClick={handleChooseBackupFile}
             disabled={loadingPreview || restoring}
-            className="h-9 px-4 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-50"
-            style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
+            className="h-9 px-4 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-50 text-foreground"
           >
             {loadingPreview ? t("settings.backup.loading") : t("settings.backup.chooseFile")}
           </button>
         </div>
 
         {backupPath && (
-          <p className="text-[11px] opacity-70 break-all" style={{ color: "var(--text-main)" }}>
+          <p className="text-[11px] opacity-70 break-all text-foreground">
             {backupPath}
           </p>
         )}
 
         {settingsPreview.included && (
-          <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-color)" }}>
+          <div className="border border-border rounded-lg p-4 space-y-3 bg-background">
             <div className="flex items-center justify-between gap-3">
-              <label className="flex items-center gap-2 text-[11px] font-bold" style={{ color: "var(--text-main)" }}>
+              <label className="flex items-center gap-2 text-[11px] font-semibold text-foreground">
                 <ThemedCheckbox
                   checked={restoreSettingsEnabled}
                   onChange={setRestoreSettingsEnabled}
@@ -749,7 +724,7 @@ const BackupSettings: React.FC = () => {
                 />
                 {t("settings.backup.restoreSettings")}
               </label>
-              <p className="text-[10px] opacity-70" style={{ color: "var(--text-main)" }}>
+              <p className="text-[10px] opacity-70 text-foreground">
                 {t("settings.backup.settingsStats", {
                   total: settingsPreview.totalKeys,
                   conflicts: settingsPreview.conflictingKeys,
@@ -776,13 +751,12 @@ const BackupSettings: React.FC = () => {
         {previewItems.length > 0 && (
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold opacity-70" style={{ color: "var(--text-main)" }}>
+              <p className="text-[11px] font-semibold opacity-70 text-foreground">
                 {t("settings.backup.selectedEntries", { count: selectedRestoreCount })}
               </p>
               <button
                 onClick={toggleRestoreAll}
-                className="h-8 px-3 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all"
-                style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
+              className="h-8 px-3 rounded-md text-[10px] font-semibold border border-border transition-all text-foreground"
               >
                 {selectedRestoreCount === selectableRestoreIndices.size
                   ? t("settings.backup.unselectAll")
@@ -790,7 +764,7 @@ const BackupSettings: React.FC = () => {
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto rounded-md border" style={{ borderColor: "var(--border-color)" }}>
+            <div className="max-h-72 overflow-y-auto rounded-md border border-border">
               {previewItems.map((item) => {
                 const name = previewNames[item.gameId] || item.gameId;
                 const strategy = conflictStrategyByIndex[item.index] || "backup";
@@ -816,8 +790,7 @@ const BackupSettings: React.FC = () => {
                 return (
                   <div
                     key={item.index}
-                    className="p-3 border-b last:border-b-0"
-                    style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
+                    className="p-3 border-b border-border last:border-b-0 text-foreground"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <label className={`flex items-start gap-3 min-w-0 flex-1 ${isBlocked ? "cursor-not-allowed opacity-85" : "cursor-pointer"}`}>
@@ -831,7 +804,7 @@ const BackupSettings: React.FC = () => {
                         <div className="min-w-0 flex items-start gap-3">
                           <SteamGameLogo gameId={item.gameId} />
                           <div className="min-w-0">
-                            <p className="text-xs font-bold truncate">{name}</p>
+                    <p className="text-xs font-semibold truncate">{name}</p>
                             <p className="text-[10px] opacity-60 truncate">{item.gameId} • {item.directory}</p>
                             <p className="text-[10px] opacity-70">
                               {t("settings.backup.restoreStats", {
@@ -842,7 +815,7 @@ const BackupSettings: React.FC = () => {
                               })}
                             </p>
                             {warning && (
-                              <p className="text-[10px] font-semibold mt-1" style={{ color: "var(--warning-color, #d97706)" }}>
+                              <p className="text-[10px] font-semibold mt-1 text-amber-600">
                                 {warning}
                               </p>
                             )}
@@ -851,7 +824,7 @@ const BackupSettings: React.FC = () => {
                       </label>
 
                       {isBlocked ? (
-                        <span className="text-[10px] font-bold opacity-80 whitespace-nowrap">{blockedBadge}</span>
+                        <span className="text-[10px] font-semibold opacity-80 whitespace-nowrap">{blockedBadge}</span>
                       ) : item.willReplace ? (
                         <CompactDropdown
                           value={strategy}
@@ -863,7 +836,7 @@ const BackupSettings: React.FC = () => {
                           ]}
                         />
                       ) : (
-                        <span className="text-[10px] font-bold opacity-70">{t("settings.backup.noConflict")}</span>
+                        <span className="text-[10px] font-semibold opacity-70">{t("settings.backup.noConflict")}</span>
                       )}
                     </div>
                   </div>
@@ -872,15 +845,14 @@ const BackupSettings: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold opacity-80" style={{ color: "var(--text-main)" }}>
+              <p className="text-[11px] font-semibold opacity-80 text-foreground">
                 {t("settings.backup.conflictsSelected", { count: restoreConflicts })}
               </p>
 
               <button
                 onClick={handleApplyRestore}
                 disabled={restoring || selectedRestoreCount === 0}
-                className="h-11 px-5 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-50"
-                style={{ borderColor: "var(--border-color)", color: "var(--text-main)" }}
+                className="h-11 px-5 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-50 text-foreground"
               >
                 {restoring ? t("settings.backup.restoring") : t("settings.backup.restoreButton")}
               </button>

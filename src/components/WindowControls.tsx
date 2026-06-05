@@ -40,7 +40,7 @@ const WindowControls: React.FC = () => {
   };
 
   const btnClass =
-    "h-full px-5 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)] transition-all duration-300 flex items-center justify-center";
+    "h-full px-5 text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-accent transition-all duration-300 flex items-center justify-center";
 
   return (
     <div

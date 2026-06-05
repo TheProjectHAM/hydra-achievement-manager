@@ -16,6 +16,9 @@ export const GameIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props}
 export const SearchIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="search" />;
 export const SettingsIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="settings" />;
 export const ArrowRightIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="arrow_forward" />;
+export const SortIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="swap_vert" />;
+export const SortAscendingIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="arrow_upward" />;
+export const SortDescendingIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="arrow_downward" />;
 export const PlatinumIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="emoji_events" />;
 export const CloseIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="close" />;
 export const MinimizeIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="remove" />;

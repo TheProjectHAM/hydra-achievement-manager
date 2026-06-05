@@ -49,29 +49,17 @@ const UpdateSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Refined Status Container */}
-      <div
-        className="border rounded-md p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm"
-        style={{
-          backgroundColor: "var(--input-bg)",
-          borderColor: "var(--border-color)",
-        }}
-      >
+      <div className="border border-border rounded-md p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm bg-muted">
         <div className="flex items-center gap-6">
-          <TagIcon className="text-2xl opacity-30 text-[var(--text-main)]" />
+          <TagIcon className="text-2xl opacity-30 text-foreground" />
           <div className="space-y-1">
-            <h4
-              className="text-sm font-black uppercase tracking-[0.15em]"
-              style={{ color: "var(--text-main)" }}
-            >
+            <h4 className="text-sm font-semibold text-foreground">
               {t("settings.updates.currentVersion").replace(
                 "{version}",
                 currentVersionLabel,
               )}
             </h4>
-            <p
-              className="text-xs font-medium uppercase tracking-widest leading-none opacity-60"
-              style={{ color: "var(--text-main)" }}
-            >
+            <p className="text-xs font-medium leading-none opacity-60 text-foreground">
               {isUpToDate
                 ? t("settings.updates.systemUpToDate")
                 : t("settings.updates.updateAvailable")}{" "}
@@ -83,14 +71,9 @@ const UpdateSettings: React.FC = () => {
         <button
           onClick={handleCheckForUpdates}
           disabled={isChecking}
-          className={`flex items-center gap-3 px-8 py-3.5 rounded-md text-xs font-bold uppercase tracking-widest transition-all border shadow-lg ${
+          className={`flex items-center gap-3 px-8 py-3.5 rounded-md text-xs font-semibold transition-all border shadow-lg bg-foreground text-background border-foreground ${
             isChecking ? "opacity-50 cursor-not-allowed" : "active:scale-95"
           }`}
-          style={{
-            backgroundColor: "var(--text-main)",
-            color: "var(--bg-color)",
-            borderColor: "var(--text-main)",
-          }}
         >
           {isChecking && <UpdateIcon className="text-sm animate-spin" />}
           {isChecking
@@ -102,63 +85,37 @@ const UpdateSettings: React.FC = () => {
       {/* Structured Changelog Section */}
       <div className="space-y-4">
         <div className="flex items-center gap-4 px-1">
-          <h4
-            className="text-xs font-black uppercase tracking-[0.3em] opacity-50"
-            style={{ color: "var(--text-main)" }}
-          >
+          <h4 className="text-xs font-semibold opacity-50 text-foreground">
             {t("settings.updates.whatsNew")}
           </h4>
-          <div
-            className="h-px flex-1 opacity-10"
-            style={{ backgroundColor: "var(--text-main)" }}
-          />
+          <div className="h-px flex-1 opacity-10 bg-foreground" />
         </div>
 
-        <div
-          className="border rounded-lg overflow-hidden shadow-sm"
-          style={{
-            backgroundColor: "var(--input-bg)",
-            borderColor: "var(--border-color)",
-          }}
-        >
+        <div className="border border-border rounded-lg overflow-hidden shadow-sm bg-muted">
           {[...updates]
             .reverse()
             .slice(0, 3)
             .map((log, index) => (
               <div
                 key={`${log.version}-${log.subVersion || index}`}
-                className={`p-8 ${index !== 2 ? "border-b" : ""}`}
-                style={{ borderColor: "var(--border-color)" }}
+                className={`p-8 ${index !== 2 ? "border-b border-border" : ""}`}
               >
                 <div className="flex items-center gap-4 mb-5">
-                  <span
-                    className="text-xs font-bold tracking-[0.2em] uppercase italic"
-                    style={{ color: "var(--text-main)" }}
-                  >
+                    <span className="text-xs font-semibold italic text-foreground">
                     {`v${log.version}${log.subVersion ? ` ${log.subVersion}` : ""}`}
                   </span>
                   {log.version === packageJson.version &&
                     (log.subVersion || "") === currentSubVersion && (
-                    <span
-                      className="text-[10px] font-black border px-2 py-0.5 rounded-md uppercase tracking-widest opacity-60"
-                      style={{
-                        color: "var(--text-main)",
-                        borderColor: "var(--border-color)",
-                      }}
-                    >
+                    <span className="text-[10px] font-semibold border border-border px-2 py-0.5 rounded-md opacity-60 text-foreground">
                       {t("common.active")}
                     </span>
                     )}
                 </div>
-                <div
-                  className="grid grid-cols-1 gap-3 border-l ml-1"
-                  style={{ borderColor: "var(--border-color)" }}
-                >
+                <div className="grid grid-cols-1 gap-3 border-l border-border ml-1">
                   {log.changelog.map((change, idx) => (
                     <div
                       key={idx}
-                      className="flex gap-4 text-xs font-medium uppercase tracking-tight leading-relaxed pl-6"
-                      style={{ color: "var(--text-muted)" }}
+                      className="flex gap-4 text-xs font-medium leading-relaxed pl-6 text-muted-foreground"
                     >
                       <span className="opacity-20">—</span>
                       <span className="opacity-90">{change}</span>

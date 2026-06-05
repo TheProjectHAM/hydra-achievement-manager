@@ -274,8 +274,8 @@ const SettingsContent: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id as SubTabId)}
               className={`flex-1 flex items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-semibold h-10 overflow-hidden text-ellipsis whitespace-nowrap ${activeSubTab === tab.id
-                ? 'bg-gray-800 text-white dark:bg-white dark:text-black'
-                : 'bg-black/5 text-gray-700 hover:bg-black/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'
+                ? 'bg-foreground text-background shadow-sm'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'
                 }`}
               aria-current={activeSubTab === tab.id ? 'page' : undefined}
               style={{ alignItems: 'center' }}
@@ -297,7 +297,7 @@ const SettingsContent: React.FC = () => {
         <button
           onClick={handleSaveChanges}
           disabled={!isDirty}
-          className="w-48 flex-shrink-0 flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white dark:bg-white dark:hover:bg-gray-200 dark:text-black font-semibold py-2 px-5 rounded-lg transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-48 flex-shrink-0 flex items-center justify-center gap-2 bg-foreground text-background hover:bg-foreground/90 font-semibold py-2 px-5 rounded-lg transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSaved ? (
             <>

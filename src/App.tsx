@@ -16,7 +16,8 @@ import AchievementsContent from './pages/Achievements';
 import ExportPage from './pages/Export';
 import InitialWizard from './pages/InitialWizard';
 import { unlockAchievements, reloadAchievements, getSteamLibraryInfo, getAchievementIniLastModified } from './tauri-api';
-import ToastContainer, { ToastItemData } from './components/ToastContainer';
+import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import packageJson from '../package.json';
 
@@ -44,7 +45,6 @@ const App: React.FC = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [showWizard, setShowWizard] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [toasts, setToasts] = useState<ToastItemData[]>([]);
   const { t } = useI18n();
 
   useEffect(() => {
@@ -66,15 +66,6 @@ const App: React.FC = () => {
     };
 
     checkWizardStatus();
-  }, []);
-
-  const closeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const pushToast = useCallback((toast: Omit<ToastItemData, 'id'>) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    setToasts((prev) => [...prev, { ...toast, id }]);
   }, []);
 
   const getErrorMessage = (error: unknown): string => {
@@ -126,18 +117,14 @@ const App: React.FC = () => {
 
         if (compareUpdates(latest, current) > 0) {
           const latestLabel = `v${latest.version}${latest.subVersion ? ` ${latest.subVersion}` : ''}`;
-          pushToast({
-            title: t('settings.updates.updateAvailable'),
-            message: `${t('settings.updates.currentVersion').replace('{version}', latestLabel)}. ${t('settings.updates.description')}`,
-            durationMs: 5000,
-            type: 'update',
+          toast(t('settings.updates.updateAvailable'), {
+            description: `${t('settings.updates.currentVersion').replace('{version}', latestLabel)}. ${t('settings.updates.description')}`,
+            duration: 5000,
           });
         } else {
-          pushToast({
-            title: t('settings.updates.systemUpToDate'),
-            message: t('settings.updates.upToDate'),
-            durationMs: 3200,
-            type: 'success',
+          toast(t('settings.updates.systemUpToDate'), {
+            description: t('settings.updates.upToDate'),
+            duration: 3200,
           });
         }
       } catch (error) {
@@ -149,7 +136,7 @@ const App: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [pushToast, t]);
+  }, [t]);
 
   useEffect(() => {
     try {
@@ -531,11 +518,9 @@ const App: React.FC = () => {
       });
 
       console.log('Achievements unlocked successfully');
-      pushToast({
-        title: t('unlockToasts.successTitle'),
-        message: t('unlockToasts.successMessage', { count: unlockedCount }),
-        durationMs: 3000,
-        type: 'success',
+      toast.success(t('unlockToasts.successTitle'), {
+        description: t('unlockToasts.successMessage', { count: unlockedCount }),
+        duration: 3000,
       });
 
       // Reload achievements data from the saved file
@@ -579,16 +564,17 @@ const App: React.FC = () => {
       console.error('Error unlocking achievements:', error);
       const errorMessage = getErrorMessage(error);
       const looksLikeSteamError = isSteam || /steam/i.test(errorMessage);
-      pushToast({
-        title: looksLikeSteamError
+      toast.error(
+        looksLikeSteamError
           ? t('unlockToasts.steamErrorTitle')
           : t('unlockToasts.errorTitle'),
-        message: looksLikeSteamError
-          ? t('unlockToasts.steamErrorMessage')
-          : t('unlockToasts.errorMessage'),
-        durationMs: 5000,
-        type: 'info',
-      });
+        {
+          description: looksLikeSteamError
+            ? t('unlockToasts.steamErrorMessage')
+            : t('unlockToasts.errorMessage'),
+          duration: 5000,
+        }
+      );
       // Revert optimistic update by refreshing from backend
       forceRefresh();
     }
@@ -772,7 +758,7 @@ const App: React.FC = () => {
   const isLayoutManaged = ['jogos', 'pesquisar', 'conquistas'].includes(activeTabId);
 
   if (isLoading) {
-    return <div className="w-screen h-screen bg-[var(--bg-color)]" />;
+    return <div className="w-screen h-screen bg-background" />;
   }
 
   if (showWizard) {
@@ -782,18 +768,17 @@ const App: React.FC = () => {
           setShowWizard(false);
           localStorage.setItem('wizardCompleted', 'true');
         }} />
-        <ToastContainer toasts={toasts} onClose={closeToast} />
+        <Toaster />
       </>
     );
   }
 
   return (
-    <div className="w-screen h-screen overflow-hidden text-[var(--text-main)] flex flex-col">
+    <div className="w-screen h-screen overflow-hidden text-foreground flex flex-col">
       <TitleBar />
       <div
-        className="flex flex-1 overflow-hidden"
+        className="flex flex-1 overflow-hidden bg-background"
         style={{
-          backgroundColor: 'var(--bg-color)',
           backgroundImage: 'var(--bg-gradient, none)',
           backgroundAttachment: 'fixed',
           backgroundSize: 'cover'
@@ -838,9 +823,15 @@ const App: React.FC = () => {
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        onNotifyToast={pushToast}
+        onNotifyToast={(toastData) => {
+          if (toastData.type === 'success') {
+            toast.success(toastData.title, { description: toastData.message, duration: toastData.durationMs || 3000 });
+          } else {
+            toast(toastData.title, { description: toastData.message, duration: toastData.durationMs || 3000 });
+          }
+        }}
       />
-      <ToastContainer toasts={toasts} onClose={closeToast} />
+      <Toaster />
     </div>
   );
 };
