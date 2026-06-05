@@ -101,7 +101,7 @@ const MonitoredGameCard: React.FC<{
 
       {isCompleted && (
         <div className="absolute top-2.5 right-2.5 z-10 animate-fade-in">
-          <span className="completed-game-badge inline-flex h-5 items-center gap-1 rounded-full border border-white/30 bg-[#dceaff]/90 px-2 text-[10px] font-semibold leading-none text-[#111827] shadow-[0_2px_10px_rgba(169,201,255,0.22)] backdrop-blur-sm">
+          <span className="completed-game-badge inline-flex h-5 items-center gap-1 rounded-full border border-primary/30 bg-primary/90 px-2 text-[10px] font-semibold leading-none text-primary-foreground backdrop-blur-sm">
             <PlatinumIcon
               className="shrink-0 leading-none opacity-80"
               style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
@@ -118,7 +118,7 @@ const MonitoredGameCard: React.FC<{
             <span className="truncate">{gameName}</span>
           </h3>
           <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-200 flex-shrink-0 drop-shadow-md">
-            <span className={isCompleted ? 'text-[#a9c9ff]' : ''}>{achievementsCurrent}</span>
+            <span className={isCompleted ? 'text-primary' : ''}>{achievementsCurrent}</span>
             <span className="opacity-30">/</span>
             <span>{finalTotal}</span>
           </div>
@@ -127,7 +127,7 @@ const MonitoredGameCard: React.FC<{
         <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
           <div
             className={`game-card-progress-fill h-full transition-all duration-500 ease-out ${isCompleted
-              ? 'bg-gradient-to-r from-[#a9c9ff] via-[#c7dfff] to-[#a9c9ff] shadow-[0_0_15px_rgba(169,201,255,0.2)] animate-shimmer bg-[length:200%_100%]'
+              ? 'bg-gradient-to-r from-primary via-primary/80 to-primary shadow-[0_0_15px_var(--primary)] animate-shimmer bg-[length:200%_100%]'
               : 'bg-white/40 group-hover:bg-white/60'
               }`}
             style={{ width: finalTotal > 0 ? `${(achievementsCurrent / finalTotal) * 100}%` : '0%' }}
@@ -230,7 +230,7 @@ const MonitoredGameRow: React.FC<{
 
       <div className="justify-self-center w-full max-w-[110px] text-center">
         {isCompleted ? (
-          <span className="text-[9px] font-semibold text-[#a9c9ff] flex items-center justify-center gap-1">
+          <span className="text-[9px] font-semibold text-primary flex items-center justify-center gap-1">
             <PlatinumIcon className="text-[11px] leading-none" style={{ fontVariationSettings: "'wght' 300" }} />
             100%
           </span>
@@ -243,13 +243,13 @@ const MonitoredGameRow: React.FC<{
 
       <div className="justify-self-end w-full max-w-[260px] pl-2 flex flex-col items-end gap-1.5">
         <div className="flex items-center gap-2 text-[10px] font-semibold">
-          <span className={isCompleted ? 'text-[#a9c9ff]' : 'text-foreground'}>{achievementsCurrent}</span>
+          <span className={isCompleted ? 'text-primary' : 'text-foreground'}>{achievementsCurrent}</span>
           <span className="opacity-20 text-foreground">/</span>
           <span className="opacity-40 text-foreground">{finalTotal}</span>
         </div>
         <div className="w-full bg-muted/50 h-1.5 rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-gradient-to-r from-[#a9c9ff] via-[#c7dfff] to-[#a9c9ff] animate-shimmer bg-[length:200%_100%] shadow-[0_0_15px_rgba(169,201,255,0.3)]' : 'bg-muted-foreground opacity-20'}`}
+            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-gradient-to-r from-primary via-primary/80 to-primary animate-shimmer bg-[length:200%_100%] shadow-[0_0_15px_var(--primary)]' : 'bg-muted-foreground opacity-20'}`}
             style={{ width: finalTotal > 0 ? `${(achievementsCurrent / finalTotal) * 100}%` : '0%' }}
           />
         </div>
