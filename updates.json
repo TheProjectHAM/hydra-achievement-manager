@@ -20,6 +20,16 @@
         "Fixed Wayland/WebKit rendering issues on Linux by automatically setting `GDK_BACKEND=x11` and `WEBKIT_DISABLE_COMPOSITING_MODE=1`.",
         "Added a new `.tar.gz` Linux archive with a standalone binary and `libsteam_api.so`."
       ]
+    },
+    {
+      "version": "1.0.2",
+      "subVersion": "v20260605",
+      "changelog": [
+        "Repaired Steam achievements parsing and writer handling, with better local Steam count preference.",
+        "Polished the sidebar widths, settings dialog sizing, modal backdrop, and game count contrast for improved readability.",
+        "Refreshed the games list and release notes UI.",
+        "Updated packaging to 1.0.2: Linux now ships `.deb`, `.rpm`, and `.tar.gz`, and Windows ships the setup installer."
+      ]
     }
   ]
 }
