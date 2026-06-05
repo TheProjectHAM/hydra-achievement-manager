@@ -78,6 +78,21 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState(false);
   const steamUnlistenRef = useRef<(() => void) | null>(null);
 
+  const getLocalAchievementCounts = (game: GameAchievements) => ({
+    current: game.achievements.filter((a: any) => a.achieved).length,
+    total: game.achievements.length,
+  });
+
+  const mergeSteamAndLocalCounts = (
+    localCurrent: number,
+    localTotal: number,
+    steamCurrent?: number,
+    steamTotal?: number,
+  ) => ({
+    current: Math.max(localCurrent, steamCurrent ?? 0),
+    total: Math.max(localTotal, steamTotal ?? 0),
+  });
+
   // Detect duplicates and filter unique games
   useEffect(() => {
     const gameMap = new Map<string, GameAchievements[]>();
@@ -464,8 +479,8 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
         lastModified: Date.now(),
         directory: 'steam://',
         source: 'steam',
-        achievementsCurrent: stats ? stats.current : sg.achievementsCurrent,
-        achievementsTotal: stats ? stats.total : sg.achievementsTotal
+        achievementsCurrent: stats ? Math.max(stats.current, sg.achievementsCurrent) : sg.achievementsCurrent,
+        achievementsTotal: stats ? Math.max(stats.total, sg.achievementsTotal) : sg.achievementsTotal
       };
     });
 
@@ -474,11 +489,18 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     const mergedHydra = games.map((g) => {
       const steam = steamById.get(g.gameId);
       if (!steam) return g;
+      const localCounts = getLocalAchievementCounts(g);
+      const mergedCounts = mergeSteamAndLocalCounts(
+        localCounts.current,
+        localCounts.total,
+        steam.achievementsCurrent,
+        steam.achievementsTotal,
+      );
       return {
         ...g,
         source: 'both',
-        achievementsCurrent: steam.achievementsCurrent,
-        achievementsTotal: steam.achievementsTotal,
+        achievementsCurrent: mergedCounts.current,
+        achievementsTotal: mergedCounts.total,
       };
     });
 
@@ -511,12 +533,13 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     return sorted.slice(0, 10).map((game: any) => {
       const source = game.source;
       const isSteam = source === 'steam' || source === 'both';
+      const localCounts = getLocalAchievementCounts(game);
       const achievementsCurrent = isSteam
-        ? Number(game.achievementsCurrent || 0)
-        : game.achievements.filter((a: any) => a.achieved).length;
+        ? Math.max(localCounts.current, Number(game.achievementsCurrent || 0))
+        : localCounts.current;
       const achievementsTotal = isSteam
-        ? Number(game.achievementsTotal || 0)
-        : game.achievements.length;
+        ? Math.max(localCounts.total, Number(game.achievementsTotal || 0))
+        : localCounts.total;
 
       return {
         gameId: game.gameId,
