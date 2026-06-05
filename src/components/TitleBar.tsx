@@ -15,7 +15,9 @@ const TitleBar: React.FC = () => {
   useEffect(() => {
     invoke<DecorationInfo>("get_window_decoration_info")
       .then((info) => {
-        setHidden(info.decorated || info.sessionType === "wayland");
+        const desktop = (info.currentDesktop ?? "").toLowerCase();
+        const shouldHide = desktop.includes("hyprland") || desktop.includes("niri");
+        setHidden(shouldHide);
       })
       .catch(() => setHidden(false));
   }, []);

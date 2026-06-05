@@ -52,7 +52,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     invoke<DecorationInfo>("get_window_decoration_info")
       .then((info) => {
-        setTitlebarVisible(!(info.decorated || info.sessionType === "wayland"));
+        const desktop = (info.currentDesktop ?? "").toLowerCase();
+        const shouldHide = desktop.includes("hyprland") || desktop.includes("niri");
+        setTitlebarVisible(!shouldHide);
       })
       .catch(() => setTitlebarVisible(true));
   }, []);
