@@ -9,8 +9,8 @@ import { getGameAchievements } from '../tauri-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-
-const LIST_VIEW_GRID_COLUMNS = '48px minmax(180px, 2fr) minmax(90px, 0.8fr) minmax(180px, 2.2fr) minmax(110px, 0.7fr) minmax(260px, 1.9fr)';
+import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const MonitoredGameCard: React.FC<{
   game: GameAchievements;
@@ -87,17 +87,17 @@ const MonitoredGameCard: React.FC<{
   return (
     <div
       onClick={() => onGameSelect({ id: parseInt(gameId), name: gameName, achievementsTotal: finalTotal })}
-      className={`group monitored-game-card relative aspect-[16/9] rounded-md overflow-hidden shadow-2xl cursor-pointer transition-all duration-300 border bg-card ${isCompleted ? 'completed-game-card' : 'border-border hover:border-foreground/30'}`}
+      className={`group monitored-game-card relative aspect-[16/9] rounded-md shadow-2xl cursor-pointer transition-all duration-300 border bg-card ${isCompleted ? 'completed-game-card' : 'border-border hover:border-foreground/30'}`}
     >
       <div
-        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${isImageLoaded ? 'opacity-100' : 'opacity-80'}`}
+        className={`absolute inset-0 overflow-hidden rounded-md bg-cover bg-center transition-opacity duration-500 ${isImageLoaded ? 'opacity-100' : 'opacity-80'}`}
         style={{ backgroundImage: `url(${imageUrl})`, backgroundColor: '#000' }}
       />
       <img src={imageUrl} onError={handleImageError} onLoad={() => setIsImageLoaded(true)} style={{ display: 'none' }} alt="" />
 
       {!isImageLoaded && <div className="absolute inset-0 bg-black/20" />}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+      <div className="absolute inset-0 overflow-hidden rounded-md bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
 
       {isCompleted && (
         <div className="absolute top-2.5 right-2.5 z-10 animate-fade-in">
@@ -110,6 +110,15 @@ const MonitoredGameCard: React.FC<{
           </span>
         </div>
       )}
+
+      <img
+        src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
+        alt=""
+        className="absolute -top-1 left-3 z-10 h-16 w-16 object-contain opacity-0 drop-shadow-xl transition-opacity duration-300 group-hover:opacity-100"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
+        }}
+      />
 
       <div className="relative flex flex-col justify-end h-full p-4 text-white">
         <div className="flex items-center justify-between mb-2 gap-3 min-w-0">
@@ -135,7 +144,7 @@ const MonitoredGameCard: React.FC<{
         </div>
       </div>
 
-      <div className="absolute inset-0 rounded-md pointer-events-none transition-shadow duration-300 group-hover:ring-1 group-hover:ring-inset group-hover:ring-white/5"></div>
+      <div className="absolute inset-0 overflow-hidden rounded-md pointer-events-none transition-shadow duration-300 group-hover:ring-1 group-hover:ring-inset group-hover:ring-white/5"></div>
     </div>
   );
 };
@@ -144,6 +153,7 @@ const MonitoredGameRow: React.FC<{
   game: GameAchievements;
   onGameSelect: (game: SteamSearchResult) => void;
 }> = ({ game, onGameSelect }) => {
+  const { t } = useI18n();
   const { duplicateGames, gameNames } = useMonitoredAchievements();
   const gameId = game.gameId;
   const source = (game as any).source;
@@ -176,85 +186,98 @@ const MonitoredGameRow: React.FC<{
 
   const finalTotal = totalAchievements ?? game.achievements.length;
   const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
+  const progressPercent = finalTotal > 0 ? Math.round((achievementsCurrent / finalTotal) * 100) : 0;
+  const handleSelect = () => onGameSelect({ id: parseInt(gameId), name: gameName, achievementsTotal: finalTotal });
 
   return (
-    <div
-      onClick={() => onGameSelect({ id: parseInt(gameId), name: gameName, achievementsTotal: finalTotal })}
-      className="group grid gap-6 items-center p-4 rounded-md transition-all duration-300 cursor-pointer border border-border bg-muted/30"
-      style={{ gridTemplateColumns: LIST_VIEW_GRID_COLUMNS }}
+    <TableRow
+      role="button"
+      tabIndex={0}
+      onClick={handleSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleSelect();
+        }
+      }}
+      className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
     >
-      <div className="w-12 h-12 flex items-center justify-center">
+      <TableCell className="w-[6%] p-2 sm:p-3">
         <img
           src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
           alt=""
-          className="w-full h-full object-contain filter drop-shadow-md"
+          className="h-12 w-12 object-contain drop-shadow-md sm:h-14 sm:w-14"
           onError={(e) => {
             (e.target as HTMLImageElement).src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
           }}
         />
-      </div>
+      </TableCell>
 
-      <div className="min-w-0">
-        <h3 className="font-semibold text-xs truncate flex items-center gap-2 text-foreground">
-          <span className="truncate">{gameName}</span>
-        </h3>
-        <p className="text-[9px] font-medium opacity-30 mt-0.5 text-foreground">AppID: {gameId}</p>
-      </div>
+      <TableCell className="w-[30%] min-w-0">
+        <div className="min-w-0 space-y-1">
+          <h3 className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
+            {isSteam && <SteamBrandIcon className="h-4 w-4 shrink-0 opacity-60" />}
+            <span className="truncate">{gameName}</span>
+          </h3>
+          <p className="text-[11px] font-medium text-muted-foreground">AppID: {gameId}</p>
+        </div>
+      </TableCell>
 
-      <div className="flex items-center justify-center">
-        {(source === 'both') ? (
-          <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1.5">
-            <SteamBrandIcon className="w-3.5 h-3.5 opacity-60" />
+      <TableCell className="hidden w-[12%] text-center sm:table-cell">
+        {source === 'both' ? (
+          <Badge variant="secondary" className="h-6 px-2.5">
+            <SteamBrandIcon className="h-3.5 w-3.5 opacity-60" />
             Both
           </Badge>
         ) : isSteam ? (
-          <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1.5">
-            <SteamBrandIcon className="w-3.5 h-3.5 opacity-60" />
+          <Badge variant="secondary" className="h-6 px-2.5">
+            <SteamBrandIcon className="h-3.5 w-3.5 opacity-60" />
             Steam
           </Badge>
         ) : (
-          <Badge variant="outline" className="flex items-center gap-2 px-3 py-1.5">
+          <Badge variant="secondary" className="h-6 px-2.5">
             Local
           </Badge>
         )}
-      </div>
+      </TableCell>
 
-      <div className="hidden lg:flex items-center justify-start gap-2 overflow-hidden" title={allPaths}>
-        <span className="text-[10px] font-medium opacity-40 truncate text-foreground">{game.directory}</span>
-        {otherDirsCount > 0 && (
-          <span className="px-1.5 py-0.5 rounded-sm bg-muted/50 text-[9px] font-semibold opacity-50 whitespace-nowrap text-foreground">
-            +{otherDirsCount}
-          </span>
-        )}
-      </div>
-
-      <div className="justify-self-center w-full max-w-[110px] text-center">
-        {isCompleted ? (
-          <span className="text-[9px] font-semibold text-primary flex items-center justify-center gap-1">
-            <PlatinumIcon className="text-[11px] leading-none" style={{ fontVariationSettings: "'wght' 300" }} />
-            100%
-          </span>
-        ) : (
-          <span className="text-[9px] font-semibold opacity-30 text-foreground">
-            {finalTotal > 0 ? Math.round((achievementsCurrent / finalTotal) * 100) : 0}%
-          </span>
-        )}
-      </div>
-
-      <div className="justify-self-end w-full max-w-[260px] pl-2 flex flex-col items-end gap-1.5">
-        <div className="flex items-center gap-2 text-[10px] font-semibold">
-          <span className={isCompleted ? 'text-primary' : 'text-foreground'}>{achievementsCurrent}</span>
-          <span className="opacity-20 text-foreground">/</span>
-          <span className="opacity-40 text-foreground">{finalTotal}</span>
+      <TableCell className="hidden md:table-cell" title={allPaths}>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-xs font-medium text-muted-foreground">{game.directory}</span>
+          {otherDirsCount > 0 && (
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+              +{otherDirsCount}
+            </Badge>
+          )}
         </div>
-        <div className="w-full bg-muted/50 h-1.5 rounded-full overflow-hidden">
-          <div
-            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-gradient-to-r from-primary via-primary/80 to-primary animate-shimmer bg-[length:200%_100%] shadow-[0_0_15px_var(--primary)]' : 'bg-muted-foreground opacity-20'}`}
-            style={{ width: finalTotal > 0 ? `${(achievementsCurrent / finalTotal) * 100}%` : '0%' }}
+      </TableCell>
+
+      <TableCell className="w-[22%]">
+        <div className="space-y-2">
+          <div className="flex items-center justify-end gap-2 text-xs font-semibold">
+            {isCompleted && (
+              <Badge className="h-5 shrink-0 gap-1 px-2 text-[10px]">
+                <PlatinumIcon
+                  className="shrink-0 leading-none opacity-80"
+                  style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
+                />
+                {t('gamesPage.completed')}
+              </Badge>
+            )}
+            <span className="tabular-nums text-muted-foreground">
+              <span className={isCompleted ? 'text-primary' : 'text-foreground'}>{achievementsCurrent}</span>
+              <span className="mx-1 opacity-40">/</span>
+              {finalTotal}
+            </span>
+          </div>
+          <Progress
+            value={progressPercent}
+            aria-label={`Progresso de ${gameName}`}
+            className={`w-full [&_[data-slot=progress-track]]:h-1.5 [&_[data-slot=progress-track]]:bg-muted/70 ${isCompleted ? '[&_[data-slot=progress-indicator]]:animate-shimmer [&_[data-slot=progress-indicator]]:bg-[length:200%_100%] [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-primary [&_[data-slot=progress-indicator]]:via-primary/80 [&_[data-slot=progress-indicator]]:to-primary [&_[data-slot=progress-indicator]]:shadow-[0_0_15px_var(--primary)]' : '[&_[data-slot=progress-indicator]]:bg-muted-foreground/40 group-hover:[&_[data-slot=progress-indicator]]:bg-primary/70'}`}
           />
         </div>
-      </div>
-    </div>
+      </TableCell>
+    </TableRow>
   );
 };
 
@@ -381,47 +404,51 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            <div
-              className="grid gap-6 items-center py-3 text-[10px] font-semibold opacity-30 border-b sticky top-0 z-10 bg-background border-border text-foreground"
-              style={{ gridTemplateColumns: LIST_VIEW_GRID_COLUMNS }}
-            >
-              <div className="w-12"></div>
-              <Button variant="ghost" onClick={() => handleSort('name')} className="group flex items-center hover:opacity-100 truncate text-left h-auto p-0 text-[10px] font-semibold">
-                Game <SortIndicator column="name" />
-              </Button>
-
-              <div className="flex items-center justify-center">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    const filters: ('all' | 'steam' | 'local')[] = ['all', 'steam', 'local'];
-                    const next = filters[(filters.indexOf(platformFilter) + 1) % filters.length];
-                    setPlatformFilter(next);
-                  }}
-                  className={`group flex items-center hover:opacity-100 h-auto p-0 text-[10px] font-semibold ${platformFilter !== 'all' ? 'opacity-100' : ''}`}
-                >
-                  {platformFilter === 'all' ? 'All' : platformFilter}
-                </Button>
-              </div>
-
-              <Button variant="ghost" onClick={() => handleSort('path')} className="group hidden lg:flex items-center justify-start hover:opacity-100 truncate h-auto p-0 text-[10px] font-semibold">
-                Path <SortIndicator column="path" />
-              </Button>
-              <div className="justify-self-center w-full max-w-[110px] text-center">Status</div>
-              <Button variant="ghost" onClick={() => handleSort('progress')} className="group justify-self-end w-full max-w-[260px] pl-2 flex items-center justify-end hover:opacity-100 h-auto p-0 text-[10px] font-semibold">
-                Progress <SortIndicator column="progress" />
-              </Button>
-            </div>
-            <div className="space-y-1 mt-2">
-              {filteredAndSortedGames.map(game => (
-                <MonitoredGameRow
-                  key={game.gameId}
-                  game={game}
-                  onGameSelect={onGameSelect}
-                />
-              ))}
-            </div>
+          <div className="overflow-hidden rounded-xl border bg-card/50">
+            <Table className="w-full table-fixed">
+              <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[6%]" />
+                  <TableHead className="w-[30%]">
+                    <Button variant="ghost" onClick={() => handleSort('name')} className="group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
+                      Game <SortIndicator column="name" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden w-[12%] text-center sm:table-cell">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        const filters: ('all' | 'steam' | 'local')[] = ['all', 'steam', 'local'];
+                        const next = filters[(filters.indexOf(platformFilter) + 1) % filters.length];
+                        setPlatformFilter(next);
+                      }}
+                      className={`group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground ${platformFilter !== 'all' ? 'text-foreground' : ''}`}
+                    >
+                      {platformFilter === 'all' ? 'All' : platformFilter}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden min-w-0 md:table-cell">
+                    <Button variant="ghost" onClick={() => handleSort('path')} className="group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
+                      Path <SortIndicator column="path" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="w-[22%] text-right">
+                    <Button variant="ghost" onClick={() => handleSort('progress')} className="group ml-auto h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
+                      Progress <SortIndicator column="progress" />
+                    </Button>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedGames.map(game => (
+                  <MonitoredGameRow
+                    key={game.gameId}
+                    game={game}
+                    onGameSelect={onGameSelect}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

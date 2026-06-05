@@ -11,6 +11,15 @@
         "Refined game and achievement management workflows for better accuracy and operational stability.",
         "Delivered broad usability, architecture, and quality-of-life improvements across the application."
       ]
+    },
+    {
+      "version": "1.0.1",
+      "subVersion": "v20260601",
+      "changelog": [
+        "Updated Wine/Proton support to use the new HydraLauncher prefix system for improved Linux compatibility.",
+        "Fixed Wayland/WebKit rendering issues on Linux by automatically setting `GDK_BACKEND=x11` and `WEBKIT_DISABLE_COMPOSITING_MODE=1`.",
+        "Added a new `.tar.gz` Linux archive with a standalone binary and `libsteam_api.so`."
+      ]
     }
   ]
 }
