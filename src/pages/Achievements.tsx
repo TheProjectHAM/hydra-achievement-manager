@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { SteamSearchResult, Achievement, AchievementStatus, Timestamp } from '../types';
-import { TrophyIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, ExportIcon, LockIcon, SearchIcon } from '../components/Icons';
+import { TrophyIcon, CheckIcon, ExportIcon, LockIcon, SearchIcon } from '../components/Icons';
 import TimestampSelector from '../components/TimestampSelector';
 import GlobalTimestampManager, { UnlockMode } from '../components/GlobalTimestampManager';
 import { useTheme } from '../contexts/ThemeContext';
@@ -8,6 +8,9 @@ import { useI18n } from '../contexts/I18nContext';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
 import UnlockModal from '../components/UnlockModal';
 import { getGameAchievements } from '../tauri-api';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Loader2, Search as SearchIconLucide } from 'lucide-react';
 
 const AchievementCard: React.FC<{
   achievement: Achievement;
@@ -45,39 +48,26 @@ const AchievementCard: React.FC<{
 
   return (
     <div
-      className={`group relative flex flex-col gap-4 p-4 rounded-md transition-all duration-300 cursor-pointer h-[155px] achievement-card overflow-hidden ${isCompleted
-        ? 'shadow-xl'
-        : 'hover:bg-[var(--hover-bg)]'
-        }`}
-      style={{ backgroundColor: 'var(--card-bg)', borderColor: 'transparent' }}
+      className={`group relative flex flex-col gap-4 p-4 rounded-md transition-all duration-300 cursor-pointer h-[155px] achievement-card overflow-hidden bg-card border-transparent ${isCompleted ? 'shadow-xl' : 'hover:bg-accent'}`}
       onClick={onToggle}
     >
-      {/* Hidden Overlay Effect */}
       {isHidden && (
-        <div className="absolute inset-0 z-20 backdrop-blur-md bg-[var(--card-bg)]/80 flex flex-col items-center justify-center transition-opacity duration-300 opacity-100 group-hover:opacity-0" style={{ pointerEvents: 'none' }}>
+        <div className="absolute inset-0 z-20 backdrop-blur-md bg-card/80 flex flex-col items-center justify-center transition-opacity duration-300 opacity-100 group-hover:opacity-0" style={{ pointerEvents: 'none' }}>
           <LockIcon className="text-2xl mb-2 opacity-50" />
-          <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{t('achievementsPage.hiddenAchievement')}</span>
+          <span className="text-[10px] font-semibold opacity-60">{t('achievementsPage.hiddenAchievement')}</span>
         </div>
       )}
 
-      {/* Rarity Bar (if steam) */}
       {achievement.percent !== undefined && achievement.percent > 0 && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-black/20">
-          <div
-            className={`h-full ${rarityColor}`}
-            style={{ width: `${Math.max(5, achievement.percent)}%` }}
-          />
+          <div className={`h-full ${rarityColor}`} style={{ width: `${Math.max(5, achievement.percent)}%` }} />
         </div>
       )}
-      {/* Top Right Checkbox Indicator - No Border */}
+
       <div
-        className={`absolute top-3 right-3 w-5 h-5 rounded-sm flex items-center justify-center transition-all duration-300 z-10 ${isCompleted
-          ? 'shadow-lg'
-          : 'bg-[var(--hover-bg)]'
-          }`}
-        style={{ backgroundColor: isCompleted ? 'var(--text-main)' : 'transparent' }}
+        className={`absolute top-3 right-3 w-5 h-5 rounded-sm flex items-center justify-center transition-all duration-300 z-10 ${isCompleted ? 'shadow-lg bg-foreground' : 'bg-transparent'}`}
       >
-        {isCompleted && <CheckIcon className="text-[10px] text-[var(--bg-color)] font-black" />}
+        {isCompleted && <CheckIcon className="text-[10px] text-background font-semibold" />}
       </div>
 
       <div className="flex items-start gap-4 w-full flex-grow pr-6">
@@ -89,16 +79,15 @@ const AchievementCard: React.FC<{
           />
         </div>
         <div className="flex-grow min-w-0">
-          <h3 className={`font-black text-xs uppercase tracking-tight transition-colors duration-300 ${isCompleted ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'} ${isHidden ? 'blur-sm group-hover:blur-0 transition-all' : ''}`}>
+          <h3 className={`font-semibold text-xs transition-colors duration-300 ${isCompleted ? 'text-foreground' : 'text-muted-foreground'} ${isHidden ? 'blur-sm group-hover:blur-0 transition-all' : ''}`}>
             {achievement.displayName}
           </h3>
-          <p className={`text-[10px] font-bold leading-relaxed mt-1 line-clamp-2 uppercase tracking-wide transition-opacity duration-300 ${isCompleted ? 'opacity-80' : 'opacity-40'} ${isHidden ? 'blur-sm group-hover:blur-0 transition-all' : ''}`} style={{ color: 'var(--text-main)' }}>
+          <p className={`text-[10px] font-medium leading-relaxed mt-1 line-clamp-2 transition-opacity duration-300 text-foreground ${isCompleted ? 'opacity-80' : 'opacity-40'} ${isHidden ? 'blur-sm group-hover:blur-0 transition-all' : ''}`}>
             {achievement.description || t('achievementsPage.noDescription')}
           </p>
 
-          {/* Rarity Text */}
           {achievement.percent !== undefined && achievement.percent > 0 && (
-            <div className={`mt-2 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${isHidden ? 'opacity-0 group-hover:opacity-60' : 'opacity-40'}`}>
+            <div className={`mt-2 text-[9px] font-semibold flex items-center gap-1 ${isHidden ? 'opacity-0 group-hover:opacity-60' : 'opacity-40'}`}>
               <span className={achievement.percent < 10 ? 'text-amber-400' : ''}>{achievement.percent.toFixed(1)}%</span>
               <span>Unlocks</span>
             </div>
@@ -117,9 +106,6 @@ const AchievementCard: React.FC<{
           timeFormat={timeFormat}
         />
       </div>
-
-      {/* Hover visual cue */}
-      {/* Hover visual cue removed */}
     </div>
   );
 };
@@ -153,8 +139,6 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const achievementsCacheRef = useRef<Record<string, Achievement[]>>({});
   const sourceStatusInitializedRef = useRef<Set<string>>(new Set());
-
-
 
   const hasSelected = game ? Object.values(achievementStatus[game.id] || {}).some((status: AchievementStatus) => status.completed) : false;
 
@@ -237,7 +221,6 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
             return normalizePath(g.directory) === normalizedPreferredPath;
           });
 
-        // Apply source status only once per source key to avoid cross-source overwrites.
         if (!sourceStatusInitializedRef.current.has(sourceCacheKey) && shouldUseSteamStatus) {
           result.achievements.forEach((ach: any) => {
             const isUnlocked = ach.achieved === true || ach.achieved === 1;
@@ -245,15 +228,12 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
 
             if (isUnlocked && internalName) {
               const currentStatus = achievementStatus[game.id]?.[internalName];
-              // Only update if not already set or modified locally
-              // We want to trust the API if the local state is "empty/default"
               const isLocallySet = currentStatus && (
                 currentStatus.completed !== false ||
                 currentStatus.timestamp.day !== ''
               );
 
               if (!isLocallySet) {
-                // Format timestamp if available
                 let timestamp: Timestamp = { day: '', month: '', year: '', hour: '', minute: '' };
 
                 if (ach.unlockTime) {
@@ -279,7 +259,6 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                     };
                   }
                 } else {
-                  // If no timestamp but unlocked, set to now
                   const now = new Date();
                   let hour = String(now.getHours()).padStart(2, '0');
                   let ampm: 'AM' | 'PM' | undefined;
@@ -416,7 +395,6 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
   const filteredAchievements = useMemo(() => {
     let result = [...achievements];
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const normalizedQuery = normalizeString(searchQuery);
       result = result.filter(
@@ -426,7 +404,6 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
       );
     }
 
-    // Sort
     result.sort((a, b) => {
       if (sortType === 'alphabetical') {
         const valA = a.displayName.toLowerCase();
@@ -441,16 +418,13 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
         const timeA = statusA?.completed ? getTimestampValue(statusA.timestamp) : 0;
         const timeB = statusB?.completed ? getTimestampValue(statusB.timestamp) : 0;
 
-        // If both are not unlocked, sort alphabetically as secondary
         if (timeA === 0 && timeB === 0) {
           return a.displayName.localeCompare(b.displayName);
         }
 
-        // Unlocked first (or last depending on direction)
         if (sortDirection === 'desc') {
           return timeB - timeA;
         } else {
-          // Unlocked last
           if (timeA === 0) return 1;
           if (timeB === 0) return -1;
           return timeA - timeB;
@@ -461,8 +435,6 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
     return result;
   }, [achievements, searchQuery, sortType, sortDirection, achievementStatus, game?.id, getTimestampValue]);
 
-
-
   const handleUnlockConfirm = (path: string) => {
     onGlobalUnlock(unlockMode, customTimestamp, path, gameAchievements);
     setIsUnlockModalOpen(false);
@@ -471,11 +443,11 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
   if (!game) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center select-none pointer-events-none">
-        <TrophyIcon className="text-8xl mb-6 text-[var(--text-main)] opacity-15" />
-        <h1 className="text-xl font-black tracking-wide text-[var(--text-main)] opacity-35">
+        <TrophyIcon className="text-6xl mb-6 text-foreground opacity-15" />
+        <h1 className="text-xl font-semibold text-foreground opacity-35">
           {t('achievementsPage.title')}
         </h1>
-        <p className="text-[11px] font-bold tracking-wide mt-2 text-[var(--text-muted)] opacity-70">
+        <p className="text-[11px] font-bold tracking-wide mt-2 text-muted-foreground opacity-70">
           {t('achievementsPage.selectGamePrompt')}
         </p>
       </div>
@@ -500,66 +472,64 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
       <div className="flex flex-col h-full gap-4">
         <header className="flex-shrink-0 flex flex-col sm:flex-row justify-between sm:items-end gap-6">
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-black uppercase tracking-tighter truncate leading-none" style={{ color: 'var(--text-main)' }} title={game.name}>
+            <h1 className="text-3xl font-semibold truncate leading-none text-foreground" title={game.name}>
               {game.name}
             </h1>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <div className="relative group w-full sm:w-64">
               <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
-                <SearchIcon className={`text-base transition-colors duration-300 ${searchQuery ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)] group-focus-within:text-[var(--text-main)]'}`} />
+                <SearchIconLucide className={`size-4 transition-colors duration-300 ${searchQuery ? 'text-foreground' : 'text-muted-foreground group-focus-within:text-foreground'}`} />
               </div>
-              <input
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('achievementsPage.searchPlaceholder')}
-                className="w-full h-11 border rounded-md pl-11 pr-4 text-[11px] font-bold tracking-wider outline-none transition-all shadow-inner"
-                style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                className="w-full h-11 pl-11 pr-4 text-[0.95rem] font-semibold"
                 aria-label={t('achievementsPage.searchPlaceholder')}
               />
             </div>
 
-            <div className="flex p-1 rounded-md border h-11" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)' }}>
-              <button
+            <div className="flex p-1 rounded-md border h-11 bg-muted/30 border-border">
+              <Button
+                variant={hasSelected ? 'default' : 'ghost'}
+                size="sm"
                 onClick={toggleAllAchievements}
                 title={hasSelected ? t('achievementsPage.unselectAll') : t('achievementsPage.selectAll')}
-                className={`px-3 flex items-center justify-center rounded-sm transition-all duration-300 ${hasSelected
-                  ? 'bg-[var(--text-main)] text-[var(--bg-color)] shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
+                className="px-3 h-full rounded-sm"
               >
                 {hasSelected ? <LockIcon className="text-xl" /> : <CheckIcon className="text-xl" />}
-              </button>
+              </Button>
 
-              <div className="w-[1px] my-1.5 mx-1 opacity-20" style={{ backgroundColor: 'var(--text-main)' }} />
+              <div className="w-px my-1.5 mx-1 opacity-20 bg-foreground" />
 
-              <button
+              <Button
+                variant={sortType === 'alphabetical' ? 'default' : 'ghost'}
+                size="sm"
                 onClick={() => setSortType('alphabetical')}
-                className={`px-3 flex items-center justify-center rounded-sm transition-all duration-300 ${sortType === 'alphabetical'
-                  ? 'bg-[var(--text-main)] text-[var(--bg-color)] shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
+                className="px-3 h-full rounded-sm text-[10px] font-semibold"
                 title="A-Z"
               >
-                <span className="text-[10px] font-black tracking-widest uppercase">A-Z</span>
-              </button>
-              <button
+                A-Z
+              </Button>
+              <Button
+                variant={sortType === 'unlockTime' ? 'default' : 'ghost'}
+                size="sm"
                 onClick={() => setSortType('unlockTime')}
-                className={`px-3 flex items-center justify-center rounded-sm transition-all duration-300 ${sortType === 'unlockTime'
-                  ? 'bg-[var(--text-main)] text-[var(--bg-color)] shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
+                className="px-3 h-full rounded-sm text-[10px] font-semibold"
                 title="Time"
               >
-                <span className="text-[10px] font-black tracking-widest uppercase">Time</span>
-              </button>
+                Time
+              </Button>
 
-              <div className="w-[1px] my-1.5 mx-1 opacity-20" style={{ backgroundColor: 'var(--text-main)' }} />
+              <div className="w-px my-1.5 mx-1 opacity-20 bg-foreground" />
 
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className="px-3 flex items-center justify-center rounded-sm text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+                className="px-3 h-full rounded-sm"
                 title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
               >
                 <div className={`transition-transform duration-300 ${sortDirection === 'desc' ? 'rotate-180' : ''}`}>
@@ -567,7 +537,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
-              </button>
+              </Button>
             </div>
           </div>
         </header>
@@ -575,10 +545,10 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
         <div className="flex-grow overflow-y-auto custom-scrollbar min-h-0 pr-2" ref={containerRef}>
           {loadingAchievements ? (
             <div className="flex-grow flex items-center justify-center h-full">
-              <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--text-muted)', borderTopColor: 'var(--text-main)' }}></div>
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
             </div>
           ) : achievements.length === 0 ? (
-            <div className="flex-grow flex items-center justify-center h-full border rounded-md" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}>
+            <div className="flex-grow flex items-center justify-center h-full border rounded-md bg-muted/30 border-border text-muted-foreground">
               <p className="text-[11px] font-bold tracking-wide opacity-70">{t('achievementsPage.noAchievements')}</p>
             </div>
           ) : filteredAchievements.length > 0 ? (
@@ -599,8 +569,8 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center select-none pointer-events-none">
-              <SearchIcon className="text-7xl mb-5 text-[var(--text-main)] opacity-15" />
-              <h2 className="text-lg font-black tracking-wide text-[var(--text-main)] opacity-35 leading-none">
+              <SearchIconLucide className="size-16 mb-5 text-foreground opacity-15" />
+              <h2 className="text-lg font-semibold text-foreground opacity-35 leading-none">
                 {t('achievementsPage.noResultsForQuery', { query: searchQuery })}
               </h2>
             </div>
@@ -608,7 +578,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
         </div>
 
         {filteredAchievements.length > 0 && (
-          <footer className="flex-shrink-0 flex flex-col md:flex-row justify-between items-center gap-4 mt-1.5 pt-3.5 border-t" style={{ borderColor: 'var(--border-color)' }}>
+          <footer className="flex-shrink-0 flex flex-col md:flex-row justify-between items-center gap-4 mt-1.5 pt-3.5 border-t border-border">
             <div className="w-full md:w-auto">
               <GlobalTimestampManager
                 mode={unlockMode}
@@ -618,25 +588,22 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
               />
             </div>
 
-
-
             <div className="flex items-center gap-2 w-full md:w-auto">
-              <button
+              <Button
+                variant="outline"
                 onClick={onExportStart}
-                className="flex-1 md:flex-none h-11 px-6 rounded-md text-[10px] font-black uppercase tracking-[0.2em] border transition-all flex items-center justify-center gap-3"
-                style={{ backgroundColor: 'var(--hover-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                className="flex-1 md:flex-none h-11 px-6 text-[10px] font-semibold"
               >
                 <ExportIcon className="text-lg opacity-50" />
                 <span>{t('globalTimestampManager.export')}</span>
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setIsUnlockModalOpen(true)}
-                className="flex-1 md:flex-none h-11 px-8 rounded-md text-[10px] font-black uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3"
-                style={{ backgroundColor: 'var(--text-main)', color: 'var(--bg-color)' }}
+                className="flex-1 md:flex-none h-11 px-8 text-[10px] font-semibold"
               >
                 <LockIcon className="text-lg" />
                 <span>{t('globalTimestampManager.unlock')}</span>
-              </button>
+              </Button>
             </div>
           </footer>
         )}

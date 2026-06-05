@@ -129,7 +129,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
   };
 
   return (
-    <div className="w-screen h-screen overflow-hidden flex flex-col" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-main)' }}>
+    <div className="w-screen h-screen overflow-hidden flex flex-col bg-background text-foreground">
       <TitleBar />
 
       <div className="mx-auto w-full max-w-5xl px-6 pt-8 pb-4">
@@ -140,25 +140,20 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
               <React.Fragment key={id}>
                 <button
                   type="button"
-                  className="h-8 min-w-8 px-2 rounded-md border text-[10px] font-black uppercase tracking-wider"
-                  style={{
-                    borderColor: active ? 'var(--text-main)' : 'var(--border-color)',
-                    backgroundColor: active ? 'var(--text-main)' : 'transparent',
-                    color: active ? 'var(--bg-color)' : 'var(--text-main)'
-                  }}
+                  className={`h-8 min-w-8 px-2 rounded-md border text-[10px] font-semibold ${active ? 'bg-foreground text-background border-foreground' : 'bg-transparent text-foreground border-border'}`}
                   onClick={() => id < step && setStep(id)}
                   disabled={id >= step}
                 >
                   {idx + 1}
                 </button>
                 {idx < STEP_IDS.length - 1 && (
-                  <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-color)' }} />
+                  <div className="h-px flex-1 bg-border" />
                 )}
               </React.Fragment>
             );
           })}
         </div>
-        <div className="mt-2 text-[10px] uppercase font-bold tracking-widest opacity-60">
+        <div className="mt-2 text-[10px] font-medium opacity-60">
           {stepLabels[step - 1]}
         </div>
       </div>
@@ -170,7 +165,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
               <div className="flex flex-col sm:flex-row items-center gap-8">
                 <img src={appLogo} alt="Project HAM" className="w-32 h-32 sm:w-40 sm:h-40" />
                 <div className="space-y-4 text-center sm:text-left">
-                  <h1 className="text-4xl font-black uppercase tracking-tight">{t('wizard.welcomeTitle')}</h1>
+                  <h1 className="text-3xl font-semibold">{t('wizard.welcomeTitle')}</h1>
                   <p className="text-sm opacity-70 max-w-2xl">{t('wizard.welcomeDesc')}</p>
                 </div>
               </div>
@@ -179,7 +174,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
 
           {step === 2 && (
             <section className="max-w-4xl mx-auto py-4 text-center">
-              <h2 className="text-2xl font-black uppercase tracking-tight mb-8">{t('wizard.selectLanguage')}</h2>
+              <h2 className="text-xl font-semibold mb-8">{t('wizard.selectLanguage')}</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-left">
                 {[
                   { id: 'en-US', name: 'English', cc: 'US' },
@@ -198,12 +193,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                     <button
                       key={langOption.id}
                       type="button"
-                      className="rounded-lg border p-3 text-left transition-all"
-                      style={{
-                        borderColor: selected ? 'var(--text-main)' : 'var(--border-color)',
-                        backgroundColor: selected ? 'var(--hover-bg)' : 'transparent',
-                        opacity: selected ? 1 : 0.85
-                      }}
+                      className={`rounded-lg border p-3 text-left transition-all ${selected ? 'bg-accent border-foreground opacity-100' : 'bg-transparent border-border opacity-85'}`}
                       onClick={() => setLanguage(langOption.id as Language)}
                     >
                       <img
@@ -211,7 +201,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                         alt={langOption.name}
                         className="w-8 h-6 rounded mb-2"
                       />
-                      <div className="text-[11px] font-bold uppercase tracking-wider">{langOption.name}</div>
+                      <div className="text-[11px] font-semibold">{langOption.name}</div>
                     </button>
                   );
                 })}
@@ -221,7 +211,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
 
           {step === 3 && (
             <section className="max-w-4xl mx-auto py-4 space-y-8 text-center">
-              <h2 className="text-2xl font-black uppercase tracking-tight">{t('wizard.achievementSource')}</h2>
+              <h2 className="text-xl font-semibold">{t('wizard.achievementSource')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   { id: 'hydra', label: t('settings.api.hydraApi'), desc: t('settings.api.hydraDescription'), icon: <HydraIcon className="text-3xl" /> },
@@ -233,18 +223,13 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                       key={api.id}
                       type="button"
                       onClick={() => setSelectedApi(api.id as ApiSource)}
-                      className="rounded-lg border p-5 text-left transition-all"
-                      style={{
-                        borderColor: selected ? 'var(--text-main)' : 'var(--border-color)',
-                        backgroundColor: selected ? 'var(--hover-bg)' : 'transparent',
-                        opacity: selected ? 1 : 0.85
-                      }}
+                      className={`rounded-lg border p-5 text-left transition-all ${selected ? 'bg-accent border-foreground opacity-100' : 'bg-transparent border-border opacity-85'}`}
                     >
                       <div className="flex items-center justify-between">
                         {api.icon}
                         {selected && <CheckIcon className="text-lg" />}
                       </div>
-                      <h3 className="text-sm font-black uppercase tracking-wider mt-3">{api.label}</h3>
+                      <h3 className="text-sm font-semibold mt-3">{api.label}</h3>
                       <p className="text-xs opacity-70 mt-2">{api.desc}</p>
                     </button>
                   );
@@ -254,7 +239,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
               {selectedApi === 'steam' && (
                 <div className="max-w-2xl mx-auto space-y-4 text-left">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-wider opacity-70">{t('wizard.securityAccessKey')}</p>
+                    <p className="text-[10px] font-semibold opacity-70">{t('wizard.securityAccessKey')}</p>
                     <p className="text-[10px] opacity-60 mt-1">{t('wizard.localStorageOnly')}</p>
                   </div>
                   <div className="relative">
@@ -263,8 +248,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                       value={steamApiKey}
                       onChange={(e) => setSteamApiKey(e.target.value)}
                       placeholder={t('wizard.pasteApiKey')}
-                      className="w-full h-11 rounded-md border px-3 pr-11 text-sm"
-                      style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-color)', color: 'var(--text-main)' }}
+                      className="w-full h-11 rounded-md border border-border px-3 pr-11 text-sm bg-background text-foreground"
                     />
                     <button
                       type="button"
@@ -274,7 +258,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                       {showSteamKey ? <VisibilityOffIcon className="text-lg opacity-70" /> : <VisibilityIcon className="text-lg opacity-70" />}
                     </button>
                   </div>
-                  <label className="flex items-center justify-between rounded-md border p-3" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                  <label className="flex items-center justify-between rounded-md border border-border p-3 bg-muted">
                     <span className="text-xs font-semibold">{t('wizard.enableSteamIntegration')}</span>
                     <button
                       type="button"
@@ -291,7 +275,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
 
           {step === 4 && (
             <section className="max-w-4xl mx-auto py-4 text-center">
-              <h2 className="text-2xl font-black uppercase tracking-tight mb-8">{t('wizard.visualStyle')}</h2>
+              <h2 className="text-xl font-semibold mb-8">{t('wizard.visualStyle')}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {themes.map((themeOption) => {
                   const selected = theme === themeOption.id;
@@ -299,16 +283,11 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                     <button
                       key={themeOption.id}
                       type="button"
-                      className="rounded-lg border p-3 text-left transition-all"
-                      style={{
-                        borderColor: selected ? 'var(--text-main)' : 'var(--border-color)',
-                        backgroundColor: selected ? 'var(--hover-bg)' : 'transparent',
-                        opacity: selected ? 1 : 0.85
-                      }}
+                      className={`rounded-lg border p-3 text-left transition-all ${selected ? 'bg-accent border-foreground opacity-100' : 'bg-transparent border-border opacity-85'}`}
                       onClick={() => setTheme(themeOption.id)}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-black uppercase tracking-wider">{themeOption.name}</span>
+                        <span className="text-[11px] font-semibold">{themeOption.name}</span>
                         {selected && <CheckIcon className="text-lg" />}
                       </div>
                       <div className="h-10 rounded-md overflow-hidden flex">
@@ -325,23 +304,18 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
 
           {step === 5 && (
             <section className="max-w-4xl mx-auto py-4 space-y-8 text-center">
-              <h2 className="text-2xl font-black uppercase tracking-tight">{t('wizard.regionalFormats')}</h2>
+              <h2 className="text-xl font-semibold">{t('wizard.regionalFormats')}</h2>
               <div className="max-w-3xl mx-auto space-y-5 text-left">
-                <div className="rounded-lg border p-4" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                <div className="rounded-lg border border-border p-4 bg-muted">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider opacity-70 mb-2">{t('wizard.datePreference')}</p>
+                      <p className="text-[10px] font-semibold opacity-70 mb-2">{t('wizard.datePreference')}</p>
                       <div className="grid grid-cols-3 gap-2">
                         {(['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as DateFormat[]).map((fmt) => (
                           <button
                             key={fmt}
                             type="button"
-                            className="rounded-md border px-2 py-2 text-[10px] font-black tracking-wide text-center"
-                            style={{
-                              borderColor: dateFormat === fmt ? 'var(--text-main)' : 'var(--border-color)',
-                              backgroundColor: dateFormat === fmt ? 'var(--text-main)' : 'transparent',
-                              color: dateFormat === fmt ? 'var(--bg-color)' : 'var(--text-main)'
-                            }}
+                            className={`rounded-md border px-2 py-2 text-[10px] font-semibold text-center ${dateFormat === fmt ? 'bg-foreground text-background border-foreground' : 'bg-transparent text-foreground border-border'}`}
                             onClick={() => setDateFormat(fmt)}
                           >
                             {dateExampleByFormat[fmt]}
@@ -350,18 +324,13 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider opacity-70 mb-2">{t('wizard.timeSystem')}</p>
+                      <p className="text-[10px] font-semibold opacity-70 mb-2">{t('wizard.timeSystem')}</p>
                       <div className="grid grid-cols-2 gap-2">
                         {(['24h', '12h'] as TimeFormat[]).map((fmt) => (
                           <button
                             key={fmt}
                             type="button"
-                            className="rounded-md border px-2 py-2 text-[10px] font-black tracking-wide text-center"
-                            style={{
-                              borderColor: timeFormat === fmt ? 'var(--text-main)' : 'var(--border-color)',
-                              backgroundColor: timeFormat === fmt ? 'var(--text-main)' : 'transparent',
-                              color: timeFormat === fmt ? 'var(--bg-color)' : 'var(--text-main)'
-                            }}
+                            className={`rounded-md border px-2 py-2 text-[10px] font-semibold text-center ${timeFormat === fmt ? 'bg-foreground text-background border-foreground' : 'bg-transparent text-foreground border-border'}`}
                             onClick={() => setTimeFormat(fmt)}
                           >
                             {timeExampleByFormat[fmt]}
@@ -370,7 +339,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs" style={{ borderColor: 'var(--border-color)' }}>
+                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs">
                     <span className="opacity-60">{sampleDate.toLocaleDateString(language, { year: 'numeric', month: '2-digit', day: '2-digit' })}</span>
                     <span className="font-semibold">
                       {sampleDate.toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}
@@ -380,10 +349,10 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
               </div>
 
               {isLinux && (
-                <div className="max-w-3xl mx-auto rounded-lg border p-4 text-left" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--input-bg)' }}>
+                <div className="max-w-3xl mx-auto rounded-lg border border-border p-4 text-left bg-muted">
                   <div className="flex items-center gap-2 mb-2">
                     <FolderIcon className="text-base opacity-70" />
-                    <p className="text-[10px] font-black uppercase tracking-wider opacity-70">{t('wizard.winePrefixTitle')}</p>
+                    <p className="text-[10px] font-semibold opacity-70">{t('wizard.winePrefixTitle')}</p>
                   </div>
                   <p className="text-xs opacity-70 mb-3">
                     {t('settings.monitored.winePrefixDescription')}
@@ -392,8 +361,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                     value={winePrefixPath}
                     onChange={(e) => setWinePrefixPathLocal(e.target.value)}
                     placeholder={t('settings.monitored.winePrefixPlaceholder')}
-                    className="w-full h-11 rounded-md border px-3 text-sm"
-                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-color)', color: 'var(--text-main)' }}
+                    className="w-full h-11 rounded-md border border-border px-3 text-sm bg-background text-foreground"
                   />
                 </div>
               )}
@@ -407,8 +375,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
           type="button"
           onClick={prevStep}
           disabled={step === 1}
-          className="h-11 px-4 rounded-md border text-xs font-black uppercase tracking-wider disabled:opacity-40 flex items-center gap-2"
-          style={{ borderColor: 'var(--border-color)' }}
+          className="h-11 px-4 rounded-md border border-border text-xs font-semibold disabled:opacity-40 flex items-center gap-2"
         >
           <ChevronLeftIcon className="text-base" />
           {t('wizard.goBack')}
@@ -419,8 +386,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
             type="button"
             onClick={nextStep}
             disabled={!canGoNext}
-            className="h-11 px-5 rounded-md text-xs font-black uppercase tracking-wider flex items-center gap-2 disabled:opacity-40"
-            style={{ backgroundColor: 'var(--text-main)', color: 'var(--bg-color)' }}
+            className="h-11 px-5 rounded-md text-xs font-semibold flex items-center gap-2 disabled:opacity-40 bg-foreground text-background"
           >
             {t('wizard.continue')}
             <ArrowRightIcon className="text-base" />
@@ -430,8 +396,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
             type="button"
             onClick={handleFinish}
             disabled={isSaving}
-            className="h-11 px-5 rounded-md text-xs font-black uppercase tracking-wider flex items-center gap-2 disabled:opacity-40"
-            style={{ backgroundColor: 'var(--text-main)', color: 'var(--bg-color)' }}
+            className="h-11 px-5 rounded-md text-xs font-semibold flex items-center gap-2 disabled:opacity-40 bg-foreground text-background"
           >
             {isSaving ? t('settings.monitored.savingPrefix') : t('wizard.completeSetup')}
             <CheckIcon className="text-base" />

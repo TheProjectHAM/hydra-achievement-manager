@@ -339,7 +339,7 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 w-full mb-8 animate-fade-in">
+      <header className="flex-shrink-0 w-full mb-4 animate-fade-in">
         <div className="relative group flex-1">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <SearchIcon className={`text-lg transition-colors duration-300 ${searchQuery ? 'text-foreground' : 'text-muted-foreground group-focus-within:text-foreground'}`} />
@@ -371,7 +371,7 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
 
       <div className="flex-grow overflow-y-auto no-scrollbar pb-10 custom-scrollbar">
         {gamesViewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 py-5 overflow-visible">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-2 pb-5 overflow-visible">
             {filteredAndSortedGames.map(game => (
               <MonitoredGameCard
                 key={game.gameId}
