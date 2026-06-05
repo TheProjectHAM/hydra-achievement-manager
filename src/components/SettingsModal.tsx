@@ -30,14 +30,13 @@ import {
 import { useTheme, Theme } from "../contexts/ThemeContext";
 import { useI18n, Language } from "../contexts/I18nContext";
 import { Button } from "@/components/ui/button";
-import { invoke } from "@tauri-apps/api/core";
-
-interface DecorationInfo {
-  decorated: boolean;
-  sessionType: string | null;
-  currentDesktop: string | null;
-  platform: string;
-}
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type SubTabId =
   | "language"
@@ -57,7 +56,6 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotifyToast }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>("language");
-  const [titlebarVisible, setTitlebarVisible] = useState(true);
   const { t, language, setLanguage } = useI18n();
 
   const {
@@ -199,14 +197,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       setSteamIntegrationEnabled(false);
     }
   }, [selectedApi]);
-
-  useEffect(() => {
-    invoke<DecorationInfo>("get_window_decoration_info")
-      .then((info) => {
-        setTitlebarVisible(!(info.decorated || info.sessionType === "wayland"));
-      })
-      .catch(() => setTitlebarVisible(true));
-  }, []);
 
   useEffect(() => {
     const currentSettings = {
@@ -468,79 +458,89 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className={`fixed left-0 right-0 bottom-0 z-40 flex overflow-hidden bg-background text-muted-foreground ${titlebarVisible ? "top-10" : "top-0"}`}>
-      {/* Sidebar Navigation */}
-      <aside className="w-72 border-r border-sidebar-border flex flex-col p-4 bg-sidebar-background text-sidebar-foreground">
-        <nav className="flex-1 space-y-1">
-          {tabs.map((tab) => {
-            const isActive = activeSubTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSubTab(tab.id as SubTabId)}
-                className={`w-full h-11 px-4 gap-4 rounded-md flex items-center text-left transition-all duration-300 group ${
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-lg"
-                    : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-                }`}
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        showCloseButton={false}
+        className="w-[min(86vw,1280px)] h-[min(84vh,900px)] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] overflow-hidden p-0 gap-0 sm:max-w-none"
+      >
+        <DialogHeader className="sr-only">
+          <DialogTitle>Settings</DialogTitle>
+          <DialogDescription>Application preferences</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex h-full w-full overflow-hidden bg-background text-muted-foreground">
+          {/* Sidebar Navigation */}
+          <aside className="w-72 border-r border-sidebar-border flex flex-col p-4 bg-sidebar-background text-sidebar-foreground">
+            <nav className="flex-1 space-y-1">
+              {tabs.map((tab) => {
+                const isActive = activeSubTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveSubTab(tab.id as SubTabId)}
+                    className={`w-full h-11 px-4 gap-4 rounded-md flex items-center text-left transition-all duration-300 group ${
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-lg"
+                        : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                    }`}
+                  >
+                    <span className={`text-2xl transition-colors ${isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground group-hover:text-sidebar-accent-foreground"}`}>
+                      {tab.icon}
+                    </span>
+                    <span className="text-[0.95rem] font-semibold truncate">
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="mt-auto pt-4 border-t border-sidebar-border flex items-center gap-2">
+              <Button
+                onClick={handleSaveChanges}
+                disabled={!isDirty}
+                variant={isSaved ? "default" : isDirty ? "default" : "outline"}
+                className={`flex-1 h-11 text-[11px] font-semibold ${isSaved ? "bg-emerald-500 hover:bg-emerald-600 text-white" : ""}`}
               >
-                <span className={`text-2xl transition-colors ${isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground group-hover:text-sidebar-accent-foreground"}`}>
-                  {tab.icon}
+                {isSaved ? (
+                  <CheckIcon className="text-sm" />
+                ) : (
+                  <SaveIcon className="text-sm" />
+                )}
+                <span>
+                  {isSaved ? t("settings.saved") : t("settings.saveChanges")}
                 </span>
-                <span className="text-[0.95rem] font-semibold truncate">
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
+              </Button>
 
-        <div className="mt-auto pt-4 border-t border-sidebar-border flex items-center gap-2">
-          <Button
-            onClick={handleSaveChanges}
-            disabled={!isDirty}
-            variant={isSaved ? "default" : isDirty ? "default" : "outline"}
-            className={`flex-1 h-11 text-[11px] font-semibold ${isSaved ? "bg-emerald-500 hover:bg-emerald-600 text-white" : ""}`}
-          >
-            {isSaved ? (
-              <CheckIcon className="text-sm" />
-            ) : (
-              <SaveIcon className="text-sm" />
-            )}
-            <span>
-              {isSaved ? t("settings.saved") : t("settings.saveChanges")}
-            </span>
-          </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="w-11 h-11 flex-shrink-0"
+                title={t("common.close")}
+              >
+                <CloseIcon className="text-2xl" />
+              </Button>
+            </div>
+          </aside>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="w-11 h-11 flex-shrink-0"
-            title={t("common.close")}
-          >
-            <CloseIcon className="text-2xl" />
-          </Button>
+          {/* Content Area */}
+          <main className="flex-1 flex flex-col overflow-hidden relative">
+            <div className="flex-1 overflow-y-auto px-12 pt-10 custom-scrollbar">
+              <div className="w-full space-y-2 pb-20">{renderContent()}</div>
+            </div>
+
+            <div
+              className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+              style={{
+                background: `linear-gradient(to top, var(--background), transparent)`,
+              }}
+            />
+          </main>
         </div>
-      </aside>
-
-      {/* Content Area */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto px-12 pt-10 custom-scrollbar">
-          <div className="w-full space-y-2 pb-20">{renderContent()}</div>
-        </div>
-
-        <div
-          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-          style={{
-            background: `linear-gradient(to top, var(--background), transparent)`,
-          }}
-        />
-      </main>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
