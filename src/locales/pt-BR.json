@@ -99,7 +99,8 @@
     "existingAchievements": "{count} conquistas existentes",
     "lastModified": "Última modificação: {date}",
     "newTotal": "Novo total: {count} conquistas",
-    "noPathsFound": "Nenhum caminho monitorado encontrado para este jogo. Configure diretórios em Configurações → Caminhos."
+    "noPathsFound": "Nenhum caminho monitorado encontrado para este jogo. Configure diretórios em Configurações → Caminhos.",
+    "globalPaths": "Caminhos Globais"
   },
   "unlockToasts": {
     "successTitle": "Desbloqueio concluído",

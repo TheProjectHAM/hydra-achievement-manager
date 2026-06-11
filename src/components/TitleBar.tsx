@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import WindowControls from "./WindowControls";
 
 interface DecorationInfo {
@@ -24,7 +25,6 @@ const TitleBar: React.FC = () => {
 
   const handleDoubleClick = async () => {
     try {
-      const { getCurrentWebviewWindow } = await import("@tauri-apps/api/webviewWindow");
       const appWindow = getCurrentWebviewWindow();
       const maximized = await appWindow.isMaximized();
       if (maximized) {

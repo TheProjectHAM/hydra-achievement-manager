@@ -43,6 +43,18 @@ require_cmd() {
   fi
 }
 
+is_arch_like() {
+  if [ -r /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    case " ${ID:-} ${ID_LIKE:-} " in
+      *" arch "*) return 0 ;;
+    esac
+  fi
+
+  return 1
+}
+
 resolve_steam_linux_so() {
   local so_path
 
@@ -80,11 +92,20 @@ patch_deb_with_steam_so() {
   tmpdir="$(mktemp -d)"
   patched_deb="${deb_file%.deb}_with_steam.deb"
 
-  dpkg-deb -R "$deb_file" "$tmpdir"
-  install -Dm755 "$steam_so" "$tmpdir/usr/bin/libsteam_api.so"
-  dpkg-deb -b "$tmpdir" "$patched_deb" >/dev/null
-  mv -f "$patched_deb" "$deb_file"
-  rm -rf "$tmpdir"
+   if ! dpkg-deb -R "$deb_file" "$tmpdir"; then
+     rm -rf "$tmpdir"
+     return 1
+   fi
+
+   install -Dm755 "$steam_so" "$tmpdir/usr/bin/libsteam_api.so"
+
+   if ! dpkg-deb -b "$tmpdir" "$patched_deb" >/dev/null; then
+     rm -rf "$tmpdir"
+     return 1
+   fi
+
+   mv -f "$patched_deb" "$deb_file"
+   rm -rf "$tmpdir"
 
   echo "Injected libsteam_api.so into .deb package."
 }
@@ -306,7 +327,7 @@ run_linux() {
     icon_source="$ROOT_DIR/src-tauri/icons/128x128.png"
   fi
 
-  if command -v makepkg >/dev/null 2>&1; then
+  if command -v makepkg >/dev/null 2>&1 && is_arch_like; then
     echo "Building Arch package with makepkg..."
     rm -rf "$arch_workdir"
     mkdir -p "$arch_workdir"
@@ -366,13 +387,15 @@ EOF
     else
       echo "Warning: Arch package build failed; skipping .pkg.tar.zst."
     fi
+  elif command -v makepkg >/dev/null 2>&1; then
+    echo "Warning: makepkg found, but this system is not Arch-like; skipping Arch package."
   else
     echo "Warning: makepkg not installed; skipping Arch package."
   fi
 
   mkdir -p "$ARTIFACTS_DIR"
 
-  deb_file="$(find "$bundle_dir/deb" -type f -name "*.deb" 2>/dev/null | sort | tail -n1 || true)"
+  deb_file="$(find "$bundle_dir/deb" -type f -name "*.deb" ! -name "*_with_steam.deb" 2>/dev/null | sort | tail -n1 || true)"
   if [ "$arch_enabled" -eq 1 ]; then
     arch_file="$(find "$arch_workdir" -maxdepth 1 -type f -name "*.pkg.tar.zst" 2>/dev/null | sort | tail -n1 || true)"
   else
@@ -383,7 +406,9 @@ EOF
 
   if [ -n "$deb_file" ] && [ -f "$deb_file" ]; then
     if [ -f "$release_dir/libsteam_api.so" ]; then
-      patch_deb_with_steam_so "$deb_file" "$release_dir/libsteam_api.so"
+      if ! patch_deb_with_steam_so "$deb_file" "$release_dir/libsteam_api.so"; then
+        echo "Warning: failed to inject libsteam_api.so into .deb package."
+      fi
     fi
     cp -f "$deb_file" "$ARTIFACTS_DIR/ProjectHAM_${app_version}_linux_amd64.deb"
   else

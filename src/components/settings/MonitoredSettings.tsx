@@ -4,6 +4,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { FolderIcon, CloseIcon, SteamBrandIcon } from '../Icons';
 import { ApiSource } from '../../types';
 import { getGameNames } from '../../tauri-api';
+import { getAppPlatform } from '@/lib/platform';
 
 interface DirectoryConfig {
     path: string;
@@ -62,7 +63,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     const [steamLibraryVdfPath, setSteamLibraryVdfPath] = useState<string | null>(null);
     const [steamGamesFound, setSteamGamesFound] = useState<number>(0);
     const [isSteamMissing, setIsSteamMissing] = useState(false);
-    const isLinux = (window as any).electronAPI?.platform === 'linux';
+    const isLinux = getAppPlatform() === 'linux';
     const [winePrefixPath, setWinePrefixPath] = useState<string>('~/.config/hydralauncher/wine-prefix');
     const [isSavingWinePrefix, setIsSavingWinePrefix] = useState(false);
     const [pendingCustomPath, setPendingCustomPath] = useState<string | null>(null);
@@ -138,7 +139,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     const hydraGroups = directoryGroups.filter(group => group.gameId);
     const visibleGroups = isLinux
         ? (activePathTab === 'global' ? globalGroups : hydraGroups)
-        : directoryGroups;
+        : globalGroups;
     const globalPathCount = globalGroups.reduce((total, group) => total + group.directories.length, 0);
     const hydraPathCount = hydraGroups.reduce((total, group) => total + group.directories.length, 0);
 
@@ -258,9 +259,9 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
         try {
             const updatedDirs = await (window as any).electronAPI.addMonitoredDirectory(pendingCustomPath, pendingDetectionPreset);
             setDirectories(updatedDirs);
-+            setIsPresetDropdownOpen(false);
-             setPendingCustomPath(null);
-             setPendingDetectionPreset('auto');
+            setIsPresetDropdownOpen(false);
+            setPendingCustomPath(null);
+            setPendingDetectionPreset('auto');
         } catch (error) {
             console.error('Error adding directory:', error);
         }

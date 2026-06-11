@@ -11,6 +11,8 @@
     "initial": "VITE_INITIAL_DEBUG=true vite",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
+    "tauri:dev:windows": "cross-env VITE_FORCE_PLATFORM=windows tauri dev",
+    "tauri:dev:linux": "cross-env VITE_FORCE_PLATFORM=linux tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {

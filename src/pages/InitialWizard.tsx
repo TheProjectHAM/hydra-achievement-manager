@@ -14,6 +14,7 @@ import {
   VisibilityOffIcon
 } from '../components/Icons';
 import { loadSettings, saveSettings, setWinePrefixPath } from '../tauri-api';
+import { getAppPlatform } from '@/lib/platform';
 import appLogo from '../../assets/icon.png';
 
 type WizardStep = 1 | 2 | 3 | 4 | 5;
@@ -29,7 +30,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
   const [showSteamKey, setShowSteamKey] = useState(false);
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const isLinux = (window as any).electronAPI?.platform === 'linux';
+  const isLinux = getAppPlatform() === 'linux';
   const [winePrefixPath, setWinePrefixPathLocal] = useState('~/.wine');
 
   useEffect(() => {
