@@ -3,6 +3,7 @@ import {
   LanguageIcon,
   PaletteIcon,
   SteamIcon,
+  GameIcon,
   UpdateIcon,
   InfoIcon,
   SaveIcon,
@@ -17,6 +18,7 @@ import AboutSettings from "./settings/AboutSettings";
 import AppearanceSettings from "./settings/AppearanceSettings";
 import UpdateSettings from "./settings/UpdateSettings";
 import ApiSettings from "./settings/ApiSettings";
+import ConnectionsSettings from "./settings/ConnectionsSettings";
 import MonitoredSettings from "./settings/MonitoredSettings";
 import DebugSettings from "./settings/DebugSettings";
 import BackupSettings from "./settings/BackupSettings";
@@ -42,6 +44,7 @@ type SubTabId =
   | "language"
   | "appearance"
   | "api"
+  | "connections"
   | "monitored"
   | "backup"
   | "updates"
@@ -191,12 +194,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     [hideHiddenAchievements],
   );
   useEffect(() => setSelectedGamesViewMode(gamesViewMode), [gamesViewMode]);
-
-  useEffect(() => {
-    if (selectedApi !== "steam" && steamIntegrationEnabled) {
-      setSteamIntegrationEnabled(false);
-    }
-  }, [selectedApi]);
 
   useEffect(() => {
     const currentSettings = {
@@ -376,6 +373,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     },
     { id: "api", icon: <SteamIcon />, label: t("settings.api.tab") },
     {
+      id: "connections",
+      icon: <GameIcon />,
+      label: t("settings.connections.tab"),
+    },
+    {
       id: "monitored",
       icon: <FolderIcon />,
       label: t("settings.monitored.tab"),
@@ -431,6 +433,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
             hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}
             setHideSteamGamesWithoutAchievements={setHideSteamGamesWithoutAchievements}
             onNotifyToast={onNotifyToast}
+          />
+        );
+      case "connections":
+        return (
+          <ConnectionsSettings
+            steamIntegrationEnabled={steamIntegrationEnabled}
+            setSteamIntegrationEnabled={setSteamIntegrationEnabled}
+            hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}
+            setHideSteamGamesWithoutAchievements={setHideSteamGamesWithoutAchievements}
           />
         );
       case "monitored":

@@ -166,6 +166,43 @@
       "forceFrontendFetch": "Force Front-end fetch",
       "forceFrontendFetchDescription": "Bypasses the app backend and fetches data directly from the browser using a proxy. Useful if the backend is blocked by a firewall or network issues."
     },
+    "connections": {
+      "tab": "Connections",
+      "title": "Connected Profiles",
+      "description": "Manage external profiles linked to Project HAM. Configure connection settings and presets for each service.",
+      "connected": "Connected",
+      "preview": "Preview",
+      "planned": "Planned",
+      "accounts": "Accounts",
+      "enableConnection": "Enable connection",
+      "syncAchievements": "Sync achievements",
+      "showInLibrary": "Show in library",
+      "comingSoon": "Coming Soon",
+      "comingSoonHint": "Services under development",
+      "steamAccounts": "Steam Accounts",
+      "steamHint": "Detected Steam library accounts",
+      "hydraProfiles": "Hydra Profiles",
+      "hydraHint": "Local Hydra achievement profiles",
+      "presetsTitle": "Connection Presets",
+      "presets": {
+        "default": {
+          "label": "Default",
+          "description": "Standard configuration for most users"
+        },
+        "steamOnly": {
+          "label": "Steam Only",
+          "description": "Only sync from Steam accounts"
+        },
+        "localOnly": {
+          "label": "Local Only",
+          "description": "Use Hydra local profiles only"
+        },
+        "multiAccount": {
+          "label": "Multi-Account",
+          "description": "Manage multiple Steam accounts"
+        }
+      }
+    },
     "language": {
       "tab": "Region",
       "title": "Language & Region",

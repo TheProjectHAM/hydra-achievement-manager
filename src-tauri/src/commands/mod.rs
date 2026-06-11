@@ -1,6 +1,7 @@
 pub mod achievements;
 pub mod backup;
 pub mod cache_system;
+pub mod connections;
 pub mod directories;
 pub mod game_lookup;
 pub mod language;

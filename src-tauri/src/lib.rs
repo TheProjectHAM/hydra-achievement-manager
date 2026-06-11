@@ -1,6 +1,7 @@
 // Módulos
 pub mod api;
 pub mod commands;
+pub mod connections;
 pub mod models;
 pub mod monitor;
 pub mod parser;
@@ -241,6 +242,8 @@ pub fn run() {
             commands::cache_system::get_cache_size,
             commands::cache_system::clear_cache,
             commands::cache_system::get_system_info,
+            commands::connections::get_hydra_connection_profile,
+            commands::connections::get_steam_connection_profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

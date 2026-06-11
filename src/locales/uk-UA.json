@@ -182,6 +182,43 @@
       "description": "Інструмент для керування та експорту ваших ігрових досягнень.",
       "creators": "Творці",
       "translators": "Перекладачі"
+    },
+    "connections": {
+      "tab": "З'єднання",
+      "title": "Підключені профілі",
+      "description": "Керуйте зовнішніми профілями, пов'язаними з Project HAM. Налаштуйте параметри з'єднання та пресети для кожного сервісу.",
+      "connected": "Підключено",
+      "preview": "Попередній перегляд",
+      "planned": "Заплановано",
+      "accounts": "Акаунти",
+      "enableConnection": "Увімкнути з'єднання",
+      "syncAchievements": "Синхронізувати досягнення",
+      "showInLibrary": "Показати в бібліотеці",
+      "comingSoon": "Незабаром",
+      "comingSoonHint": "Сервіси в розробці",
+      "steamAccounts": "Акаунти Steam",
+      "steamHint": "Виявлені акаунти бібліотеки Steam",
+      "hydraProfiles": "Профілі Hydra",
+      "hydraHint": "Локальні профілі досягнень Hydra",
+      "presetsTitle": "Пресети з'єднання",
+      "presets": {
+        "default": {
+          "label": "За замовчуванням",
+          "description": "Стандартна конфігурація для більшості користувачів"
+        },
+        "steamOnly": {
+          "label": "Тільки Steam",
+          "description": "Синхронізувати тільки з акаунтів Steam"
+        },
+        "localOnly": {
+          "label": "Тільки локальні",
+          "description": "Використовувати тільки локальні профілі Hydra"
+        },
+        "multiAccount": {
+          "label": "Мультиаккаунт",
+          "description": "Керувати кількома акаунтами Steam"
+        }
+      }
     }
   }
 }

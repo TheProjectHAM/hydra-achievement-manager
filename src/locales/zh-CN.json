@@ -182,6 +182,43 @@
       "description": "一个用于管理和导出游戏成就的工具。",
       "creators": "创建者",
       "translators": "翻译者"
+    },
+    "connections": {
+      "tab": "连接",
+      "title": "已连接的配置文件",
+      "description": "管理与 Project HAM 关联的外部配置文件。为每个服务配置连接设置和预设。",
+      "connected": "已连接",
+      "preview": "预览",
+      "planned": "计划中",
+      "accounts": "账户",
+      "enableConnection": "启用连接",
+      "syncAchievements": "同步成就",
+      "showInLibrary": "在库中显示",
+      "comingSoon": "即将推出",
+      "comingSoonHint": "正在开发的服务",
+      "steamAccounts": "Steam 账户",
+      "steamHint": "检测到的 Steam 库账户",
+      "hydraProfiles": "Hydra 配置文件",
+      "hydraHint": "本地 Hydra 成就配置文件",
+      "presetsTitle": "连接预设",
+      "presets": {
+        "default": {
+          "label": "默认",
+          "description": "大多数用户的标准配置"
+        },
+        "steamOnly": {
+          "label": "仅 Steam",
+          "description": "仅从 Steam 账户同步"
+        },
+        "localOnly": {
+          "label": "仅本地",
+          "description": "仅使用 Hydra 本地配置文件"
+        },
+        "multiAccount": {
+          "label": "多账户",
+          "description": "管理多个 Steam 账户"
+        }
+      }
     }
   }
 }

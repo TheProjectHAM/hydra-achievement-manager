@@ -243,6 +243,43 @@
       "translators": "Traductores",
       "footerRights": "Hydra Achievement Manager © 2026",
       "buildRepository": "Repositorio de la build"
+    },
+    "connections": {
+      "tab": "Conexiones",
+      "title": "Perfiles Conectados",
+      "description": "Administra los perfiles externos vinculados a Project HAM. Configura los ajustes de conexión y predefiniciones para cada servicio.",
+      "connected": "Conectado",
+      "preview": "Vista previa",
+      "planned": "Planificado",
+      "accounts": "Cuentas",
+      "enableConnection": "Habilitar conexión",
+      "syncAchievements": "Sincronizar logros",
+      "showInLibrary": "Mostrar en biblioteca",
+      "comingSoon": "Próximamente",
+      "comingSoonHint": "Servicios en desarrollo",
+      "steamAccounts": "Cuentas Steam",
+      "steamHint": "Cuentas de biblioteca Steam detectadas",
+      "hydraProfiles": "Perfiles Hydra",
+      "hydraHint": "Perfiles locales de logros Hydra",
+      "presetsTitle": "Predefiniciones de Conexión",
+      "presets": {
+        "default": {
+          "label": "Predeterminado",
+          "description": "Configuración estándar para la mayoría de usuarios"
+        },
+        "steamOnly": {
+          "label": "Solo Steam",
+          "description": "Sincronizar solo desde cuentas Steam"
+        },
+        "localOnly": {
+          "label": "Solo Local",
+          "description": "Usar solo perfiles locales Hydra"
+        },
+        "multiAccount": {
+          "label": "Multi-Cuenta",
+          "description": "Administrar múltiples cuentas Steam"
+        }
+      }
     }
   },
   "wizard": {

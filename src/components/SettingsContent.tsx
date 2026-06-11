@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { LanguageIcon, InfoIcon, SaveIcon, CheckIcon, PaletteIcon, UpdateIcon, SteamIcon, FolderIcon } from './Icons';
+import { LanguageIcon, InfoIcon, SaveIcon, CheckIcon, PaletteIcon, UpdateIcon, SteamIcon, FolderIcon, GameIcon } from './Icons';
 import LocaleSettings from './settings/LanguageSettings';
 import AboutSettings from './settings/AboutSettings';
 import AppearanceSettings from './settings/AppearanceSettings';
 import UpdateSettings from './settings/UpdateSettings';
 import ApiSettings from './settings/ApiSettings';
+import ConnectionsSettings from './settings/ConnectionsSettings';
 import MonitoredSettings from './settings/MonitoredSettings';
 import { DateFormat, TimeFormat, SidebarGameScale, ApiSource, GamesViewMode } from '../types';
 import { useTheme, Theme } from '../contexts/ThemeContext';
 import { useI18n, Language } from '../contexts/I18nContext';
 
-type SubTabId = 'language' | 'appearance' | 'api' | 'monitored' | 'updates' | 'about';
+type SubTabId = 'language' | 'appearance' | 'api' | 'connections' | 'monitored' | 'updates' | 'about';
 
 const SettingsContent: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>('language');
@@ -109,14 +110,6 @@ const SettingsContent: React.FC = () => {
   useEffect(() => setSelectedHideHiddenAchievements(hideHiddenAchievements), [hideHiddenAchievements]);
   useEffect(() => setSelectedGamesViewMode(gamesViewMode), [gamesViewMode]);
 
-  // Auto-disable Steam integration when switching to Hydra API
-  useEffect(() => {
-    if (selectedApi !== 'steam' && steamIntegrationEnabled) {
-      setSteamIntegrationEnabled(false);
-    }
-  }, [selectedApi]);
-
-
   // Effect to check for changes
   useEffect(() => {
     const currentSettings = {
@@ -199,6 +192,7 @@ const SettingsContent: React.FC = () => {
     { id: 'language', icon: <LanguageIcon />, key: 'language' },
     { id: 'appearance', icon: <PaletteIcon />, key: 'appearance' },
     { id: 'api', icon: <SteamIcon />, key: 'api' },
+    { id: 'connections', icon: <GameIcon />, key: 'connections' },
     { id: 'monitored', icon: <FolderIcon />, key: 'monitored' },
     { id: 'updates', icon: <UpdateIcon />, key: 'updates' },
     { id: 'about', icon: <InfoIcon />, key: 'about' },
@@ -237,6 +231,13 @@ const SettingsContent: React.FC = () => {
           setSelectedApi={setSelectedApi}
           steamApiKey={steamApiKey}
           setSteamApiKey={setSteamApiKey}
+          steamIntegrationEnabled={steamIntegrationEnabled}
+          setSteamIntegrationEnabled={setSteamIntegrationEnabled}
+          hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}
+          setHideSteamGamesWithoutAchievements={setHideSteamGamesWithoutAchievements}
+        />;
+      case 'connections':
+        return <ConnectionsSettings
           steamIntegrationEnabled={steamIntegrationEnabled}
           setSteamIntegrationEnabled={setSteamIntegrationEnabled}
           hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}

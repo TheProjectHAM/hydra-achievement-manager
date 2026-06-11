@@ -182,6 +182,43 @@
       "description": "ゲームの実績を管理・エクスポートするためのツールです。",
       "creators": "作成者",
       "translators": "翻訳者"
+    },
+    "connections": {
+      "tab": "接続",
+      "title": "接続プロファイル",
+      "description": "Project HAM にリンクされた外部プロファイルを管理します。各サービスの接続設定とプリセットを設定します。",
+      "connected": "接続済み",
+      "preview": "プレビュー",
+      "planned": "予定",
+      "accounts": "アカウント",
+      "enableConnection": "接続を有効にする",
+      "syncAchievements": "実績を同期",
+      "showInLibrary": "ライブラリに表示",
+      "comingSoon": "近日公開",
+      "comingSoonHint": "開発中のサービス",
+      "steamAccounts": "Steam アカウント",
+      "steamHint": "検出された Steam ライブラリアカウント",
+      "hydraProfiles": "Hydra プロファイル",
+      "hydraHint": "ローカル Hydra 実績プロファイル",
+      "presetsTitle": "接続プリセット",
+      "presets": {
+        "default": {
+          "label": "デフォルト",
+          "description": "ほとんどのユーザー向けの標準設定"
+        },
+        "steamOnly": {
+          "label": "Steam のみ",
+          "description": "Steam アカウントのみから同期"
+        },
+        "localOnly": {
+          "label": "ローカルのみ",
+          "description": "Hydra ローカルプロファイルのみを使用"
+        },
+        "multiAccount": {
+          "label": "マルチアカウント",
+          "description": "複数の Steam アカウントを管理"
+        }
+      }
     }
   }
 }

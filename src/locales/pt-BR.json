@@ -166,6 +166,43 @@
       "forceFrontendFetch": "Forçar Requisições no Frontend",
       "forceFrontendFetchDescription": "Ignora o backend do aplicativo e busca dados diretamente pelo navegador usando um proxy. Útil se o backend estiver sendo bloqueado por firewall ou problemas de rede."
     },
+    "connections": {
+      "tab": "Conexões",
+      "title": "Perfis Conectados",
+      "description": "Gerencie perfis externos vinculados ao Project HAM. Configure as definições de conexão e predefinições para cada serviço.",
+      "connected": "Conectado",
+      "preview": "Prévia",
+      "planned": "Planejado",
+      "accounts": "Contas",
+      "enableConnection": "Ativar conexão",
+      "syncAchievements": "Sincronizar conquistas",
+      "showInLibrary": "Mostrar na biblioteca",
+      "comingSoon": "Em Breve",
+      "comingSoonHint": "Serviços em desenvolvimento",
+      "steamAccounts": "Contas Steam",
+      "steamHint": "Contas da biblioteca Steam detectadas",
+      "hydraProfiles": "Perfis Hydra",
+      "hydraHint": "Perfis locais de conquistas Hydra",
+      "presetsTitle": "Predefinições de Conexão",
+      "presets": {
+        "default": {
+          "label": "Padrão",
+          "description": "Configuração padrão para a maioria dos usuários"
+        },
+        "steamOnly": {
+          "label": "Apenas Steam",
+          "description": "Sincronizar apenas de contas Steam"
+        },
+        "localOnly": {
+          "label": "Apenas Local",
+          "description": "Usar apenas perfis locais Hydra"
+        },
+        "multiAccount": {
+          "label": "Multi-Conta",
+          "description": "Gerenciar múltiplas contas Steam"
+        }
+      }
+    },
     "language": {
       "tab": "Região",
       "title": "Idioma e Região",

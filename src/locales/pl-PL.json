@@ -182,6 +182,43 @@
       "description": "Narzędzie do zarządzania i eksportowania osiągnięć w grach.",
       "creators": "Twórcy",
       "translators": "Tłumacze"
+    },
+    "connections": {
+      "tab": "Połączenia",
+      "title": "Połączone Profile",
+      "description": "Zarządzaj profilami zewnętrznymi powiązanymi z Project HAM. Konfiguruj ustawienia połączeń i presetów dla każdej usługi.",
+      "connected": "Połączono",
+      "preview": "Podgląd",
+      "planned": "Planowane",
+      "accounts": "Konta",
+      "enableConnection": "Włącz połączenie",
+      "syncAchievements": "Synchronizuj osiągnięcia",
+      "showInLibrary": "Pokaż w bibliotece",
+      "comingSoon": "Wkrótce",
+      "comingSoonHint": "Usługi w fazie rozwoju",
+      "steamAccounts": "Konta Steam",
+      "steamHint": "Wykryte konta biblioteki Steam",
+      "hydraProfiles": "Profile Hydra",
+      "hydraHint": "Lokalne profili osiągnięć Hydra",
+      "presetsTitle": "Presety połączeń",
+      "presets": {
+        "default": {
+          "label": "Domyślny",
+          "description": "Standardowa konfiguracja dla większości użytkowników"
+        },
+        "steamOnly": {
+          "label": "Tylko Steam",
+          "description": "Synchronizuj tylko z kont Steam"
+        },
+        "localOnly": {
+          "label": "Tylko lokalne",
+          "description": "Używaj tylko lokalnych profili Hydra"
+        },
+        "multiAccount": {
+          "label": "Wiele kont",
+          "description": "Zarządzaj wieloma kontami Steam"
+        }
+      }
     }
   }
 }

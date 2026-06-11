@@ -408,6 +408,45 @@ export const saveSettings = (settings: any) =>
 
 export const loadSettings = () => invoke<any>("load_settings");
 
+// Connections
+export interface HydraConnectionProfile {
+  id: string;
+  displayName: string;
+  profileImageUrl?: string | null;
+  backgroundImageUrl?: string | null;
+  subscription?: {
+    id?: string | null;
+    userId?: number | null;
+    status?: string | null;
+    expiresAt?: string | null;
+    billingCycle?: string | null;
+    paymentPlatform?: string | null;
+    plan?: {
+      id?: string | null;
+      type?: string | null;
+    } | null;
+  } | null;
+}
+
+export const getHydraConnectionProfile = () =>
+  invoke<HydraConnectionProfile | null>("get_hydra_connection_profile");
+
+export interface SteamConnectionProfile {
+  steamId64: string;
+  accountId: number;
+  accountName?: string | null;
+  personaName: string;
+  steam3Id: string;
+  steam2Id: string;
+  profileUrl: string;
+  avatarHash?: string | null;
+  avatarUrl?: string | null;
+  localAvatarPath?: string | null;
+}
+
+export const getSteamConnectionProfile = () =>
+  invoke<SteamConnectionProfile | null>("get_steam_connection_profile");
+
 // Steam Integration
 export const isSteamAvailable = () => invoke<boolean>("is_steam_available");
 

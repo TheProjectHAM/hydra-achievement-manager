@@ -183,6 +183,43 @@
       "description": "Uno strumento per gestire ed esportare i tuoi obiettivi di gioco.",
       "creators": "Creatori",
       "translators": "Traduttori"
+    },
+    "connections": {
+      "tab": "Connessioni",
+      "title": "Profili Connessi",
+      "description": "Gestisci i profili esterni collegati a Project HAM. Configura le impostazioni di connessione e le preimpostazioni per ogni servizio.",
+      "connected": "Connesso",
+      "preview": "Anteprima",
+      "planned": "Pianificato",
+      "accounts": "Account",
+      "enableConnection": "Abilita connessione",
+      "syncAchievements": "Sincronizza obiettivi",
+      "showInLibrary": "Mostra nella libreria",
+      "comingSoon": "In Arrivo",
+      "comingSoonHint": "Servizi in sviluppo",
+      "steamAccounts": "Account Steam",
+      "steamHint": "Account della libreria Steam rilevati",
+      "hydraProfiles": "Profili Hydra",
+      "hydraHint": "Profili locali obiettivi Hydra",
+      "presetsTitle": "Preimpostazioni Connessione",
+      "presets": {
+        "default": {
+          "label": "Predefinito",
+          "description": "Configurazione standard per la maggior parte degli utenti"
+        },
+        "steamOnly": {
+          "label": "Solo Steam",
+          "description": "Sincronizza solo dagli account Steam"
+        },
+        "localOnly": {
+          "label": "Solo Locale",
+          "description": "Usa solo i profili locali Hydra"
+        },
+        "multiAccount": {
+          "label": "Multi-Account",
+          "description": "Gestisci più account Steam"
+        }
+      }
     }
   }
 }

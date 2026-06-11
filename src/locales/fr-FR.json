@@ -183,6 +183,43 @@
       "description": "Un outil pour gérer et exporter vos succès de jeu.",
       "creators": "Créatrices",
       "translators": "Traducteurs"
+    },
+    "connections": {
+      "tab": "Connexions",
+      "title": "Profils Connectés",
+      "description": "Gérez les profils externes liés à Project HAM. Configurez les paramètres de connexion et les préréglages pour chaque service.",
+      "connected": "Connecté",
+      "preview": "Aperçu",
+      "planned": "Prévu",
+      "accounts": "Comptes",
+      "enableConnection": "Activer la connexion",
+      "syncAchievements": "Synchroniser les succès",
+      "showInLibrary": "Afficher dans la bibliothèque",
+      "comingSoon": "Bientôt Disponible",
+      "comingSoonHint": "Services en développement",
+      "steamAccounts": "Comptes Steam",
+      "steamHint": "Comptes de bibliothèque Steam détectés",
+      "hydraProfiles": "Profils Hydra",
+      "hydraHint": "Profils locaux de succès Hydra",
+      "presetsTitle": "Préréglages de Connexion",
+      "presets": {
+        "default": {
+          "label": "Par Défaut",
+          "description": "Configuration standard pour la plupart des utilisateurs"
+        },
+        "steamOnly": {
+          "label": "Steam Uniquement",
+          "description": "Synchroniser uniquement depuis les comptes Steam"
+        },
+        "localOnly": {
+          "label": "Local Uniquement",
+          "description": "Utiliser uniquement les profils locaux Hydra"
+        },
+        "multiAccount": {
+          "label": "Multi-Compte",
+          "description": "Gérer plusieurs comptes Steam"
+        }
+      }
     }
   }
 }
