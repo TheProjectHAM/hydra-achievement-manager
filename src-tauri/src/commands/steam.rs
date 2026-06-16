@@ -6,7 +6,7 @@ use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 
 #[cfg(target_os = "windows")]
-fn find_windows_steam_dll() -> Option<PathBuf> {
+fn find_windows_steam_dll(app_handle: Option<&AppHandle>) -> Option<PathBuf> {
     let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
     let primary = exe_dir.join("steam_api64.dll");
     if primary.exists() {
@@ -16,6 +16,15 @@ fn find_windows_steam_dll() -> Option<PathBuf> {
     let legacy = exe_dir.join("steam_api64_windows_x64.dll");
     if legacy.exists() {
         return Some(legacy);
+    }
+
+    if let Some(app_handle) = app_handle {
+        if let Ok(resource_dir) = tauri::Manager::path(app_handle).resource_dir() {
+            let resource = resource_dir.join("steam_api64.dll");
+            if resource.exists() {
+                return Some(resource);
+            }
+        }
     }
 
     None
@@ -49,14 +58,15 @@ fn find_linux_steam_runtime_library() -> Option<PathBuf> {
     candidates.into_iter().find(|p| p.exists())
 }
 
-fn find_steam_runtime_library() -> Option<PathBuf> {
+fn find_steam_runtime_library(app_handle: Option<&AppHandle>) -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     {
-        return find_windows_steam_dll();
+        return find_windows_steam_dll(app_handle);
     }
 
     #[cfg(target_os = "linux")]
     {
+        let _ = app_handle;
         return find_linux_steam_runtime_library();
     }
 
@@ -99,7 +109,7 @@ pub async fn is_steam_available(
         let settings = load_settings(app_handle.clone()).await.unwrap_or(serde_json::json!({}));
         let (_, manual_dll) = get_saved_steam_manual_paths(&settings);
 
-        let mut dll_path = find_windows_steam_dll();
+        let mut dll_path = find_windows_steam_dll(Some(&app_handle));
         if dll_path.is_none() {
             if let Some(saved_path) = manual_dll {
                 let candidate = PathBuf::from(saved_path);
@@ -149,7 +159,7 @@ pub async fn get_steam_availability_details(
     let settings = load_settings(app_handle.clone()).await.unwrap_or(serde_json::json!({}));
     let (manual_vdf, manual_runtime_lib) = get_saved_steam_manual_paths(&settings);
 
-    let mut runtime_lib_path = find_steam_runtime_library().map(|p| p.to_string_lossy().to_string());
+    let mut runtime_lib_path = find_steam_runtime_library(Some(&app_handle)).map(|p| p.to_string_lossy().to_string());
     if runtime_lib_path.is_none() {
         if let Some(saved) = manual_runtime_lib {
             let candidate = PathBuf::from(saved);
@@ -436,7 +446,7 @@ pub async fn get_steam_library_info(
 /// Obtém o caminho da biblioteca Steam runtime detectada/salva.
 #[tauri::command]
 pub async fn get_steam_dll_path(app_handle: AppHandle) -> Result<Option<String>, String> {
-    if let Some(auto_path) = find_steam_runtime_library() {
+    if let Some(auto_path) = find_steam_runtime_library(Some(&app_handle)) {
         return Ok(Some(auto_path.to_string_lossy().to_string()));
     }
 

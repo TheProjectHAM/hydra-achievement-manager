@@ -201,6 +201,7 @@ run_windows() {
   local win_release_dir
   local win_exe_path
   local win_dll_path
+  local win_resource_dll_path
   local nsis_out_dir
   local nsis_script
   local icon_path
@@ -225,12 +226,10 @@ run_windows() {
 
   sync_icons
 
-  echo "Compiling Tauri app for Windows (x86_64)..."
-  yarn tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
-
   win_release_dir="$ROOT_DIR/src-tauri/target/x86_64-pc-windows-msvc/release"
   win_exe_path="$win_release_dir/project-ham.exe"
   win_dll_path="$win_release_dir/steam_api64.dll"
+  win_resource_dll_path="$ROOT_DIR/src-tauri/resources/steam_api64.dll"
   nsis_out_dir="$win_release_dir/bundle/nsis"
   nsis_script="$ROOT_DIR/installer/windows/project-ham.nsi"
   icon_path="$ROOT_DIR/assets/icon.ico"
@@ -243,9 +242,19 @@ run_windows() {
   fi
 
   if [ -n "$steam_dll_source" ] && [ -f "$steam_dll_source" ]; then
-    cp -f "$steam_dll_source" "$win_dll_path"
+    mkdir -p "$(dirname "$win_resource_dll_path")"
+    cp -f "$steam_dll_source" "$win_resource_dll_path"
     echo "Using Steam DLL from: $steam_dll_source"
+  else
+    echo "steam_api64.dll source not found."
+    echo "Set STEAMWORKS_DLL_PATH or ensure steamworks-sys exists in cargo registry cache."
+    exit 1
   fi
+
+  echo "Compiling Tauri app for Windows (x86_64)..."
+  yarn tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --config '{"bundle":{"resources":{"resources/steam_api64.dll":"steam_api64.dll"}}}'
+
+  cp -f "$win_resource_dll_path" "$win_dll_path"
 
   if [ ! -f "$win_exe_path" ]; then
     echo "Windows executable not found: $win_exe_path"

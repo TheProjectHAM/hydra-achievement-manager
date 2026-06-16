@@ -35,10 +35,11 @@ interface ConnectionCardProps {
   profile: ConnectionProfile;
   expanded: boolean;
   onToggle: () => void;
+  badge?: string;
   children?: React.ReactNode;
 }
 
-const ConnectionCard: React.FC<ConnectionCardProps> = ({ profile, expanded, onToggle, children }) => (
+const ConnectionCard: React.FC<ConnectionCardProps> = ({ profile, expanded, onToggle, badge, children }) => (
   <div className="rounded-xl border border-border bg-card overflow-hidden transition-shadow duration-300 ease-out hover:shadow-sm">
     <button
       type="button"
@@ -64,6 +65,11 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({ profile, expanded, onTo
       <div className="flex flex-1 items-center gap-2 min-w-0 text-foreground">
         <span className="text-muted-foreground flex-shrink-0">{getServiceIcon(profile.kind)}</span>
         <span className="text-sm font-medium truncate">{profile.displayName}</span>
+        {badge && (
+          <Badge variant="secondary" className="text-[10px] flex-shrink-0">
+            {badge}
+          </Badge>
+        )}
       </div>
 
       <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full text-muted-foreground transition-colors duration-300 ease-out hover:bg-accent">
@@ -126,6 +132,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   const [steamLibPath, setSteamLibPath] = useState<string | null>(null);
   const [steamDllPath, setSteamDllPath] = useState<string | null>(null);
   const [steamFailureReason, setSteamFailureReason] = useState<string | null>(null);
+  const [subAccounts, setSubAccounts] = useState<Array<{ personaName: string; steamId64: string; accountName?: string | null; avatarUrl?: string | null; profileUrl: string }>>([]);
   const [isSelectingVdf, setIsSelectingVdf] = useState(false);
   const [isSelectingDll, setIsSelectingDll] = useState(false);
   const [isRetryingConnection, setIsRetryingConnection] = useState(false);
@@ -247,6 +254,9 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
             avatarInitials: displayName.slice(0, 2).toUpperCase(),
             avatarUrl: steamProfile.avatarUrl,
           });
+          setSubAccounts(steamProfile.subAccounts ?? []);
+        } else {
+          setSubAccounts([]);
         }
 
         if (hydraProfile) {
@@ -310,9 +320,48 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
               profile={profile}
               expanded={expandedCard === profile.id}
               onToggle={() => setExpandedCard(expandedCard === profile.id ? null : profile.id)}
+              badge={profile.kind === 'steam' && subAccounts.length > 0 ? `+${subAccounts.length}` : undefined}
             >
               {profile.kind === 'steam' ? (
                 <div className="space-y-2">
+                  {subAccounts.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                        Sub-contas ({subAccounts.length})
+                      </p>
+                      <div className="space-y-1">
+                        {subAccounts.map(sub => (
+                          <a
+                            key={sub.steamId64}
+                            href={sub.profileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/30 p-2 transition-colors hover:bg-accent"
+                          >
+                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden text-[10px] font-bold text-muted-foreground ring-1 ring-border">
+                              {sub.avatarUrl ? (
+                                <img
+                                  src={sub.avatarUrl}
+                                  alt={sub.personaName}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                    (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden');
+                                  }}
+                                />
+                              ) : null}
+                              <span className={cn('text-[10px] font-bold', sub.avatarUrl && 'hidden')}>
+                                {(sub.personaName || sub.accountName || '?').slice(0, 2).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="text-xs font-medium text-foreground truncate">
+                              {sub.personaName || sub.accountName || sub.steamId64}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <SettingsRow
                     title={t('settings.api.steamIntegrationTitle')}
                     description={t('settings.api.steamIntegrationBetaNotice')}

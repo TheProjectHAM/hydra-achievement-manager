@@ -215,7 +215,7 @@ const SectionCard: React.FC<{
         className="w-full text-left hover:bg-accent/40 transition-colors"
       >
         {artUrl ? (
-          <div className="relative h-20 w-full overflow-hidden bg-muted">
+          <div className="relative h-28 w-full overflow-hidden bg-muted">
             <img
               src={artUrl}
               alt=""

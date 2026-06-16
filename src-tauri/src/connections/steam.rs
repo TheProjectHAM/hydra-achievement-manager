@@ -1,4 +1,4 @@
-use super::types::SteamConnectionProfile;
+use super::types::{SteamConnectionProfile, SteamSubAccount};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -26,11 +26,18 @@ pub fn get_steam_profile() -> Result<Option<SteamConnectionProfile>, String> {
     let loginusers = fs::read_to_string(&loginusers_path)
         .map_err(|e| format!("Failed to read Steam loginusers.vdf: {}", e))?;
 
-    let Some(user) = parse_loginusers(&loginusers) else {
+    let all_users = parse_loginusers(&loginusers);
+    if all_users.is_empty() {
         return Ok(None);
     };
 
-    let steam_id64 = user.steam_id64;
+    let primary_idx = all_users
+        .iter()
+        .position(|u| u.most_recent)
+        .unwrap_or(0);
+
+    let user = &all_users[primary_idx];
+    let steam_id64 = user.steam_id64.clone();
     let account_id = steam_id64_to_account_id(&steam_id64)?;
     let localconfig_path = steam_path
         .join("userdata")
@@ -48,7 +55,7 @@ pub fn get_steam_profile() -> Result<Option<SteamConnectionProfile>, String> {
         .as_deref()
         .and_then(|text| find_vdf_value_near_account(text, &account_id.to_string(), "name"))
         .or_else(|| localconfig.as_deref().and_then(|text| find_vdf_value(text, "PersonaName")))
-        .or(user.persona_name)
+        .or(user.persona_name.clone())
         .unwrap_or_else(|| user.account_name.clone().unwrap_or_else(|| "Steam Profile".to_string()));
 
     let local_avatar_path = steam_path
@@ -60,10 +67,46 @@ pub fn get_steam_profile() -> Result<Option<SteamConnectionProfile>, String> {
         .as_ref()
         .map(|hash| format!("https://avatars.akamai.steamstatic.com/{}_full.jpg", hash));
 
+    let sub_accounts: Vec<SteamSubAccount> = all_users
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != primary_idx)
+        .map(|(_, u)| {
+            let acc_id = steam_id64_to_account_id(&u.steam_id64).unwrap_or(0);
+
+            let sub_persona = u
+                .persona_name
+                .clone()
+                .or_else(|| u.account_name.clone())
+                .unwrap_or_else(|| "Steam Account".to_string());
+
+            let sub_localconfig_path = steam_path
+                .join("userdata")
+                .join(acc_id.to_string())
+                .join("config")
+                .join("localconfig.vdf");
+            let sub_localconfig = fs::read_to_string(&sub_localconfig_path).ok();
+            let sub_avatar_hash = sub_localconfig
+                .as_deref()
+                .and_then(|text| find_vdf_value(text, "avatar"));
+            let sub_avatar_url = sub_avatar_hash
+                .map(|hash| format!("https://avatars.akamai.steamstatic.com/{}_full.jpg", hash));
+
+            SteamSubAccount {
+                steam_id64: u.steam_id64.clone(),
+                account_id: acc_id,
+                account_name: u.account_name.clone(),
+                persona_name: sub_persona,
+                profile_url: format!("https://steamcommunity.com/profiles/{}", u.steam_id64),
+                avatar_url: sub_avatar_url,
+            }
+        })
+        .collect();
+
     Ok(Some(SteamConnectionProfile {
         steam_id64: steam_id64.clone(),
         account_id,
-        account_name: user.account_name,
+        account_name: user.account_name.clone(),
         persona_name,
         steam3_id: format!("[U:1:{}]", account_id),
         steam2_id: account_id_to_steam2(account_id),
@@ -73,6 +116,7 @@ pub fn get_steam_profile() -> Result<Option<SteamConnectionProfile>, String> {
         local_avatar_path: local_avatar_path
             .exists()
             .then(|| local_avatar_path.to_string_lossy().to_string()),
+        sub_accounts,
     }))
 }
 
@@ -104,7 +148,7 @@ fn steam_install_path() -> Option<PathBuf> {
     None
 }
 
-fn parse_loginusers(text: &str) -> Option<LoginUser> {
+fn parse_loginusers(text: &str) -> Vec<LoginUser> {
     let mut users = Vec::new();
     let lines: Vec<&str> = text.lines().collect();
     let mut index = 0usize;
@@ -159,10 +203,6 @@ fn parse_loginusers(text: &str) -> Option<LoginUser> {
     }
 
     users
-        .iter()
-        .find(|user| user.most_recent)
-        .cloned()
-        .or_else(|| users.into_iter().next())
 }
 
 fn find_vdf_value(text: &str, wanted_key: &str) -> Option<String> {

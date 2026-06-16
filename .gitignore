@@ -32,6 +32,7 @@ Thumbs.db
 # Tauri / Rust
 src-tauri/target/
 src-tauri/gen/
+src-tauri/resources/steam_api64.dll
 
 # Installer and packaging artifacts
 installer/

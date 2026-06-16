@@ -442,6 +442,16 @@ export interface SteamConnectionProfile {
   avatarHash?: string | null;
   avatarUrl?: string | null;
   localAvatarPath?: string | null;
+  subAccounts: SteamSubAccount[];
+}
+
+export interface SteamSubAccount {
+  steamId64: string;
+  accountId: number;
+  accountName?: string | null;
+  personaName: string;
+  profileUrl: string;
+  avatarUrl?: string | null;
 }
 
 export const getSteamConnectionProfile = () =>
