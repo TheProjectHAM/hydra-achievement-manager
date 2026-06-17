@@ -2,6 +2,7 @@
 pub mod api;
 pub mod commands;
 pub mod connections;
+pub mod logger;
 pub mod models;
 pub mod monitor;
 pub mod parser;
@@ -26,17 +27,7 @@ pub struct AppState {
 pub fn run() {
     tauri::Builder::default()
         .plugin(
-            tauri_plugin_log::Builder::new()
-                .targets([
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
-                        file_name: None,
-                    }),
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
-                ])
-                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
-                .level(log::LevelFilter::Info)
-                .build(),
+            crate::logger::build().build(),
         )
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
