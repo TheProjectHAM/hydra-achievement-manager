@@ -4,7 +4,7 @@ import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsConte
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { GameAchievements } from '../types';
-import { PlatinumIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon } from '../components/Icons';
+import { PlatinumIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon, WarningIcon } from '../components/Icons';
 import { getGameAchievements } from '../tauri-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -39,11 +39,15 @@ const MonitoredGameCard: React.FC<{
   const [imageIndex, setImageIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState(fallbackImages[0]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [backgroundFailed, setBackgroundFailed] = useState(false);
+  const [hoverLogoFailed, setHoverLogoFailed] = useState(false);
 
   useEffect(() => {
     setImageIndex(0);
     setImageUrl(fallbackImages[0]);
     setIsImageLoaded(false);
+    setBackgroundFailed(false);
+    setHoverLogoFailed(false);
   }, [gameId]);
 
   useEffect(() => {
@@ -74,6 +78,7 @@ const MonitoredGameCard: React.FC<{
       setImageUrl(fallbackImages[nextIndex]);
     } else {
       setIsImageLoaded(true);
+      setBackgroundFailed(true);
     }
   };
 
@@ -97,6 +102,12 @@ const MonitoredGameCard: React.FC<{
 
       {!isImageLoaded && <div className="absolute inset-0 bg-black/20" />}
 
+      {backgroundFailed && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <WarningIcon className="text-yellow-500/60 text-6xl" />
+        </div>
+      )}
+
       <div className="absolute inset-0 overflow-hidden rounded-md bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
 
       {isCompleted && (
@@ -111,14 +122,25 @@ const MonitoredGameCard: React.FC<{
         </div>
       )}
 
-      <img
-        src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
-        alt=""
-        className="absolute -top-1 left-3 z-10 h-16 w-16 object-contain opacity-0 drop-shadow-xl transition-opacity duration-300 group-hover:opacity-100"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
-        }}
-      />
+      {hoverLogoFailed ? (
+        <div className="absolute -top-2 -left-1 z-10 h-16 w-16 flex items-center justify-center opacity-0 drop-shadow-xl transition-opacity duration-300 group-hover:opacity-100">
+          <WarningIcon className="text-yellow-500 text-5xl" />
+        </div>
+      ) : (
+        <img
+          src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
+          alt=""
+          className="absolute -top-1 left-3 z-10 h-16 w-16 object-contain opacity-0 drop-shadow-xl transition-opacity duration-300 group-hover:opacity-100"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            if (img.src.includes('capsule_184x69.jpg')) {
+              setHoverLogoFailed(true);
+            } else {
+              img.src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
+            }
+          }}
+        />
+      )}
 
       <div className="relative flex flex-col justify-end h-full p-4 text-white">
         <div className="flex items-center justify-between mb-2 gap-3 min-w-0">
@@ -184,6 +206,12 @@ const MonitoredGameRow: React.FC<{
     fetchData();
   }, [gameId, isSteam]);
 
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [gameId]);
+
   const finalTotal = totalAchievements ?? game.achievements.length;
   const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
   const progressPercent = finalTotal > 0 ? Math.round((achievementsCurrent / finalTotal) * 100) : 0;
@@ -203,14 +231,25 @@ const MonitoredGameRow: React.FC<{
       className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
     >
       <TableCell className="w-[6%] p-2 sm:p-3">
-        <img
-          src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
-          alt=""
-          className="h-12 w-12 object-contain drop-shadow-md sm:h-14 sm:w-14"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
-          }}
-        />
+        {logoFailed ? (
+          <div className="h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center">
+            <WarningIcon className="text-yellow-500 text-4xl sm:text-5xl" />
+          </div>
+        ) : (
+          <img
+            src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
+            alt=""
+            className="h-12 w-12 object-contain drop-shadow-md sm:h-14 sm:w-14"
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              if (img.src.includes('capsule_184x69.jpg')) {
+                setLogoFailed(true);
+              } else {
+                img.src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
+              }
+            }}
+          />
+        )}
       </TableCell>
 
       <TableCell className="w-[30%] min-w-0">

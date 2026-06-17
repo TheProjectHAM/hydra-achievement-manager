@@ -4,7 +4,7 @@ import { SETTINGS_TAB } from '../constants';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
-import { SortAscendingIcon, SortDescendingIcon, SteamBrandIcon } from './Icons';
+import { SortAscendingIcon, SortDescendingIcon, SteamBrandIcon, WarningIcon } from './Icons';
 import { invoke } from "@tauri-apps/api/core";
 
 interface DecorationInfo {
@@ -221,8 +221,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                         if (index < fallbacks.length) {
                           img.src = fallbacks[index];
                           img.dataset.index = String(index + 1);
+                        } else {
+                          img.style.display = 'none';
+                          const container = img.parentElement;
+                          if (container) {
+                            const warning = container.querySelector('[data-warning-icon]') as HTMLElement;
+                            if (warning) warning.style.display = 'flex';
+                          }
                         }
                       }}
+                    />
+                    <WarningIcon
+                      data-warning-icon
+                      className="w-full h-full text-yellow-500 flex items-center justify-center"
+                      style={{ display: 'none', borderRadius: '4px' }}
                     />
                   </div>
                   {!isCollapsed && (
