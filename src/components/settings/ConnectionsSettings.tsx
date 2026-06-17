@@ -327,7 +327,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                   {subAccounts.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                        Sub-contas ({subAccounts.length})
+                        {t('settings.connections.connectedAccounts', { count: subAccounts.length })}
                       </p>
                       <div className="space-y-1">
                         {subAccounts.map(sub => (
