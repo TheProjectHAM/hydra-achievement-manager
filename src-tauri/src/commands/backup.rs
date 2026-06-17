@@ -617,7 +617,6 @@ fn restore_steam_entry(item: &BackupGameEntry, state: &State<'_, crate::AppState
         Ok(())
     })();
 
-    let _ = steam_monitor.switch_app_id(480);
     let _ = steam_monitor.shutdown();
 
     restore_result

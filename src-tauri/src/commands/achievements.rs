@@ -412,10 +412,6 @@ pub async fn unlock_achievements(
                     Ok(())
                 })();
 
-                if let Err(e) = steam_monitor.switch_app_id(480) {
-                    log::warn!("Failed to switch back to AppID 480 after unlock: {}", e);
-                }
-
                 if let Err(e) = steam_monitor.shutdown() {
                     log::warn!("Failed to close Steam session after unlock: {}", e);
                 }

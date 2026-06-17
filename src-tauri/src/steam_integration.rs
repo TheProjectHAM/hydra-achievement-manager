@@ -1,7 +1,10 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 use steamworks::{Client, ClientManager, SingleClient};
 
 /// Representa um jogo Steam detectado
@@ -15,6 +18,10 @@ pub struct SteamGame {
     #[serde(rename = "achievementsCurrent")]
     pub achievements_current: u32,
     pub source: String, // "steam"
+    #[serde(rename = "libraryPath")]
+    pub library_path: String,
+    #[serde(rename = "installPath")]
+    pub install_path: String,
 }
 
 /// Representa uma conquista Steam
@@ -41,6 +48,17 @@ pub struct SteamIntegration {
 }
 
 impl SteamIntegration {
+    fn pump_callbacks(single_client: &Option<Arc<Mutex<SingleClient<ClientManager>>>>, cycles: usize) {
+        for _ in 0..cycles {
+            if let Some(single_client_lock) = single_client {
+                if let Ok(single_client) = single_client_lock.lock() {
+                    single_client.run_callbacks();
+                }
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+
     fn get_steam_appid_path() -> Result<PathBuf> {
         let exe = std::env::current_exe()?;
         let exe_dir = exe
@@ -155,8 +173,8 @@ impl SteamIntegration {
         std::env::set_var("SteamGameId", app_id.to_string());
 
         // 3. Limpa o cliente atual
-        self.client = None;
         self.single_client = None;
+        self.client = None;
         self.enabled = false;
 
         // 4. Inicializa novamente
@@ -174,8 +192,8 @@ impl SteamIntegration {
 
     /// Encerra a sessão Steam local e limpa os clientes em memória.
     pub fn shutdown(&mut self) {
-        self.client = None;
         self.single_client = None;
+        self.client = None;
         self.enabled = false;
         self.last_init_error = None;
 
@@ -206,12 +224,25 @@ impl SteamIntegration {
                         if let Ok(content) = std::fs::read_to_string(&path) {
                             if let (Some(appid), Some(name)) = (self.parse_acf_value(&content, "appid"), self.parse_acf_value(&content, "name")) {
                                 if !games.iter().any(|g: &SteamGame| g.game_id == appid) {
+                                    let installdir = self.parse_acf_value(&content, "installdir").unwrap_or_default();
+                                    let install_path = if installdir.is_empty() {
+                                        folder.join("steamapps").join("common").to_string_lossy().to_string()
+                                    } else {
+                                        folder
+                                            .join("steamapps")
+                                            .join("common")
+                                            .join(installdir)
+                                            .to_string_lossy()
+                                            .to_string()
+                                    };
                                     games.push(SteamGame {
                                         game_id: appid,
                                         name,
                                         achievements_total: 0, 
                                         achievements_current: 0,
                                         source: "steam".to_string(),
+                                        library_path: folder.to_string_lossy().to_string(),
+                                        install_path,
                                     });
                                 }
                             }
@@ -254,14 +285,12 @@ impl SteamIntegration {
 
         let user_stats = client.user_stats();
         user_stats.request_current_stats();
+        Self::pump_callbacks(&self.single_client, 10);
 
-        if let Some(single_client_lock) = &self.single_client {
-            if let Ok(single_client) = single_client_lock.lock() {
-                single_client.run_callbacks();
-            }
-        }
+        let achievement_names = catch_unwind(AssertUnwindSafe(|| user_stats.get_achievement_names()))
+            .map_err(|_| anyhow::anyhow!("Steam did not return achievements for this AppID"))?;
 
-        let Some(achievement_names) = user_stats.get_achievement_names() else {
+        let Some(achievement_names) = achievement_names else {
             drop(guard);
             return Ok(Vec::new());
         };
@@ -310,16 +339,30 @@ impl SteamIntegration {
 
         let user_stats = client.user_stats();
         
+        let achievement = user_stats.achievement(achievement_name);
+        let current_state = achievement.get().unwrap_or(false);
+
+        if current_state == unlocked {
+            log::debug!(
+                "Achievement '{}' already {}, skipping Steam update",
+                achievement_name,
+                if unlocked { "unlocked" } else { "locked" }
+            );
+            drop(guard);
+            return Ok(());
+        }
+
         if unlocked {
-            user_stats.achievement(achievement_name).set().map_err(|_| anyhow::anyhow!("Failed to set achievement"))?;
+            achievement.set().map_err(|_| anyhow::anyhow!("Failed to set achievement"))?;
             log::info!("Achievement '{}' unlocked", achievement_name);
         } else {
-            user_stats.achievement(achievement_name).clear().map_err(|_| anyhow::anyhow!("Failed to clear achievement"))?;
+            achievement.clear().map_err(|_| anyhow::anyhow!("Failed to clear achievement"))?;
             log::info!("Achievement '{}' locked", achievement_name);
         }
 
         // Salva as mudanças
         user_stats.store_stats().map_err(|_| anyhow::anyhow!("Failed to store stats"))?;
+        Self::pump_callbacks(&self.single_client, 5);
         
         drop(guard);
         

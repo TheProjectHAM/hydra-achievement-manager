@@ -1,6 +1,9 @@
 use super::settings::{load_settings, save_settings};
+use crate::api::{HydraAPI, SteamAPI};
+use crate::steam_integration::SteamAchievementData;
 use crate::utils::CacheManager;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
@@ -98,6 +101,149 @@ fn get_saved_steam_manual_paths(settings: &Value) -> (Option<String>, Option<Str
     (vdf, dll)
 }
 
+fn steam_library_entries(folders: Vec<PathBuf>) -> Vec<Value> {
+    folders
+        .into_iter()
+        .filter_map(|folder| {
+            let vdf_path = folder.join("steamapps").join("libraryfolders.vdf");
+            let last_modified = std::fs::metadata(&vdf_path)
+                .ok()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs() as i64);
+
+            if folder.exists() {
+                Some(serde_json::json!({
+                    "path": folder.to_string_lossy().to_string(),
+                    "vdfPath": if vdf_path.exists() { Some(vdf_path.to_string_lossy().to_string()) } else { None },
+                    "lastModified": last_modified,
+                }))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn map_ui_language_to_steam_store_lang(language: &str) -> &str {
+    match language {
+        "pt-BR" => "brazilian",
+        "es-ES" => "spanish",
+        "ru-RU" => "russian",
+        "fr-FR" => "french",
+        "de-DE" => "german",
+        "it-IT" => "italian",
+        "ja-JP" => "japanese",
+        "zh-CN" => "schinese",
+        "pl-PL" => "polish",
+        "uk-UA" => "ukrainian",
+        _ => "english",
+    }
+}
+
+fn map_ui_language_to_hydra_lang(language: &str) -> &str {
+    match language {
+        "pt-BR" => "pt",
+        "es-ES" => "es",
+        "ru-RU" => "ru",
+        _ => "en",
+    }
+}
+
+async fn enrich_steam_achievement_metadata(
+    app_id: u32,
+    achievements: &mut [SteamAchievementData],
+    app_handle: AppHandle,
+) {
+    let settings = load_settings(app_handle).await.unwrap_or_else(|_| serde_json::json!({}));
+    let selected_api = settings
+        .get("selectedApi")
+        .and_then(|v| v.as_str())
+        .unwrap_or("hydra");
+    let steam_api_key = settings
+        .get("steamApiKey")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let steam_id = settings
+        .get("steamId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let language = settings
+        .get("language")
+        .and_then(|v| v.as_str())
+        .unwrap_or("en-US");
+
+    if selected_api == "steam" && !steam_api_key.is_empty() {
+        if let Ok(metadata) = SteamAPI::get_game_achievements(
+            app_id,
+            steam_api_key,
+            map_ui_language_to_steam_store_lang(language),
+        )
+        .await
+        {
+            let metadata_by_name: HashMap<_, _> = metadata.into_iter().map(|ach| (ach.apiname.clone(), ach)).collect();
+            for achievement in achievements.iter_mut() {
+                if let Some(meta) = metadata_by_name.get(&achievement.name) {
+                    if let Some(display_name) = &meta.name {
+                        achievement.display_name = display_name.clone();
+                    }
+                    if let Some(description) = &meta.description {
+                        achievement.description = description.clone();
+                    }
+                    if let Some(icon) = &meta.icon {
+                        achievement.icon = icon.clone();
+                    }
+                    if let Some(icon_gray) = &meta.icongray {
+                        achievement.icon_gray = icon_gray.clone();
+                    }
+                }
+            }
+
+            if !steam_id.is_empty() {
+                if let Ok(player_achievements) =
+                    SteamAPI::get_player_achievements(app_id, steam_api_key, steam_id).await
+                {
+                    let unlock_times: HashMap<_, _> = player_achievements
+                        .into_iter()
+                        .map(|ach| (ach.apiname, ach.unlocktime))
+                        .collect();
+
+                    for achievement in achievements.iter_mut() {
+                        if let Some(unlock_time) = unlock_times.get(&achievement.name) {
+                            if *unlock_time > 0 {
+                                achievement.unlock_time = *unlock_time as u32;
+                            }
+                        }
+                    }
+                }
+            }
+            return;
+        }
+    }
+
+    if let Ok(metadata) = HydraAPI::get_game_achievements(
+        &app_id.to_string(),
+        Some(map_ui_language_to_hydra_lang(language)),
+    )
+    .await
+    {
+        let metadata_by_name: HashMap<_, _> = metadata
+            .achievements
+            .into_iter()
+            .map(|ach| (ach.name.clone(), ach))
+            .collect();
+
+        for achievement in achievements.iter_mut() {
+            if let Some(meta) = metadata_by_name.get(&achievement.name) {
+                achievement.display_name = meta.display_name.clone();
+                achievement.description = meta.description.clone();
+                achievement.icon = meta.icon.clone();
+                achievement.icon_gray = meta.icongray.clone();
+            }
+        }
+    }
+}
+
 /// Verifica se o Steam está disponível
 #[tauri::command]
 pub async fn is_steam_available(
@@ -185,19 +331,29 @@ pub async fn get_steam_availability_details(
         }
     };
 
-    let mut vdf_path: Option<String> = None;
-    for folder in folders {
-        let candidate = folder.join("steamapps").join("libraryfolders.vdf");
-        if candidate.exists() {
-            vdf_path = Some(candidate.to_string_lossy().to_string());
-            break;
-        }
-    }
+    let mut libraries = steam_library_entries(folders);
+    let mut vdf_path = libraries
+        .iter()
+        .find_map(|library| library.get("vdfPath").and_then(|v| v.as_str()).map(|s| s.to_string()));
     if vdf_path.is_none() {
         if let Some(saved) = manual_vdf {
             let candidate = PathBuf::from(saved);
             if candidate.exists() {
                 vdf_path = Some(candidate.to_string_lossy().to_string());
+                let library_path = candidate
+                    .parent()
+                    .and_then(|p| p.parent())
+                    .map(|p| p.to_string_lossy().to_string());
+                libraries.push(serde_json::json!({
+                    "path": library_path,
+                    "vdfPath": candidate.to_string_lossy().to_string(),
+                    "lastModified": std::fs::metadata(&candidate)
+                        .ok()
+                        .and_then(|m| m.modified().ok())
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|d| d.as_secs() as i64),
+                    "manual": true,
+                }));
             }
         }
     }
@@ -244,6 +400,7 @@ pub async fn get_steam_availability_details(
         "available": available,
         "runtimeLibPath": runtime_lib_path,
         "vdfPath": vdf_path,
+        "libraries": libraries,
         "steamworksInitialized": steam_initialized,
         "reason": reason
     }))
@@ -317,13 +474,31 @@ pub async fn get_steam_games(
 pub async fn get_steam_game_achievements(
     app_id: u32,
     state: tauri::State<'_, crate::AppState>,
+    app_handle: AppHandle,
 ) -> Result<Vec<crate::steam_integration::SteamAchievementData>, String> {
-    let steam_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
-    if let Some(steam_monitor) = &*steam_lock {
-        steam_monitor.get_game_achievements(app_id).map_err(|e| e.to_string())
-    } else {
-        Err("Steam monitor not initialized".to_string())
-    }
+    let result = {
+        let steam_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
+        if let Some(steam_monitor) = &*steam_lock {
+            let result = (|| -> Result<Vec<crate::steam_integration::SteamAchievementData>, String> {
+            steam_monitor.initialize().map_err(|e| e.to_string())?;
+            if !steam_monitor.is_enabled() {
+                return Err("Steam integration not available or Steam not running".to_string());
+            }
+
+            steam_monitor.switch_app_id(app_id).map_err(|e| e.to_string())?;
+            steam_monitor.get_game_achievements(app_id).map_err(|e| e.to_string())
+            })();
+
+            let _ = steam_monitor.shutdown();
+            result
+        } else {
+            Err("Steam monitor not initialized".to_string())
+        }
+    };
+
+    let mut achievements = result?;
+    enrich_steam_achievement_metadata(app_id, &mut achievements, app_handle).await;
+    Ok(achievements)
 }
 
 /// Define o estado de uma conquista Steam
@@ -404,42 +579,44 @@ pub async fn get_steam_library_info(
         }
     };
 
-    for folder in folders {
-        let vdf_path = folder.join("steamapps").join("libraryfolders.vdf");
-        if vdf_path.exists() {
-            let last_modified = std::fs::metadata(&vdf_path)
-                .ok()
-                .and_then(|m| m.modified().ok())
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| d.as_secs() as i64);
-
-            return Ok(serde_json::json!({
-                "vdfPath": vdf_path.to_string_lossy().to_string(),
-                "lastModified": last_modified
-            }));
-        }
-    }
+    let mut libraries = steam_library_entries(folders);
+    let mut vdf_path = libraries
+        .iter()
+        .find_map(|library| library.get("vdfPath").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    let mut last_modified = libraries
+        .iter()
+        .find_map(|library| library.get("lastModified").and_then(|v| v.as_i64()));
 
     let settings = load_settings(app_handle).await.unwrap_or(serde_json::json!({}));
     let (manual_vdf, _) = get_saved_steam_manual_paths(&settings);
-    if let Some(saved_path) = manual_vdf {
+    if vdf_path.is_none() {
+        if let Some(saved_path) = manual_vdf {
         let candidate = PathBuf::from(saved_path);
         if candidate.exists() {
-            let last_modified = std::fs::metadata(&candidate)
+            last_modified = std::fs::metadata(&candidate)
                 .ok()
                 .and_then(|m| m.modified().ok())
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| d.as_secs() as i64);
-            return Ok(serde_json::json!({
+            vdf_path = Some(candidate.to_string_lossy().to_string());
+            let library_path = candidate
+                .parent()
+                .and_then(|p| p.parent())
+                .map(|p| p.to_string_lossy().to_string());
+            libraries.push(serde_json::json!({
+                "path": library_path,
                 "vdfPath": candidate.to_string_lossy().to_string(),
-                "lastModified": last_modified
+                "lastModified": last_modified,
+                "manual": true,
             }));
+        }
         }
     }
 
     Ok(serde_json::json!({
-        "vdfPath": null,
-        "lastModified": null
+        "vdfPath": vdf_path,
+        "lastModified": last_modified,
+        "libraries": libraries
     }))
 }
 
