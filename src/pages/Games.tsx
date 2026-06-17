@@ -254,16 +254,18 @@ const MonitoredGameRow: React.FC<{
 
       <TableCell className="w-[22%]">
         <div className="space-y-2">
-          <div className="flex items-center justify-end gap-2 text-xs font-semibold">
-            {isCompleted && (
-              <Badge className="h-5 shrink-0 gap-1 px-2 text-[10px]">
-                <PlatinumIcon
-                  className="shrink-0 leading-none opacity-80"
-                  style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
-                />
-                {t('gamesPage.completed')}
-              </Badge>
-            )}
+          <div className="flex min-h-5 items-center justify-between gap-2 text-xs font-semibold">
+            <div className="min-w-0">
+              {isCompleted && (
+                <Badge className="h-5 shrink-0 gap-1 px-2 text-[10px]">
+                  <PlatinumIcon
+                    className="shrink-0 leading-none opacity-80"
+                    style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
+                  />
+                  {t('gamesPage.completed')}
+                </Badge>
+              )}
+            </div>
             <span className="tabular-nums text-muted-foreground">
               <span className={isCompleted ? 'text-primary' : 'text-foreground'}>{achievementsCurrent}</span>
               <span className="mx-1 opacity-40">/</span>
