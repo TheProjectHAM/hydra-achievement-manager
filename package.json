@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.3",
   "versionDateTag": "v20260617",
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "vite",
