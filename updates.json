@@ -30,6 +30,21 @@
         "Refreshed the games list and release notes UI.",
         "Updated packaging to 1.0.2: Linux now ships `.deb`, `.rpm`, and `.tar.gz`, and Windows ships the setup installer."
       ]
+    },
+    {
+      "version": "1.0.3",
+      "subVersion": "v20260617",
+      "changelog": [
+        "Added a new Connections Profiles settings panel for managing Steam and Hydra launcher profiles.",
+        "Replaced the default logger with a custom formatted terminal logger with color-coded levels.",
+        "Hardened Steamworks achievement handling with callback pumping and panic-safe fetching.",
+        "Load Steam achievement state from Steamworks for real-time status instead of local files.",
+        "Prevented accidental achievement clears by returning errors on failed state reads.",
+        "Refined the unlock path selection modal with collapsible section cards.",
+        "Aligned the platinum badge in the games list view.",
+        "Show a yellow warning icon when a game logo fails to load.",
+        "Bundled steam_api64.dll into the Windows installer for Steamworks integration."
+      ]
     }
   ]
 }
