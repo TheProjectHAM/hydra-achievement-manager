@@ -270,8 +270,18 @@ run_windows() {
   app_version="$(get_app_version)"
   installer_candidates=("$nsis_out_dir"/*.exe)
 
-  if [ -e "${installer_candidates[0]:-}" ]; then
+  local installer_path=""
+  for candidate in "${installer_candidates[@]}"; do
+    if [[ "$candidate" == *"$app_version"* ]]; then
+      installer_path="$candidate"
+      break
+    fi
+  done
+  if [ -z "$installer_path" ] && [ -e "${installer_candidates[0]:-}" ]; then
     installer_path="${installer_candidates[0]}"
+  fi
+
+  if [ -n "$installer_path" ]; then
     echo "Using Tauri NSIS installer: $installer_path"
   else
     installer_path=""
