@@ -1,8 +1,8 @@
 {
   "name": "ProjectHAM",
   "private": true,
-  "version": "1.0.2",
-  "versionDateTag": "v20260605",
+  "version": "1.0.3",
+  "versionDateTag": "v20260617",
   "type": "module",
   "scripts": {
     "dev": "vite",
