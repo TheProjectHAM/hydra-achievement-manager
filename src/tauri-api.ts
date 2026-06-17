@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { open as openExternalUrl } from "@tauri-apps/plugin-shell";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { SteamAchievementData } from "./types";
 
 console.log("🚀 [TAURI-API] Module loaded with fallback support (Tauri v2)");
 
@@ -466,7 +467,7 @@ export const getSteamUserInfo = () =>
 export const getSteamGames = () => invoke<any[]>("get_steam_games");
 
 export const getSteamGameAchievements = (appId: number) =>
-  invoke<any[]>("get_steam_game_achievements", { appId });
+  invoke<SteamAchievementData[]>("get_steam_game_achievements", { appId });
 
 export const setSteamAchievement = (
   achievementName: string,

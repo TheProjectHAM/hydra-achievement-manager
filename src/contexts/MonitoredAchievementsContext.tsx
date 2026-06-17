@@ -6,6 +6,7 @@ import {
   requestAchievements,
   getGameNames,
   getGameAchievements,
+  getSteamGameAchievements,
   onSteamGamesUpdate,
   getSteamGames,
   isSteamAvailable,
@@ -339,23 +340,18 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
         // Fetch in parallel
         await Promise.all(gamesToFetch.map(async (game) => {
           try {
-            const gameAchievements = await getGameAchievements(game.gameId);
-            const currentCount = gameAchievements.achievements.filter((a: any) => a.achieved).length;
+            const gameAchievements = await getSteamGameAchievements(Number(game.gameId));
+            const currentCount = gameAchievements.filter((a: any) => a.achieved).length;
 
             setSteamGameAchievements(prev => ({
               ...prev,
               [game.gameId]: {
                 current: currentCount,
-                total: gameAchievements.achievements.length
+                total: gameAchievements.length
               }
             }));
           } catch (error) {
             console.error(`Error fetching Steam achievements for game ${game.gameId}:`, error);
-            // Mark as 0 so we don't retry immediately
-            setSteamGameAchievements(prev => ({
-              ...prev,
-              [game.gameId]: { current: 0, total: 0 }
-            }));
           }
         }));
       }

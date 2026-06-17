@@ -7,7 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
 import UnlockModal from '../components/UnlockModal';
-import { getGameAchievements } from '../tauri-api';
+import { getGameAchievements, getSteamGameAchievements } from '../tauri-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search as SearchIconLucide } from 'lucide-react';
@@ -186,7 +186,10 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
       }
 
       try {
-        const result = await getGameAchievements(game.id.toString());
+        const isSteamSourceSelected = !preferredSourcePath || preferredSourcePath.startsWith('steam://');
+        const result = isSteamSourceSelected
+          ? { achievements: await getSteamGameAchievements(game.id) }
+          : await getGameAchievements(game.id.toString());
         let achievements: Achievement[] = [];
         if (result.achievements.length > 0 && result.achievements[0].apiname !== undefined) {
           achievements = result.achievements.map((ach: any) => ({
@@ -200,15 +203,16 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
         } else {
           achievements = result.achievements.map((ach: any) => ({
             internalName: ach.name,
-            displayName: ach.displayName,
+            displayName: ach.displayName || ach.name,
             description: ach.description,
             icon: ach.icon,
+            percent: ach.percent,
+            hidden: ach.hidden,
           }));
         }
         setGameAchievements(achievements);
         achievementsCacheRef.current[sourceCacheKey] = achievements;
 
-        const isSteamSourceSelected = !preferredSourcePath || preferredSourcePath.startsWith('steam://');
         const shouldUseSteamStatus = isSteamSourceSelected;
         const normalizePath = (p: string) =>
           p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
@@ -258,26 +262,6 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                       ...(ampm && { ampm }),
                     };
                   }
-                } else {
-                  const now = new Date();
-                  let hour = String(now.getHours()).padStart(2, '0');
-                  let ampm: 'AM' | 'PM' | undefined;
-
-                  if (timeFormat === '12h') {
-                    const hour24 = now.getHours();
-                    const hour12 = hour24 % 12 || 12;
-                    hour = String(hour12).padStart(2, '0');
-                    ampm = hour24 >= 12 ? 'PM' : 'AM';
-                  }
-
-                  timestamp = {
-                    day: String(now.getDate()).padStart(2, '0'),
-                    month: String(now.getMonth() + 1).padStart(2, '0'),
-                    year: String(now.getFullYear()),
-                    hour: hour,
-                    minute: String(now.getMinutes()).padStart(2, '0'),
-                    ...(ampm && { ampm }),
-                  };
                 }
 
                 onAchievementStatusUpdate(game.id, internalName, {
