@@ -417,7 +417,6 @@ pub async fn unlock_achievements(
                 }
 
                 unlock_result?;
-                app_handle.emit("achievements-updated", ()).map_err(|e| e.to_string())?;
                 return Ok(());
             }
         }
