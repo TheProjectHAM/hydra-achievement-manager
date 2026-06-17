@@ -340,7 +340,9 @@ impl SteamIntegration {
         let user_stats = client.user_stats();
         
         let achievement = user_stats.achievement(achievement_name);
-        let current_state = achievement.get().unwrap_or(false);
+        let current_state = achievement
+            .get()
+            .map_err(|_| anyhow::anyhow!("Failed to read achievement state"))?;
 
         if current_state == unlocked {
             log::debug!(

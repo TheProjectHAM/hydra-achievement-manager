@@ -164,7 +164,8 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
 
   useEffect(() => {
     setSearchQuery('');
-  }, [game]);
+    sourceStatusInitializedRef.current.clear();
+  }, [game, preferredSourcePath]);
 
   useEffect(() => {
     const getSourceCacheKey = (gameId: number, sourcePath?: string | null) =>
@@ -343,7 +344,9 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
           });
         }
 
-        sourceStatusInitializedRef.current.add(sourceCacheKey);
+        if (!shouldUseSteamStatus || result.achievements.length > 0) {
+          sourceStatusInitializedRef.current.add(sourceCacheKey);
+        }
       } catch (error) {
         console.error('Error fetching achievements:', error);
         setGameAchievements([]);

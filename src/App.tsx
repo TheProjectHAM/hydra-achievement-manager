@@ -15,7 +15,7 @@ import GamesContent from './pages/Games';
 import AchievementsContent from './pages/Achievements';
 import ExportPage from './pages/Export';
 import InitialWizard from './pages/InitialWizard';
-import { unlockAchievements, reloadAchievements, getSteamLibraryInfo, getAchievementIniLastModified } from './tauri-api';
+import { unlockAchievements, reloadAchievements, getSteamGameAchievements, getSteamLibraryInfo, getAchievementIniLastModified } from './tauri-api';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
@@ -473,16 +473,17 @@ const App: React.FC = () => {
         .find((bucket) => bucket && Object.keys(bucket).length > 0) || {};
 
     const achievements = (isSteam && allAchievements)
-      ? allAchievements.map(ach => {
-        const status = gameStatuses[ach.internalName] || { completed: false, timestamp: { day: '', month: '', year: '', hour: '', minute: '' } };
+      ? allAchievements.flatMap(ach => {
+        const status = gameStatuses[ach.internalName];
+        if (!status) return [];
         const hasEmptyTimestamp = !status.timestamp.day && !status.timestamp.month &&
           !status.timestamp.year && !status.timestamp.hour && !status.timestamp.minute;
 
-        return {
+        return [{
           name: ach.internalName,
           completed: status.completed,
           timestamp: (status.completed && hasEmptyTimestamp) ? generateTimestamp() : status.timestamp,
-        };
+        }];
       })
       : Object.entries(gameStatuses)
         .filter(([, status]: [string, AchievementStatus]) => status.completed) // Only include completed achievements for non-steam
@@ -523,27 +524,31 @@ const App: React.FC = () => {
         duration: 3000,
       });
 
-      // Reload achievements data from the saved file
+      // Reload achievements data from the saved file or Steamworks.
       try {
-        const result = await reloadAchievements(gameId, path);
+        const result = isSteam
+          ? { achievements: await getSteamGameAchievements(Number(gameId)) }
+          : await reloadAchievements(gameId, path);
 
         // Convert parsed achievements to achievementStatus format
         const newAchievementStatus: Record<string, AchievementStatus> = {};
 
         result.achievements.forEach((ach: any) => {
           if (ach.achieved) {
-            // Convert Unix timestamp to date components
-            const unlockDate = new Date(ach.unlockTime * 1000);
-            const timestamp: Timestamp = {
-              day: format(unlockDate, 'dd'),
-              month: format(unlockDate, 'MM'),
-              year: format(unlockDate, 'yyyy'),
-              hour: format(unlockDate, timeFormat === '12h' ? 'hh' : 'HH'),
-              minute: format(unlockDate, 'mm'),
-              ...(timeFormat === '12h' && { ampm: format(unlockDate, 'aa').toUpperCase() as 'AM' | 'PM' }),
-            };
+            const unlockTime = Number(ach.unlockTime || 0);
+            const unlockDate = unlockTime > 0 ? new Date(unlockTime * 1000) : null;
+            const timestamp: Timestamp = unlockDate && !isNaN(unlockDate.getTime())
+              ? {
+                day: format(unlockDate, 'dd'),
+                month: format(unlockDate, 'MM'),
+                year: format(unlockDate, 'yyyy'),
+                hour: format(unlockDate, timeFormat === '12h' ? 'hh' : 'HH'),
+                minute: format(unlockDate, 'mm'),
+                ...(timeFormat === '12h' && { ampm: format(unlockDate, 'aa').toUpperCase() as 'AM' | 'PM' }),
+              }
+              : { day: '', month: '', year: '', hour: '', minute: '' };
 
-            newAchievementStatus[ach.name] = {
+            newAchievementStatus[ach.apiname || ach.name] = {
               completed: true,
               timestamp: timestamp,
             };
