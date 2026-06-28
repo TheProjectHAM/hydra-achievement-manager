@@ -330,7 +330,8 @@ pub async fn apply_achievements_restore(
     let mut restored_settings = false;
     if should_restore_settings {
         if let Some(settings) = backup.settings.as_ref() {
-            let strategy = parse_settings_strategy(settings_strategy.as_deref().unwrap_or("backup"))?;
+            let strategy =
+                parse_settings_strategy(settings_strategy.as_deref().unwrap_or("backup"))?;
             restored_settings = restore_settings_from_backup(settings, &app_handle, strategy)?;
         }
     }
@@ -390,7 +391,10 @@ fn detect_game_file_format(directory: &str, game_id: &str) -> String {
     "ini".to_string()
 }
 
-fn read_existing_achievements(directory: &str, game_id: &str) -> Result<Vec<AchievementEntry>, String> {
+fn read_existing_achievements(
+    directory: &str,
+    game_id: &str,
+) -> Result<Vec<AchievementEntry>, String> {
     if is_steam_directory(directory) {
         return Ok(Vec::new());
     }
@@ -589,7 +593,10 @@ fn get_detected_steam_game_ids(state: &State<'_, crate::AppState>) -> HashSet<St
     }
 }
 
-fn restore_steam_entry(item: &BackupGameEntry, state: &State<'_, crate::AppState>) -> Result<(), String> {
+fn restore_steam_entry(
+    item: &BackupGameEntry,
+    state: &State<'_, crate::AppState>,
+) -> Result<(), String> {
     let app_id = item
         .game_id
         .parse::<u32>()
@@ -606,7 +613,9 @@ fn restore_steam_entry(item: &BackupGameEntry, state: &State<'_, crate::AppState
             return Err("Steam integration not available or Steam not running".to_string());
         }
 
-        steam_monitor.switch_app_id(app_id).map_err(|e| e.to_string())?;
+        steam_monitor
+            .switch_app_id(app_id)
+            .map_err(|e| e.to_string())?;
 
         for achievement in &item.achievements {
             steam_monitor
@@ -622,7 +631,12 @@ fn restore_steam_entry(item: &BackupGameEntry, state: &State<'_, crate::AppState
     restore_result
 }
 
-fn should_write_json(base_path: &Path, ini_path: &Path, json_path: &Path, backup_format: &str) -> bool {
+fn should_write_json(
+    base_path: &Path,
+    ini_path: &Path,
+    json_path: &Path,
+    backup_format: &str,
+) -> bool {
     if json_path.exists() {
         return true;
     }
@@ -712,7 +726,9 @@ fn build_settings_preview(
     })
 }
 
-fn build_resolution_map(items: Vec<GameConflictResolution>) -> Result<HashMap<usize, ConflictStrategy>, String> {
+fn build_resolution_map(
+    items: Vec<GameConflictResolution>,
+) -> Result<HashMap<usize, ConflictStrategy>, String> {
     let mut map = HashMap::new();
     for item in items {
         let strategy = parse_conflict_strategy(&item.strategy)?;
@@ -755,7 +771,8 @@ fn restore_settings_from_backup(
             Ok(true)
         }
         SettingsStrategy::Merge => {
-            let mut current = read_current_settings(app_handle)?.unwrap_or_else(|| serde_json::json!({}));
+            let mut current =
+                read_current_settings(app_handle)?.unwrap_or_else(|| serde_json::json!({}));
             let current_obj = current
                 .as_object_mut()
                 .ok_or_else(|| "Current settings format is invalid".to_string())?;
