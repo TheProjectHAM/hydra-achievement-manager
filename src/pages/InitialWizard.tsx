@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import TitleBar from '../components/TitleBar';
+import WindowResizeHandles from '../components/WindowResizeHandles';
 import { useTheme, Theme } from '../contexts/ThemeContext';
 import { DateFormat, TimeFormat, ApiSource } from '../types';
 import { useI18n, Language } from '../contexts/I18nContext';
@@ -131,6 +132,7 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
 
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-background text-foreground">
+      <WindowResizeHandles />
       <TitleBar />
 
       <div className="mx-auto w-full max-w-5xl px-6 pt-8 pb-4">

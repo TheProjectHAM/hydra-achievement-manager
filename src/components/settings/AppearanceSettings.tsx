@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Theme, useTheme } from '../../contexts/ThemeContext';
-import { SidebarGameScale, GamesViewMode } from '../../types';
+import { SidebarGameScale, GamesViewMode, TitleBarMode } from '../../types';
 import { ApiSource } from '../../types';
 import {
   UpdateIcon
@@ -165,6 +165,8 @@ const AppearanceSettings: React.FC<{
   setSelectedMarquee: (marquee: boolean) => void;
   selectedGamesViewMode: GamesViewMode;
   setSelectedGamesViewMode: (mode: GamesViewMode) => void;
+  selectedTitleBarMode: TitleBarMode;
+  setSelectedTitleBarMode: (mode: TitleBarMode) => void;
   selectedHideHiddenAchievements: boolean;
   setSelectedHideHiddenAchievements: (enabled: boolean) => void;
   selectedApi: ApiSource;
@@ -173,6 +175,7 @@ const AppearanceSettings: React.FC<{
   selectedGameScale, setSelectedGameScale,
   selectedMarquee, setSelectedMarquee,
   selectedGamesViewMode, setSelectedGamesViewMode,
+  selectedTitleBarMode, setSelectedTitleBarMode,
   selectedHideHiddenAchievements, setSelectedHideHiddenAchievements,
   selectedApi
 }) => {
@@ -203,6 +206,18 @@ const AppearanceSettings: React.FC<{
           options={THEMES}
           selectedId={selectedTheme}
           onSelect={setSelectedTheme}
+        />
+
+        <ModernSelector
+          label={t('settings.appearance.titleBarMode')}
+          description={t('settings.appearance.titleBarModeDesc')}
+          options={[
+            { id: 'hidden', name: t('settings.appearance.titleBarHidden') },
+            { id: 'custom', name: t('settings.appearance.titleBarCustom') },
+            { id: 'native', name: t('settings.appearance.titleBarNative') }
+          ]}
+          selectedId={selectedTitleBarMode}
+          onSelect={setSelectedTitleBarMode}
         />
 
         <ModernSelector

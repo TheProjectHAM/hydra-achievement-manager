@@ -1,27 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import React from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import WindowControls from "./WindowControls";
-
-interface DecorationInfo {
-  decorated: boolean;
-  sessionType: string | null;
-  currentDesktop: string | null;
-  platform: string;
-}
+import { useTheme } from "../contexts/ThemeContext";
 
 const TitleBar: React.FC = () => {
-  const [hidden, setHidden] = useState(false);
-
-  useEffect(() => {
-    invoke<DecorationInfo>("get_window_decoration_info")
-      .then((info) => {
-        const desktop = (info.currentDesktop ?? "").toLowerCase();
-        const shouldHide = desktop.includes("hyprland") || desktop.includes("niri");
-        setHidden(shouldHide);
-      })
-      .catch(() => setHidden(false));
-  }, []);
+  const { titleBarMode } = useTheme();
 
   const handleDoubleClick = async () => {
     try {
@@ -37,23 +20,20 @@ const TitleBar: React.FC = () => {
     }
   };
 
-  if (hidden) return null;
+  if (titleBarMode !== "custom") return null;
 
   return (
     <div
       className="h-10 flex items-center justify-between pl-4 pr-0 text-sm select-none border-b border-sidebar-border cursor-default w-full shrink-0 bg-sidebar-background"
-      
       data-tauri-drag-region
       onDoubleClick={handleDoubleClick}
     >
-      {/* Left section - Branding (pointer-events-none makes it transparent to drag region) */}
       <div className="flex items-center pointer-events-none">
-        <span className="text-[11px] font-semibold text-sidebar-primary-foreground">
+        <span className="font-sans text-[0.95rem] font-semibold text-sidebar-primary">
           Project HAM
         </span>
       </div>
 
-      {/* Right section - Controls */}
       <div className="h-full flex items-center">
         <WindowControls />
       </div>

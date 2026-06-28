@@ -133,6 +133,15 @@ pub fn run() {
                 }
             }
 
+            if let Some(window) = app.get_webview_window("main") {
+                let use_native_titlebar = loaded_settings
+                    .as_ref()
+                    .and_then(|s| s.get("titleBarMode"))
+                    .and_then(|v| v.as_str())
+                    == Some("native");
+                let _ = window.set_decorations(use_native_titlebar);
+            }
+
             let saved_wine_prefix = loaded_settings
                 .as_ref()
                 .and_then(|s| s.get("winePrefixPath"))
@@ -218,6 +227,7 @@ pub fn run() {
             commands::ui::minimize_window,
             commands::ui::maximize_window,
             commands::ui::close_window,
+            commands::ui::set_window_decorations,
             commands::steam::is_steam_available,
             commands::steam::get_steam_availability_details,
             commands::steam::get_steam_user_info,

@@ -1,18 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Tab, SteamSearchResult } from '../types';
 import { SETTINGS_TAB } from '../constants';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
 import { SortAscendingIcon, SortDescendingIcon, SteamBrandIcon, WarningIcon } from './Icons';
-import { invoke } from "@tauri-apps/api/core";
-
-interface DecorationInfo {
-  decorated: boolean;
-  sessionType: string | null;
-  currentDesktop: string | null;
-  platform: string;
-}
 
 interface SidebarProps {
   tabs: Tab[];
@@ -43,21 +35,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedGameId
 }) => {
   const { t } = useI18n();
-  const { sidebarGameScale, sidebarMarquee } = useTheme();
+  const { sidebarGameScale, sidebarMarquee, titleBarMode } = useTheme();
   const { recentGames } = useMonitoredAchievements();
   const [recentSearch, setRecentSearch] = useState('');
   const [recentSortDirection, setRecentSortDirection] = useState<'desc' | 'asc'>('desc');
-  const [titlebarVisible, setTitlebarVisible] = useState(true);
-
-  useEffect(() => {
-    invoke<DecorationInfo>("get_window_decoration_info")
-      .then((info) => {
-        const desktop = (info.currentDesktop ?? "").toLowerCase();
-        const shouldHide = desktop.includes("hyprland") || desktop.includes("niri");
-        setTitlebarVisible(!shouldHide);
-      })
-      .catch(() => setTitlebarVisible(true));
-  }, []);
 
   const scaleStyles = useMemo(() => ({
     sm: { button: 'h-11', image: 'w-8 h-8', name: 'text-xs', count: 'text-[10px]' },
@@ -106,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       style={{ width: `${isCollapsed ? 72 : width}px` }}
-      className={`flex flex-col fixed left-0 bottom-0 z-40 select-none transition-all duration-300 ease-in-out border-r border-sidebar-border bg-sidebar-background ${titlebarVisible ? 'top-10' : 'top-0'}`}
+      className={`flex flex-col fixed left-0 bottom-0 z-40 select-none transition-all duration-300 ease-in-out border-r border-sidebar-border bg-sidebar-background ${titleBarMode === 'custom' ? 'top-10' : 'top-0'}`}
     >
       <div className={`flex flex-col h-full w-full p-4 overflow-hidden ${isCollapsed ? 'items-center' : 'items-stretch'}`}>
 

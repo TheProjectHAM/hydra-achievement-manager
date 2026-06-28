@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { DateFormat, TimeFormat, SidebarGameScale } from '../types';
+import { DateFormat, TimeFormat, SidebarGameScale, TitleBarMode } from '../types';
+import { setWindowDecorations } from '../tauri-api';
 
 export type Theme =
   | 'light'
@@ -37,6 +38,8 @@ interface ThemeContextType {
   setHideHiddenAchievements: (enabled: boolean) => void;
   hideSteamGamesWithoutAchievements: boolean;
   setHideSteamGamesWithoutAchievements: (enabled: boolean) => void;
+  titleBarMode: TitleBarMode;
+  setTitleBarMode: (mode: TitleBarMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -51,6 +54,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [gamesViewMode, setGamesViewModeState] = useState<GamesViewMode>('grid');
   const [hideHiddenAchievements, setHideHiddenAchievementsState] = useState<boolean>(true);
   const [hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievementsState] = useState<boolean>(true);
+  const [titleBarMode, setTitleBarModeState] = useState<TitleBarMode>('custom');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -69,6 +73,16 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
           if (settings.hideSteamGamesWithoutAchievements !== undefined) {
             setHideSteamGamesWithoutAchievementsState(settings.hideSteamGamesWithoutAchievements);
+          }
+          if (settings.titleBarMode) {
+            setTitleBarModeState(settings.titleBarMode);
+            setWindowDecorations(settings.titleBarMode === 'native').catch((error) => {
+              console.error('Error applying window titlebar mode:', error);
+            });
+          } else {
+            setWindowDecorations(false).catch((error) => {
+              console.error('Error applying default window titlebar mode:', error);
+            });
           }
         } else {
           const savedTheme = localStorage.getItem('app_theme') as Theme | null;
@@ -117,6 +131,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       gamesViewMode,
       hideHiddenAchievements,
       hideSteamGamesWithoutAchievements,
+      titleBarMode,
       ...updates
     };
 
@@ -178,6 +193,14 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     saveSettings({ hideSteamGamesWithoutAchievements: enabled } as any);
   };
 
+  const setTitleBarMode = (mode: TitleBarMode) => {
+    setTitleBarModeState(mode);
+    setWindowDecorations(mode === 'native').catch((error) => {
+      console.error('Error applying window titlebar mode:', error);
+    });
+    saveSettings({ titleBarMode: mode } as any);
+  };
+
   return (
     <ThemeContext.Provider value={{
       theme, setTheme,
@@ -188,7 +211,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       timeFormat, setTimeFormat,
       gamesViewMode, setGamesViewMode,
       hideHiddenAchievements, setHideHiddenAchievements,
-      hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievements
+      hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievements,
+      titleBarMode, setTitleBarMode
     }}>
       {children}
     </ThemeContext.Provider>

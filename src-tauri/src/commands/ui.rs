@@ -33,6 +33,11 @@ pub async fn close_window(window: tauri::WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn set_window_decorations(window: tauri::WebviewWindow, decorations: bool) -> Result<(), String> {
+    window.set_decorations(decorations).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn open_devtools(window: tauri::WebviewWindow) {
     #[cfg(debug_assertions)]
     {
