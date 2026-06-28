@@ -45,6 +45,22 @@
         "Show a yellow warning icon when a game logo fails to load.",
         "Bundled steam_api64.dll into the Windows installer for Steamworks integration."
       ]
+    },
+    {
+      "version": "1.0.4",
+      "subVersion": "v20260628",
+      "changelog": [
+        "Added a Steam achievement source selector so Steam games can use either the local Steamworks session or the Steam Web API.",
+        "Improved Steamworks achievement metadata loading by enriching names, descriptions, icons, and gray icons from the Steam Web API when available, then falling back to Hydra for any missing fields.",
+        "Improved Steam Web API achievement handling with normalized Steam IDs, better private-profile/403 handling, global rarity percentages, and more robust schema parsing diagnostics.",
+        "Updated the achievements page to share the selected Steam source across loading, caching, status initialization, sorting, bulk unlock, and export flows.",
+        "Added configurable window titlebar modes: custom, hidden, and native, with resize handles for custom/hidden titlebar layouts.",
+        "Updated sidebar/titlebar layout behavior to follow the selected titlebar mode instead of relying on automatic desktop-environment detection.",
+        "Added English and Portuguese settings text for Steam achievement source selection and titlebar mode options.",
+        "Fixed release packaging so the build script selects the NSIS installer matching the current app version instead of the first installer found.",
+        "Added the GPL-3.0-only license metadata to the frontend package manifest.",
+        "Adjusted tooltip layering and tidied backup restore formatting."
+      ]
     }
   ]
 }
