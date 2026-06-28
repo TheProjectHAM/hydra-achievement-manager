@@ -3648,7 +3648,7 @@ dependencies = [
 
 [[package]]
 name = "project-ham"
-version = "1.0.1"
+version = "1.0.4"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

@@ -1,6 +1,6 @@
 [package]
 name = "project-ham"
-version = "1.0.3"
+version = "1.0.4"
 description = "Project HAM is an open-source tool developed to assist Hydra Launcher users in managing and tracking game achievements."
 authors = ["Esther"]
 license = "GPL-3.0"
