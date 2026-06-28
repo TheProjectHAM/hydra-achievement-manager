@@ -50,16 +50,15 @@
       "version": "1.0.4",
       "subVersion": "v20260628",
       "changelog": [
-        "Added a Steam achievement source selector so Steam games can use either the local Steamworks session or the Steam Web API.",
-        "Improved Steamworks achievement metadata loading by enriching names, descriptions, icons, and gray icons from the Steam Web API when available, then falling back to Hydra for any missing fields.",
-        "Improved Steam Web API achievement handling with normalized Steam IDs, better private-profile/403 handling, global rarity percentages, and more robust schema parsing diagnostics.",
-        "Updated the achievements page to share the selected Steam source across loading, caching, status initialization, sorting, bulk unlock, and export flows.",
-        "Added configurable window titlebar modes: custom, hidden, and native, with resize handles for custom/hidden titlebar layouts.",
-        "Updated sidebar/titlebar layout behavior to follow the selected titlebar mode instead of relying on automatic desktop-environment detection.",
-        "Added English and Portuguese settings text for Steam achievement source selection and titlebar mode options.",
-        "Fixed release packaging so the build script selects the NSIS installer matching the current app version instead of the first installer found.",
-        "Added the GPL-3.0-only license metadata to the frontend package manifest.",
-        "Adjusted tooltip layering and tidied backup restore formatting."
+        "Added a new Steam achievements source option, letting you choose between Steamworks and Steam API in settings.",
+        "Fixed missing achievement images when using Steamworks by loading better metadata and falling back to Hydra when needed.",
+        "Improved Steam achievement loading reliability, including better support for private profiles and unlock timestamps.",
+        "Improved the achievements page behavior when switching Steam sources, sorting achievements, unlocking in bulk, and exporting data.",
+        "Added configurable window titlebar modes: Custom, Hidden, and Native.",
+        "Improved window resizing when using custom or hidden titlebars.",
+        "Updated English and Portuguese translations for the new Steam and window settings.",
+        "Fixed Windows release packaging to pick the correct installer for the current version.",
+        "Improved tooltip layering and small backup restore details."
       ]
     }
   ]
