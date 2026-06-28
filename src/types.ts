@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
 
 export type ApiSource = 'steam' | 'hydra';
+export type SteamAchievementSource = 'steamworks' | 'steamapi';
+export type TitleBarMode = 'hidden' | 'custom' | 'native';
 
 export type SidebarGameScale = 'sm' | 'md' | 'lg';
 

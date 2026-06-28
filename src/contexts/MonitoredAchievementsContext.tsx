@@ -6,7 +6,7 @@ import {
   requestAchievements,
   getGameNames,
   getGameAchievements,
-  getSteamGameAchievements,
+  getAchievementsForGameSource,
   onSteamGamesUpdate,
   getSteamGames,
   isSteamAvailable,
@@ -77,6 +77,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const [steamGameAchievements, setSteamGameAchievements] = useState<Record<string, { current: number, total: number }>>({});
   const [isSteamLoaded, setIsSteamLoaded] = useState(false);
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState(false);
+  const [steamAchievementSource, setSteamAchievementSource] = useState<'steamworks' | 'steamapi'>('steamworks');
   const steamUnlistenRef = useRef<(() => void) | null>(null);
 
   const getLocalAchievementCounts = (game: GameAchievements) => ({
@@ -244,6 +245,10 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
             console.log('[Steam Integration] Loading setting:', loadedSettings.steamIntegrationEnabled);
             setSteamIntegrationEnabled(loadedSettings.steamIntegrationEnabled);
           }
+          if (loadedSettings?.steamAchievementSource) {
+            setSteamAchievementSource(loadedSettings.steamAchievementSource === 'api' ? 'steamapi' : loadedSettings.steamAchievementSource);
+            setSteamGameAchievements({});
+          }
         }
       } catch (error) {
         console.error('Error loading Steam integration setting:', error);
@@ -340,7 +345,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
         // Fetch in parallel
         await Promise.all(gamesToFetch.map(async (game) => {
           try {
-            const gameAchievements = await getSteamGameAchievements(Number(game.gameId));
+            const gameAchievements = (await getAchievementsForGameSource(game.gameId, true)).achievements;
             const currentCount = gameAchievements.filter((a: any) => a.achieved).length;
 
             setSteamGameAchievements(prev => ({
@@ -358,7 +363,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     };
 
     fetchSteamGameAchievements();
-  }, [steamGames]); // No 'steamGameAchievements' dependency to avoid infinite loop if we update state inside
+  }, [steamGames, steamAchievementSource]); // No 'steamGameAchievements' dependency to avoid infinite loop if we update state inside
 
   const openDirectorySelection = (gameId: string) => {
     const duplicate = duplicateGames.find(d => d.gameId === gameId);

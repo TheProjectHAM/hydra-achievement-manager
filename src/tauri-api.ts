@@ -6,6 +6,9 @@ import { SteamAchievementData } from "./types";
 
 console.log("🚀 [TAURI-API] Module loaded with fallback support (Tauri v2)");
 
+const inFlightAchievementRequests = new Map<string, Promise<any>>();
+const inFlightSteamGameRequests = new Map<number, Promise<SteamAchievementData[]>>();
+
 const mapUiLanguageToSteamStoreLanguage = (language?: string): string => {
   switch (language) {
     case "pt-BR":
@@ -53,6 +56,9 @@ export const minimizeWindow = () => invoke("minimize_window");
 export const maximizeWindow = () => invoke("maximize_window");
 export const closeWindow = () => invoke("close_window");
 
+export const setWindowDecorations = (decorations: boolean) =>
+  invoke<void>("set_window_decorations", { decorations });
+
 // Achievements
 export const requestAchievements = async () => {
   try {
@@ -80,6 +86,10 @@ export const getGameNameFallback = async (game_id: string): Promise<string> => {
     );
     return await getGameNameBackend(game_id);
   } catch (error) {
+    if (options.forceSteamApi) {
+      throw error;
+    }
+
     console.warn(
       `⚠️ [FALLBACK] Backend failed for game name ${game_id}, using Tauri HTTP plugin:`,
       error,
@@ -204,36 +214,50 @@ export const searchSteamGamesFallback = async (
 
 export const searchSteamGames = searchSteamGamesFallback;
 
-export const getGameAchievementsBackend = async (gameId: string) => {
+export const getGameAchievementsBackend = async (
+  gameId: string,
+  options: { forceSteamApi?: boolean } = {},
+) => {
   const settings = await loadSettings().catch(() => null);
   return invoke<any>("get_game_achievements", {
     gameId,
     language: settings?.language || "en-US",
+    forceSteamApi: options.forceSteamApi || false,
   });
 };
 
-export const getGameAchievementsFallback = async (game_id: string) => {
-  try {
-    const settings = await loadSettings();
-    if (settings?.forceFrontendFetch) {
+export const getGameAchievementsFallback = async (
+  game_id: string,
+  options: { forceSteamApi?: boolean } = {},
+) => {
+  const requestKey = `${game_id}:${options.forceSteamApi ? "steamapi" : "default"}`;
+  const inFlightRequest = inFlightAchievementRequests.get(requestKey);
+  if (inFlightRequest) {
+    return inFlightRequest;
+  }
+
+  const request = (async () => {
+    try {
+      const settings = await loadSettings();
+      if (settings?.forceFrontendFetch && !options.forceSteamApi) {
+        console.log(
+          `🌐 [FRONTEND] Force frontend fetch enabled - skipping backend for achievements ${game_id}`,
+        );
+        throw new Error("Force frontend fetch enabled");
+      }
       console.log(
-        `🌐 [FRONTEND] Force frontend fetch enabled - skipping backend for achievements ${game_id}`,
+        `🔧 [BACKEND] Attempting backend fetch for achievements ${game_id}`,
       );
-      throw new Error("Force frontend fetch enabled");
-    }
-    console.log(
-      `🔧 [BACKEND] Attempting backend fetch for achievements ${game_id}`,
-    );
-    const result = await getGameAchievementsBackend(game_id);
-    return result;
-  } catch (error) {
-    console.warn(
-      `⚠️ [FALLBACK] Backend failed for achievements ${game_id}, using Tauri HTTP plugin:`,
-      error,
-    );
-    const settings = await loadSettings().catch(() => null);
-    const hydraLanguage = mapUiLanguageToHydraLanguage(settings?.language);
-    const hydraUrl = `https://hydra-api-us-east-1.losbroxas.org/games/achievements?shop=steam&objectId=${game_id}&language=${hydraLanguage}`;
+      const result = await getGameAchievementsBackend(game_id, options);
+      return result;
+    } catch (error) {
+      console.warn(
+        `⚠️ [FALLBACK] Backend failed for achievements ${game_id}, using Tauri HTTP plugin:`,
+        error,
+      );
+      const settings = await loadSettings().catch(() => null);
+      const hydraLanguage = mapUiLanguageToHydraLanguage(settings?.language);
+      const hydraUrl = `https://hydra-api-us-east-1.losbroxas.org/games/achievements?shop=steam&objectId=${game_id}&language=${hydraLanguage}`;
 
     try {
       const response = await tauriFetch(hydraUrl, {
@@ -259,10 +283,45 @@ export const getGameAchievementsFallback = async (game_id: string) => {
       );
       throw error; // Re-throw original error if fallback fails
     }
-  }
+    }
+  })();
+
+  inFlightAchievementRequests.set(requestKey, request);
+  request.then(
+    () => inFlightAchievementRequests.delete(requestKey),
+    () => inFlightAchievementRequests.delete(requestKey),
+  );
+  return request;
 };
 
 export const getGameAchievements = getGameAchievementsFallback;
+
+export const shouldUseSteamworksAchievements = async () => {
+  const settings = await loadSettings().catch(() => null);
+  return !["steamapi", "api"].includes(settings?.steamAchievementSource);
+};
+
+export const getSteamAchievementSource = async (): Promise<"steamworks" | "steamapi"> => {
+  const settings = await loadSettings().catch(() => null);
+  return ["steamapi", "api"].includes(settings?.steamAchievementSource)
+    ? "steamapi"
+    : "steamworks";
+};
+
+export const getAchievementsForGameSource = async (
+  gameId: string | number,
+  isSteamGame: boolean,
+) => {
+  if (isSteamGame && (await shouldUseSteamworksAchievements())) {
+    return { achievements: await getSteamGameAchievements(Number(gameId)) };
+  }
+
+  if (isSteamGame) {
+    return getGameAchievements(String(gameId), { forceSteamApi: true });
+  }
+
+  return getGameAchievements(String(gameId));
+};
 
 export const reloadAchievements = (gameId: string, basePath: string) =>
   invoke<any>("reload_achievements", { gameId, basePath });
@@ -464,10 +523,37 @@ export const isSteamAvailable = () => invoke<boolean>("is_steam_available");
 export const getSteamUserInfo = () =>
   invoke<{ userId: string; userName: string }>("get_steam_user_info");
 
-export const getSteamGames = () => invoke<any[]>("get_steam_games");
+let inFlightSteamGamesRequest: Promise<any[]> | null = null;
+export const getSteamGames = () => {
+  if (!inFlightSteamGamesRequest) {
+    inFlightSteamGamesRequest = invoke<any[]>("get_steam_games");
+    inFlightSteamGamesRequest.then(
+      () => {
+        inFlightSteamGamesRequest = null;
+      },
+      () => {
+        inFlightSteamGamesRequest = null;
+      },
+    );
+  }
 
-export const getSteamGameAchievements = (appId: number) =>
-  invoke<SteamAchievementData[]>("get_steam_game_achievements", { appId });
+  return inFlightSteamGamesRequest;
+};
+
+export const getSteamGameAchievements = (appId: number) => {
+  const inFlightRequest = inFlightSteamGameRequests.get(appId);
+  if (inFlightRequest) {
+    return inFlightRequest;
+  }
+
+  const request = invoke<SteamAchievementData[]>("get_steam_game_achievements", { appId });
+  inFlightSteamGameRequests.set(appId, request);
+  request.then(
+    () => inFlightSteamGameRequests.delete(appId),
+    () => inFlightSteamGameRequests.delete(appId),
+  );
+  return request;
+};
 
 export const setSteamAchievement = (
   achievementName: string,

@@ -4,8 +4,10 @@ import { SteamBrandIcon, HydraIcon } from '../Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getHydraConnectionProfile, getSteamConnectionProfile } from '../../tauri-api';
+import { SteamAchievementSource } from '../../types';
 
 type ConnectionKind = 'steam' | 'hydra';
 
@@ -20,6 +22,8 @@ interface ConnectionProfile {
 interface ConnectionsSettingsProps {
   steamIntegrationEnabled: boolean;
   setSteamIntegrationEnabled: (enabled: boolean) => void;
+  steamAchievementSource: SteamAchievementSource;
+  setSteamAchievementSource: (source: SteamAchievementSource) => void;
   hideSteamGamesWithoutAchievements: boolean;
   setHideSteamGamesWithoutAchievements: (enabled: boolean) => void;
 }
@@ -122,6 +126,8 @@ const SettingsRow: React.FC<{
 const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   steamIntegrationEnabled,
   setSteamIntegrationEnabled,
+  steamAchievementSource,
+  setSteamAchievementSource,
   hideSteamGamesWithoutAchievements,
   setHideSteamGamesWithoutAchievements,
 }) => {
@@ -377,6 +383,43 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                           disabled={!canEnableSteamIntegration}
                           onCheckedChange={setSteamIntegrationEnabled}
                         />
+                      </div>
+                    }
+                  />
+
+                  <SettingsRow
+                    title={t('settings.connections.steamAchievementSource')}
+                    description={t('settings.connections.steamAchievementSourceDesc')}
+                    trailing={
+                      <div className="flex rounded-md border border-border bg-background p-0.5">
+                        {([
+                          ['steamworks', t('settings.connections.steamworksSource'), t('settings.connections.steamworksSourceTooltip')],
+                          ['steamapi', t('settings.connections.steamApiSource'), t('settings.connections.steamApiSourceTooltip')],
+                        ] as const).map(([value, label, tooltip]) => (
+                          <TooltipProvider key={value} delay={250}>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <button
+                                    type="button"
+                                    onClick={() => setSteamAchievementSource(value)}
+                                    className={cn(
+                                      'h-7 px-2.5 rounded text-[10px] font-semibold transition-colors',
+                                      steamAchievementSource === value
+                                        ? 'bg-accent text-foreground'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                    )}
+                                  >
+                                    {label}
+                                  </button>
+                                }
+                              />
+                              <TooltipContent className="max-w-64 text-center leading-relaxed" side="top">
+                                {tooltip}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ))}
                       </div>
                     }
                   />

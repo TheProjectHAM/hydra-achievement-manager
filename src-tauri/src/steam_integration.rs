@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -27,6 +27,8 @@ pub struct SteamGame {
 /// Representa uma conquista Steam
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SteamAchievementData {
+    #[serde(default)]
+    pub apiname: String,
     pub name: String,
     #[serde(rename = "displayName")]
     pub display_name: String,
@@ -48,7 +50,10 @@ pub struct SteamIntegration {
 }
 
 impl SteamIntegration {
-    fn pump_callbacks(single_client: &Option<Arc<Mutex<SingleClient<ClientManager>>>>, cycles: usize) {
+    fn pump_callbacks(
+        single_client: &Option<Arc<Mutex<SingleClient<ClientManager>>>>,
+        cycles: usize,
+    ) {
         for _ in 0..cycles {
             if let Some(single_client_lock) = single_client {
                 if let Ok(single_client) = single_client_lock.lock() {
@@ -134,7 +139,7 @@ impl SteamIntegration {
         std::env::set_var("SteamAppId", &app_id);
         std::env::set_var("SteamGameId", &app_id);
         Self::ensure_steam_appid_file(&app_id);
-        
+
         // Tentamos inicializar o cliente Steam.
         // O steamworks-rs pode entrar em pânico ou retornar erro se as DLLs não estiverem lá,
         // mas o catch_unwind não é prático aqui por causa de tipos não-unwind-safe.
@@ -161,13 +166,13 @@ impl SteamIntegration {
     /// Muda o AppID atual criando um novo cliente
     pub fn switch_app_id(&mut self, app_id: u32) -> Result<()> {
         log::info!("Switching Steam AppID to {}", app_id);
-        
+
         // 1. Determina o caminho para o steam_appid.txt ao lado do executável
         let appid_path = Self::get_steam_appid_path()?;
 
         log::debug!("Writing AppID {} to {:?}", app_id, appid_path);
         let _ = std::fs::write(&appid_path, app_id.to_string());
-        
+
         // 2. Define a variável de ambiente (garante que a DLL da Steam leia o ID correto)
         std::env::set_var("SteamAppId", app_id.to_string());
         std::env::set_var("SteamGameId", app_id.to_string());
@@ -222,11 +227,20 @@ impl SteamIntegration {
                     let path = entry.path();
                     if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("acf") {
                         if let Ok(content) = std::fs::read_to_string(&path) {
-                            if let (Some(appid), Some(name)) = (self.parse_acf_value(&content, "appid"), self.parse_acf_value(&content, "name")) {
+                            if let (Some(appid), Some(name)) = (
+                                self.parse_acf_value(&content, "appid"),
+                                self.parse_acf_value(&content, "name"),
+                            ) {
                                 if !games.iter().any(|g: &SteamGame| g.game_id == appid) {
-                                    let installdir = self.parse_acf_value(&content, "installdir").unwrap_or_default();
+                                    let installdir = self
+                                        .parse_acf_value(&content, "installdir")
+                                        .unwrap_or_default();
                                     let install_path = if installdir.is_empty() {
-                                        folder.join("steamapps").join("common").to_string_lossy().to_string()
+                                        folder
+                                            .join("steamapps")
+                                            .join("common")
+                                            .to_string_lossy()
+                                            .to_string()
                                     } else {
                                         folder
                                             .join("steamapps")
@@ -238,7 +252,7 @@ impl SteamIntegration {
                                     games.push(SteamGame {
                                         game_id: appid,
                                         name,
-                                        achievements_total: 0, 
+                                        achievements_total: 0,
                                         achievements_current: 0,
                                         source: "steam".to_string(),
                                         library_path: folder.to_string_lossy().to_string(),
@@ -261,7 +275,10 @@ impl SteamIntegration {
         let key_with_quotes = format!("\"{}\"", key);
         for line in content.lines() {
             let line = line.trim();
-            if line.to_lowercase().contains(&key_with_quotes.to_lowercase()) {
+            if line
+                .to_lowercase()
+                .contains(&key_with_quotes.to_lowercase())
+            {
                 let parts: Vec<&str> = line.split('\"').collect();
                 if parts.len() >= 4 {
                     return Some(parts[3].to_string());
@@ -277,18 +294,23 @@ impl SteamIntegration {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self.client.as_ref()
+        let client_lock = self
+            .client
+            .as_ref()
             .context("Steam client not initialized")?;
-        
-        let guard = client_lock.lock().map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
+
+        let guard = client_lock
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
         let user_stats = client.user_stats();
         user_stats.request_current_stats();
         Self::pump_callbacks(&self.single_client, 10);
 
-        let achievement_names = catch_unwind(AssertUnwindSafe(|| user_stats.get_achievement_names()))
-            .map_err(|_| anyhow::anyhow!("Steam did not return achievements for this AppID"))?;
+        let achievement_names =
+            catch_unwind(AssertUnwindSafe(|| user_stats.get_achievement_names()))
+                .map_err(|_| anyhow::anyhow!("Steam did not return achievements for this AppID"))?;
 
         let Some(achievement_names) = achievement_names else {
             drop(guard);
@@ -309,8 +331,16 @@ impl SteamIntegration {
                 .unwrap_or("")
                 .to_string();
 
+            let fallback_name = name.clone();
+            let friendly_name = if display_name.trim().is_empty() {
+                fallback_name.clone()
+            } else {
+                display_name.clone()
+            };
+
             achievements.push(SteamAchievementData {
-                name,
+                apiname: fallback_name,
+                name: friendly_name,
                 display_name,
                 description,
                 achieved,
@@ -331,14 +361,18 @@ impl SteamIntegration {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self.client.as_ref()
+        let client_lock = self
+            .client
+            .as_ref()
             .context("Steam client not initialized")?;
-        
-        let guard = client_lock.lock().map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
+
+        let guard = client_lock
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
         let user_stats = client.user_stats();
-        
+
         let achievement = user_stats.achievement(achievement_name);
         let current_state = achievement
             .get()
@@ -355,19 +389,25 @@ impl SteamIntegration {
         }
 
         if unlocked {
-            achievement.set().map_err(|_| anyhow::anyhow!("Failed to set achievement"))?;
+            achievement
+                .set()
+                .map_err(|_| anyhow::anyhow!("Failed to set achievement"))?;
             log::info!("Achievement '{}' unlocked", achievement_name);
         } else {
-            achievement.clear().map_err(|_| anyhow::anyhow!("Failed to clear achievement"))?;
+            achievement
+                .clear()
+                .map_err(|_| anyhow::anyhow!("Failed to clear achievement"))?;
             log::info!("Achievement '{}' locked", achievement_name);
         }
 
         // Salva as mudanças
-        user_stats.store_stats().map_err(|_| anyhow::anyhow!("Failed to store stats"))?;
+        user_stats
+            .store_stats()
+            .map_err(|_| anyhow::anyhow!("Failed to store stats"))?;
         Self::pump_callbacks(&self.single_client, 5);
-        
+
         drop(guard);
-        
+
         Ok(())
     }
 
@@ -377,18 +417,24 @@ impl SteamIntegration {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self.client.as_ref()
+        let client_lock = self
+            .client
+            .as_ref()
             .context("Steam client not initialized")?;
-        
-        let guard = client_lock.lock().map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
+
+        let guard = client_lock
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
         let user_stats = client.user_stats();
         let achievement = user_stats.achievement(achievement_name);
-        let unlocked = achievement.get().map_err(|_| anyhow::anyhow!("Failed to get achievement status"))?;
-        
+        let unlocked = achievement
+            .get()
+            .map_err(|_| anyhow::anyhow!("Failed to get achievement status"))?;
+
         drop(guard);
-        
+
         Ok(unlocked)
     }
 
@@ -411,18 +457,22 @@ impl SteamIntegration {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self.client.as_ref()
+        let client_lock = self
+            .client
+            .as_ref()
             .context("Steam client not initialized")?;
-        
-        let guard = client_lock.lock().map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
+
+        let guard = client_lock
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
         let friends = client.friends();
         let user_id = client.user().steam_id().raw().to_string();
         let user_name = friends.name();
-        
+
         drop(guard);
-        
+
         Ok((user_id, user_name))
     }
 

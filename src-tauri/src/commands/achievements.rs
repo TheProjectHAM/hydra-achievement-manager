@@ -13,89 +13,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 
-fn extract_xml_tag_value(line: &str, tag: &str) -> Option<String> {
-    let open = format!("<{}>", tag);
-    let close = format!("</{}>", tag);
-    let start = line.find(&open)? + open.len();
-    let end = line[start..].find(&close)? + start;
-    Some(line[start..end].trim().to_string())
-}
-
-fn flush_current_steam_achievement(
-    map: &mut HashMap<String, (i32, i64)>,
-    current_name: &mut Option<String>,
-    current_achieved: &mut Option<i32>,
-    current_unlock_time: &mut Option<i64>,
-) {
-    if let (Some(name), Some(achieved), Some(unlock_time)) = (
-        current_name.take(),
-        current_achieved.take(),
-        current_unlock_time.take(),
-    ) {
-        map.insert(name, (achieved, unlock_time));
-    }
-}
-
-fn parse_steam_community_achievement_xml(xml_content: &str) -> HashMap<String, (i32, i64)> {
-    let mut map = HashMap::new();
-    let mut current_name: Option<String> = None;
-    let mut current_achieved: Option<i32> = None;
-    let mut current_unlock_time: Option<i64> = None;
-    let mut in_achievement = false;
-
-    for line in xml_content.lines() {
-        let trimmed = line.trim();
-
-        if trimmed.starts_with("<achievement") {
-            in_achievement = true;
-            current_name = None;
-            current_achieved = None;
-            current_unlock_time = None;
-            continue;
-        }
-
-        if trimmed.starts_with("</achievement>") {
-            flush_current_steam_achievement(
-                &mut map,
-                &mut current_name,
-                &mut current_achieved,
-                &mut current_unlock_time,
-            );
-            in_achievement = false;
-            continue;
-        }
-
-        if !in_achievement {
-            continue;
-        }
-
-        if let Some(name) = extract_xml_tag_value(trimmed, "apiname") {
-            current_name = Some(name);
-        }
-
-        if let Some(achieved) = extract_xml_tag_value(trimmed, "achieved") {
-            current_achieved = Some(achieved.parse().unwrap_or(0));
-        }
-
-        if let Some(unlock_time) = extract_xml_tag_value(trimmed, "unlocktime") {
-            current_unlock_time = Some(unlock_time.parse().unwrap_or(0));
-        }
-    }
-
-    flush_current_steam_achievement(
-        &mut map,
-        &mut current_name,
-        &mut current_achieved,
-        &mut current_unlock_time,
-    );
-    map
-}
-
 /// Obtém achievements de um jogo
 #[tauri::command]
 pub async fn get_game_achievements(
     game_id: String,
     language: Option<String>,
+    force_steam_api: Option<bool>,
     state: tauri::State<'_, crate::AppState>,
     app_handle: AppHandle,
 ) -> Result<Value, String> {
@@ -107,7 +30,7 @@ pub async fn get_game_achievements(
 
     let mut selected_api = "hydra".to_string();
     let mut steam_api_key = String::new();
-    let mut steam_id = String::new();
+    let mut saved_steam_id = String::new();
     let mut settings_language: Option<String> = None;
 
     if settings_path.exists() {
@@ -117,10 +40,10 @@ pub async fn get_game_achievements(
                     selected_api = api.to_string();
                 }
                 if let Some(key) = settings.get("steamApiKey").and_then(|v| v.as_str()) {
-                    steam_api_key = key.to_string();
+                    steam_api_key = key.trim().to_string();
                 }
                 if let Some(id) = settings.get("steamId").and_then(|v| v.as_str()) {
-                    steam_id = id.to_string();
+                    saved_steam_id = SteamAPI::normalize_steam_id(id).unwrap_or_default();
                 }
                 if let Some(lang) = settings.get("language").and_then(|v| v.as_str()) {
                     settings_language = Some(lang.to_string());
@@ -128,46 +51,68 @@ pub async fn get_game_achievements(
             }
         }
     }
-    let language = language.or(settings_language).unwrap_or_else(|| "en-US".to_string());
+    if force_steam_api.unwrap_or(false) {
+        selected_api = "steam".to_string();
+    }
+
+    let active_steam_id = {
+        let steam_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
+        if let Some(steam_monitor) = &*steam_lock {
+            let mut initialized_here = false;
+            if !steam_monitor.is_enabled() {
+                let _ = steam_monitor.initialize();
+                initialized_here = true;
+            }
+
+            let id = if steam_monitor.is_enabled() {
+                steam_monitor.get_user_info().ok().map(|(id, _)| id)
+            } else {
+                None
+            };
+
+            if initialized_here && steam_monitor.is_enabled() {
+                let _ = steam_monitor.shutdown();
+            }
+
+            id.and_then(|id| SteamAPI::normalize_steam_id(&id))
+        } else {
+            None
+        }
+    };
+
+    let mut steam_id = active_steam_id.unwrap_or_else(|| saved_steam_id.clone());
+
+    if steam_id.is_empty() {
+        if let Ok(Some(profile)) = crate::connections::steam::get_steam_profile() {
+            steam_id =
+                SteamAPI::normalize_steam_id(&profile.steam_id64).unwrap_or(profile.steam_id64);
+        }
+    }
+
+    if !steam_id.is_empty() && steam_id != saved_steam_id {
+        let _ = save_settings(serde_json::json!({ "steamId": steam_id.clone() }), app_handle.clone()).await;
+    }
+
+    let language = language
+        .or(settings_language)
+        .unwrap_or_else(|| "en-US".to_string());
     log::info!(
         "Getting achievements for game_id: {} using api: {}",
         game_id,
         selected_api
     );
     if selected_api == "steam" {
-        log::info!("Steam Info: ID={}, KeyLength={}", steam_id, steam_api_key.len());
+        log::info!(
+            "Steam Info: ID={}, KeyLength={}",
+            steam_id,
+            steam_api_key.len()
+        );
     }
 
-    if steam_id.is_empty() {
-        let resolved_id = {
-            let steam_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
-            if let Some(steam_monitor) = &*steam_lock {
-                let mut initialized_here = false;
-                if !steam_monitor.is_enabled() {
-                    let _ = steam_monitor.initialize();
-                    initialized_here = true;
-                }
-
-                let id = if steam_monitor.is_enabled() {
-                    steam_monitor.get_user_info().ok().map(|(id, _)| id)
-                } else {
-                    None
-                };
-
-                if initialized_here && steam_monitor.is_enabled() {
-                    let _ = steam_monitor.shutdown();
-                }
-
-                id
-            } else {
-                None
-            }
-        };
-
-        if let Some(id) = resolved_id {
-            steam_id = id.clone();
-            let _ = save_settings(serde_json::json!({ "steamId": id }), app_handle.clone()).await;
-        }
+    if force_steam_api.unwrap_or(false) && steam_api_key.is_empty() {
+        return Err(
+            "Steam API key is required to fetch Steam achievements through Steam API".to_string(),
+        );
     }
 
     let steam_language = map_ui_language_to_steam_store_lang(&language);
@@ -177,19 +122,42 @@ pub async fn get_game_achievements(
         let app_id: u32 = game_id
             .parse()
             .map_err(|e: std::num::ParseIntError| e.to_string())?;
-        let mut schema_achievements = SteamAPI::get_game_achievements(app_id, &steam_api_key, steam_language)
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut schema_achievements =
+            SteamAPI::get_game_achievements(app_id, &steam_api_key, steam_language)
+                .await
+                .map_err(|e| e.to_string())?;
 
         if !steam_id.is_empty() {
-            if let Ok(player_achievements) =
-                SteamAPI::get_player_achievements(app_id, &steam_api_key, &steam_id).await
-            {
-                let player_map: HashMap<String, i32> =
-                    player_achievements.iter().map(|a| (a.apiname.clone(), a.achieved)).collect();
+            let player_achievements_result =
+                match SteamAPI::get_player_achievements(app_id, &steam_api_key, &steam_id).await {
+                    Ok(player_achievements) => Ok(player_achievements),
+                    Err(error) => {
+                        if SteamAPI::is_player_achievements_forbidden(&error) {
+                            log::debug!(
+                                "Steam player achievements for app {} are not accessible through Steam Web API (profile/game details may be private)",
+                                app_id
+                            );
+                        } else {
+                            log::warn!(
+                                "Steam Web API achievements failed for app {} ({}).",
+                                app_id,
+                                error
+                            );
+                        }
+                        Err(error)
+                    }
+                };
 
-                let time_map: HashMap<String, i64> =
-                    player_achievements.iter().map(|a| (a.apiname.clone(), a.unlocktime)).collect();
+            if let Ok(player_achievements) = player_achievements_result {
+                let player_map: HashMap<String, i32> = player_achievements
+                    .iter()
+                    .map(|a| (a.apiname.clone(), a.achieved))
+                    .collect();
+
+                let time_map: HashMap<String, i64> = player_achievements
+                    .iter()
+                    .map(|a| (a.apiname.clone(), a.unlocktime))
+                    .collect();
 
                 for ach in &mut schema_achievements {
                     if let Some(achieved) = player_map.get(&ach.apiname) {
@@ -207,30 +175,44 @@ pub async fn get_game_achievements(
             .await
             .map_err(|e| e.to_string())?;
 
-        let mut final_achievements = serde_json::to_value(result.achievements).map_err(|e| e.to_string())?;
+        let mut final_achievements =
+            serde_json::to_value(result.achievements).map_err(|e| e.to_string())?;
 
         if let Ok(app_id) = game_id.parse::<u32>() {
             let mut steam_status_map: HashMap<String, (i32, i64)> = HashMap::new();
 
             if !steam_api_key.is_empty() && !steam_id.is_empty() {
-                if let Ok(player_achievements) =
-                    SteamAPI::get_player_achievements(app_id, &steam_api_key, &steam_id).await
+                let player_achievements_result = match SteamAPI::get_player_achievements(
+                    app_id,
+                    &steam_api_key,
+                    &steam_id,
+                )
+                .await
                 {
+                    Ok(player_achievements) => Ok(player_achievements),
+                    Err(error) => {
+                        if SteamAPI::is_player_achievements_forbidden(&error) {
+                            log::debug!(
+                                "Steam player achievement status for app {} is not accessible through Steam Web API (profile/game details may be private)",
+                                app_id
+                            );
+                        } else {
+                            log::warn!(
+                                "Steam Web API status merge failed for app {} ({}).",
+                                app_id,
+                                error
+                            );
+                        }
+                        Err(error)
+                    }
+                };
+
+                if let Ok(player_achievements) = player_achievements_result {
                     for ach in player_achievements {
                         steam_status_map.insert(ach.apiname, (ach.achieved, ach.unlocktime));
                     }
                 }
             } else if !steam_id.is_empty() {
-                let base_url =
-                    std::env::var("STEAM_COMMUNITY_URL").unwrap_or_else(|_| "https://steamcommunity.com".to_string());
-
-                let url = format!("{}/profiles/{}/stats/{}/?xml=1", base_url, steam_id, app_id);
-
-                let xml_client = crate::utils::http::get_client().map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-                let response = xml_client.get(&url).send().await.map_err(|e| e.to_string())?;
-
-                let xml_content: String = response.text().await.map_err(|e| e.to_string())?;
-                steam_status_map = parse_steam_community_achievement_xml(&xml_content);
             }
 
             if !steam_status_map.is_empty() {
@@ -239,8 +221,14 @@ pub async fn get_game_achievements(
                         if let Some(name) = ach.get("name").and_then(|v| v.as_str()) {
                             if let Some((achieved, unlocktime)) = steam_status_map.get(name) {
                                 if let Some(obj) = ach.as_object_mut() {
-                                    obj.insert("achieved".to_string(), serde_json::json!(*achieved > 0));
-                                    obj.insert("unlockTime".to_string(), serde_json::json!(unlocktime));
+                                    obj.insert(
+                                        "achieved".to_string(),
+                                        serde_json::json!(*achieved > 0),
+                                    );
+                                    obj.insert(
+                                        "unlockTime".to_string(),
+                                        serde_json::json!(unlocktime),
+                                    );
                                 }
                             }
                         }
@@ -316,34 +304,6 @@ pub async fn get_game_achievements(
     }))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::parse_steam_community_achievement_xml;
-
-    #[test]
-    fn parses_steam_community_achievement_xml_blocks() {
-        let xml = r#"
-            <stats>
-              <achievement>
-                <apiname>FIRST_BLOOD</apiname>
-                <achieved>1</achieved>
-                <unlocktime>1710000000</unlocktime>
-              </achievement>
-              <achievement>
-                <apiname>SECOND_WIND</apiname>
-                <achieved>0</achieved>
-                <unlocktime>0</unlocktime>
-              </achievement>
-            </stats>
-        "#;
-
-        let parsed = parse_steam_community_achievement_xml(xml);
-
-        assert_eq!(parsed.get("FIRST_BLOOD"), Some(&(1, 1_710_000_000)));
-        assert_eq!(parsed.get("SECOND_WIND"), Some(&(0, 0)));
-    }
-}
-
 /// Recarrega achievements de um arquivo
 #[tauri::command]
 pub async fn reload_achievements(
@@ -363,9 +323,17 @@ pub async fn reload_achievements(
         AchievementParser::achievement_file_for_config(&expanded_base_path, &game_id, preset).0
     };
 
-    let achievements = AchievementParser::parse_achievement_file_auto(&file_path).map_err(|e| e.to_string())?;
+    let achievements =
+        AchievementParser::parse_achievement_file_auto(&file_path).map_err(|e| e.to_string())?;
 
-    let _ = CacheManager::update_game(&app_handle, game_id.clone(), None, Some(achievements.len()), None, None);
+    let _ = CacheManager::update_game(
+        &app_handle,
+        game_id.clone(),
+        None,
+        Some(achievements.len()),
+        None,
+        None,
+    );
 
     Ok(serde_json::json!({
         "gameId": game_id,
@@ -401,7 +369,9 @@ pub async fn unlock_achievements(
                         .game_id
                         .parse::<u32>()
                         .map_err(|_| "Invalid Steam AppID".to_string())?;
-                    steam_monitor.switch_app_id(app_id).map_err(|e| e.to_string())?;
+                    steam_monitor
+                        .switch_app_id(app_id)
+                        .map_err(|e| e.to_string())?;
 
                     for achievement in &options.achievements {
                         steam_monitor
@@ -424,13 +394,16 @@ pub async fn unlock_achievements(
     }
 
     let preset = directory_preset_for_path(&state, &options.selected_path).unwrap_or_default();
-    AchievementUnlocker::unlock_achievements_with_preset(&options, preset).map_err(|e| e.to_string())?;
+    AchievementUnlocker::unlock_achievements_with_preset(&options, preset)
+        .map_err(|e| e.to_string())?;
 
     if let Err(e) = refresh_monitor_after_local_unlock(&state, app_handle.clone()).await {
         log::warn!("Failed to refresh monitor after local unlock: {}", e);
     }
 
-    app_handle.emit("achievements-updated", ()).map_err(|e| e.to_string())?;
+    app_handle
+        .emit("achievements-updated", ())
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -471,14 +444,16 @@ async fn refresh_monitor_after_local_unlock(
             .ok_or_else(|| "Monitor not initialized".to_string())?;
 
         let current = monitor.get_directories();
-        let custom_dirs: Vec<DirectoryConfig> = current.iter().filter(|d| !d.is_default).cloned().collect();
+        let custom_dirs: Vec<DirectoryConfig> =
+            current.iter().filter(|d| !d.is_default).cloned().collect();
         let default_enabled: std::collections::HashMap<String, bool> = current
             .iter()
             .filter(|d| d.is_default)
             .map(|d| (d.name.clone(), d.enabled))
             .collect();
 
-        let mut next = super::directories::build_default_directory_configs(saved_wine_prefix.as_deref());
+        let mut next =
+            super::directories::build_default_directory_configs(saved_wine_prefix.as_deref());
         for dir in &mut next {
             if let Some(enabled) = default_enabled.get(&dir.name) {
                 dir.enabled = *enabled;
@@ -506,7 +481,10 @@ const EXPORT_COOLDOWN: u64 = 2000;
 
 /// Exporta achievements
 #[tauri::command]
-pub async fn export_achievements(game_id: String, app_handle: AppHandle) -> Result<serde_json::Value, String> {
+pub async fn export_achievements(
+    game_id: String,
+    app_handle: AppHandle,
+) -> Result<serde_json::Value, String> {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|e| e.to_string())?
@@ -552,12 +530,16 @@ pub async fn export_achievements(game_id: String, app_handle: AppHandle) -> Resu
     };
 
     let mut language = "en-US".to_string();
-    let settings = load_settings(app_handle.clone()).await.unwrap_or(serde_json::json!({}));
+    let settings = load_settings(app_handle.clone())
+        .await
+        .unwrap_or(serde_json::json!({}));
     if let Some(lang) = settings.get("language").and_then(|v| v.as_str()) {
         language = lang.to_string();
     }
 
-    match AchievementExporter::export_achievements(&game_id, export_dir, &language, &app_handle).await {
+    match AchievementExporter::export_achievements(&game_id, export_dir, &language, &app_handle)
+        .await
+    {
         Ok(_) => Ok(serde_json::json!({
             "success": true
         })),

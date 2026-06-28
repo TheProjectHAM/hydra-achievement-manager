@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import TitleBar from './components/TitleBar';
+import WindowResizeHandles from './components/WindowResizeHandles';
 import Sidebar from './components/Sidebar';
 import { TABS } from './constants';
 import { SteamSearchResult, Achievement, AchievementStatus, Timestamp, TimeFormat } from './types';
@@ -15,7 +16,7 @@ import GamesContent from './pages/Games';
 import AchievementsContent from './pages/Achievements';
 import ExportPage from './pages/Export';
 import InitialWizard from './pages/InitialWizard';
-import { unlockAchievements, reloadAchievements, getSteamGameAchievements, getSteamLibraryInfo, getAchievementIniLastModified } from './tauri-api';
+import { unlockAchievements, reloadAchievements, getAchievementsForGameSource, getSteamLibraryInfo, getAchievementIniLastModified } from './tauri-api';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
@@ -527,7 +528,7 @@ const App: React.FC = () => {
       // Reload achievements data from the saved file or Steamworks.
       try {
         const result = isSteam
-          ? { achievements: await getSteamGameAchievements(Number(gameId)) }
+          ? await getAchievementsForGameSource(gameId, true)
           : await reloadAchievements(gameId, path);
 
         // Convert parsed achievements to achievementStatus format
@@ -535,7 +536,7 @@ const App: React.FC = () => {
 
         result.achievements.forEach((ach: any) => {
           if (ach.achieved) {
-            const unlockTime = Number(ach.unlockTime || 0);
+              const unlockTime = Number(ach.unlockTime ?? ach.unlocktime ?? 0);
             const unlockDate = unlockTime > 0 ? new Date(unlockTime * 1000) : null;
             const timestamp: Timestamp = unlockDate && !isNaN(unlockDate.getTime())
               ? {
@@ -780,6 +781,7 @@ const App: React.FC = () => {
 
   return (
     <div className="w-screen h-screen overflow-hidden text-foreground flex flex-col">
+      <WindowResizeHandles />
       <TitleBar />
       <div
         className="flex flex-1 overflow-hidden bg-background"

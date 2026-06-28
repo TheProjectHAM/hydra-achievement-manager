@@ -28,6 +28,8 @@ import {
   SidebarGameScale,
   ApiSource,
   GamesViewMode,
+  SteamAchievementSource,
+  TitleBarMode,
 } from "../types";
 import { useTheme, Theme } from "../contexts/ThemeContext";
 import { useI18n, Language } from "../contexts/I18nContext";
@@ -77,6 +79,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     sidebarWidth,
     gamesViewMode,
     setGamesViewMode,
+    titleBarMode,
+    setTitleBarMode,
   } = useTheme();
 
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(language);
@@ -91,12 +95,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     useState<boolean>(sidebarMarquee);
   const [selectedGamesViewMode, setSelectedGamesViewMode] =
     useState<GamesViewMode>(gamesViewMode);
+  const [selectedTitleBarMode, setSelectedTitleBarMode] =
+    useState<TitleBarMode>(titleBarMode);
   const [selectedHideHiddenAchievements, setSelectedHideHiddenAchievements] =
     useState<boolean>(hideHiddenAchievements);
   const [selectedApi, setSelectedApi] = useState<ApiSource>("hydra");
   const [steamApiKey, setSteamApiKey] = useState<string>("");
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] =
     useState<boolean>(false);
+  const [steamAchievementSource, setSteamAchievementSource] =
+    useState<SteamAchievementSource>("steamworks");
   const [hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievements] =
     useState<boolean>(true);
   const [forceFrontendFetch, setForceFrontendFetch] = useState<boolean>(false);
@@ -110,9 +118,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     sidebarMarquee: sidebarMarquee,
     hideHiddenAchievements: hideHiddenAchievements,
     gamesViewMode: gamesViewMode,
+    titleBarMode: titleBarMode,
     selectedApi: "hydra" as ApiSource,
     steamApiKey: "",
     steamIntegrationEnabled: false,
+    steamAchievementSource: "steamworks" as SteamAchievementSource,
     hideSteamGamesWithoutAchievements: true,
     forceFrontendFetch: false,
   });
@@ -137,12 +147,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
               setSteamIntegrationEnabled(
                 loadedSettings.steamIntegrationEnabled,
               );
+            if (loadedSettings.steamAchievementSource)
+              setSteamAchievementSource(
+                loadedSettings.steamAchievementSource === "api"
+                  ? "steamapi"
+                  : loadedSettings.steamAchievementSource,
+              );
             if (loadedSettings.hideSteamGamesWithoutAchievements !== undefined)
               setHideSteamGamesWithoutAchievements(
                 loadedSettings.hideSteamGamesWithoutAchievements,
               );
             if (loadedSettings.gamesViewMode)
               setSelectedGamesViewMode(loadedSettings.gamesViewMode);
+            if (loadedSettings.titleBarMode)
+              setSelectedTitleBarMode(loadedSettings.titleBarMode);
             if (loadedSettings.hideHiddenAchievements !== undefined) {
               setSelectedHideHiddenAchievements(
                 loadedSettings.hideHiddenAchievements,
@@ -162,10 +180,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
               hideHiddenAchievements:
                 loadedSettings.hideHiddenAchievements ?? hideHiddenAchievements,
               gamesViewMode: loadedSettings.gamesViewMode || gamesViewMode,
+              titleBarMode: loadedSettings.titleBarMode || titleBarMode,
               selectedApi: loadedSettings.selectedApi || "hydra",
               steamApiKey: loadedSettings.steamApiKey || "",
               steamIntegrationEnabled:
                 loadedSettings.steamIntegrationEnabled || false,
+              steamAchievementSource:
+                loadedSettings.steamAchievementSource === "api"
+                  ? "steamapi"
+                  : loadedSettings.steamAchievementSource || "steamworks",
               hideSteamGamesWithoutAchievements:
                 loadedSettings.hideSteamGamesWithoutAchievements ?? true,
               forceFrontendFetch: loadedSettings.forceFrontendFetch || false,
@@ -194,6 +217,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     [hideHiddenAchievements],
   );
   useEffect(() => setSelectedGamesViewMode(gamesViewMode), [gamesViewMode]);
+  useEffect(() => setSelectedTitleBarMode(titleBarMode), [titleBarMode]);
 
   useEffect(() => {
     const currentSettings = {
@@ -205,9 +229,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       sidebarMarquee: selectedSidebarMarquee,
       hideHiddenAchievements: selectedHideHiddenAchievements,
       gamesViewMode: selectedGamesViewMode,
+      titleBarMode: selectedTitleBarMode,
       selectedApi: selectedApi,
       steamApiKey: steamApiKey,
       steamIntegrationEnabled: steamIntegrationEnabled,
+      steamAchievementSource: steamAchievementSource,
       hideSteamGamesWithoutAchievements: hideSteamGamesWithoutAchievements,
       forceFrontendFetch: forceFrontendFetch,
     };
@@ -225,10 +251,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     selectedSidebarGameScale,
     selectedSidebarMarquee,
     selectedGamesViewMode,
+    selectedTitleBarMode,
     selectedHideHiddenAchievements,
     selectedApi,
     steamApiKey,
     steamIntegrationEnabled,
+    steamAchievementSource,
     hideSteamGamesWithoutAchievements,
     forceFrontendFetch,
     savedSettings,
@@ -246,6 +274,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
         ? overrides.sidebarMarquee
         : selectedSidebarMarquee;
     const finalGamesViewMode = overrides.gamesViewMode || selectedGamesViewMode;
+    const finalTitleBarMode = overrides.titleBarMode || selectedTitleBarMode;
     const finalHideHiddenAchievements =
       overrides.hideHiddenAchievements !== undefined
         ? overrides.hideHiddenAchievements
@@ -257,6 +286,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       overrides.steamIntegrationEnabled !== undefined
         ? overrides.steamIntegrationEnabled
         : steamIntegrationEnabled;
+    const finalSteamAchievementSource =
+      overrides.steamAchievementSource || steamAchievementSource;
     const finalHideSteamGamesWithoutAchievements =
       overrides.hideSteamGamesWithoutAchievements !== undefined
         ? overrides.hideSteamGamesWithoutAchievements
@@ -279,6 +310,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     }
     if (gamesViewMode !== finalGamesViewMode)
       setGamesViewMode(finalGamesViewMode);
+    if (titleBarMode !== finalTitleBarMode)
+      setTitleBarMode(finalTitleBarMode);
     if (hideSteamGamesWithoutAchievements !== finalHideSteamGamesWithoutAchievements) {
       setHideSteamGamesWithoutAchievements(finalHideSteamGamesWithoutAchievements);
     }
@@ -293,9 +326,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
       hideHiddenAchievements: finalHideHiddenAchievements,
       sidebarWidth: sidebarWidth,
       gamesViewMode: finalGamesViewMode,
+      titleBarMode: finalTitleBarMode,
       selectedApi: finalApi,
       steamApiKey: finalSteamApiKey,
       steamIntegrationEnabled: finalSteamIntegrationEnabled,
+      steamAchievementSource: finalSteamAchievementSource,
       hideSteamGamesWithoutAchievements:
         finalHideSteamGamesWithoutAchievements,
       forceFrontendFetch: finalForceFrontendFetch,
@@ -314,9 +349,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
         sidebarMarquee: finalSidebarMarquee,
         hideHiddenAchievements: finalHideHiddenAchievements,
         gamesViewMode: finalGamesViewMode,
+        titleBarMode: finalTitleBarMode,
         selectedApi: finalApi,
         steamApiKey: finalSteamApiKey,
         steamIntegrationEnabled: finalSteamIntegrationEnabled,
+        steamAchievementSource: finalSteamAchievementSource,
         hideSteamGamesWithoutAchievements:
           finalHideSteamGamesWithoutAchievements,
         forceFrontendFetch: finalForceFrontendFetch,
@@ -418,6 +455,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
             setSelectedHideHiddenAchievements={setSelectedHideHiddenAchievements}
             selectedGamesViewMode={selectedGamesViewMode}
             setSelectedGamesViewMode={setSelectedGamesViewMode}
+            selectedTitleBarMode={selectedTitleBarMode}
+            setSelectedTitleBarMode={setSelectedTitleBarMode}
             selectedApi={selectedApi}
           />
         );
@@ -440,6 +479,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
           <ConnectionsSettings
             steamIntegrationEnabled={steamIntegrationEnabled}
             setSteamIntegrationEnabled={setSteamIntegrationEnabled}
+            steamAchievementSource={steamAchievementSource}
+            setSteamAchievementSource={(source) => {
+              setSteamAchievementSource(source);
+              handleSaveChanges({ steamAchievementSource: source });
+            }}
             hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}
             setHideSteamGamesWithoutAchievements={setHideSteamGamesWithoutAchievements}
           />

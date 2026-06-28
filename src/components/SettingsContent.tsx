@@ -7,7 +7,7 @@ import UpdateSettings from './settings/UpdateSettings';
 import ApiSettings from './settings/ApiSettings';
 import ConnectionsSettings from './settings/ConnectionsSettings';
 import MonitoredSettings from './settings/MonitoredSettings';
-import { DateFormat, TimeFormat, SidebarGameScale, ApiSource, GamesViewMode } from '../types';
+import { DateFormat, TimeFormat, SidebarGameScale, ApiSource, GamesViewMode, SteamAchievementSource } from '../types';
 import { useTheme, Theme } from '../contexts/ThemeContext';
 import { useI18n, Language } from '../contexts/I18nContext';
 
@@ -40,6 +40,7 @@ const SettingsContent: React.FC = () => {
   const [selectedApi, setSelectedApi] = useState<ApiSource>('hydra');
   const [steamApiKey, setSteamApiKey] = useState<string>('');
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState<boolean>(false);
+  const [steamAchievementSource, setSteamAchievementSource] = useState<SteamAchievementSource>('steamworks');
   const [hideSteamGamesWithoutAchievements, setHideSteamGamesWithoutAchievements] = useState<boolean>(true);
 
   // State for tracking changes
@@ -55,6 +56,7 @@ const SettingsContent: React.FC = () => {
     selectedApi: 'hydra' as ApiSource,
     steamApiKey: '',
     steamIntegrationEnabled: false,
+    steamAchievementSource: 'steamworks' as SteamAchievementSource,
     hideSteamGamesWithoutAchievements: true,
   });
   const [isDirty, setIsDirty] = useState(false);
@@ -71,6 +73,9 @@ const SettingsContent: React.FC = () => {
             if (loadedSettings.selectedApi) setSelectedApi(loadedSettings.selectedApi);
             if (loadedSettings.steamApiKey) setSteamApiKey(loadedSettings.steamApiKey);
             if (loadedSettings.steamIntegrationEnabled !== undefined) setSteamIntegrationEnabled(loadedSettings.steamIntegrationEnabled);
+            if (loadedSettings.steamAchievementSource) {
+              setSteamAchievementSource(loadedSettings.steamAchievementSource === 'api' ? 'steamapi' : loadedSettings.steamAchievementSource);
+            }
             if (loadedSettings.gamesViewMode) setSelectedGamesViewMode(loadedSettings.gamesViewMode);
             if (loadedSettings.hideHiddenAchievements !== undefined) setSelectedHideHiddenAchievements(loadedSettings.hideHiddenAchievements);
             if (loadedSettings.hideSteamGamesWithoutAchievements !== undefined) setHideSteamGamesWithoutAchievements(loadedSettings.hideSteamGamesWithoutAchievements);
@@ -88,6 +93,7 @@ const SettingsContent: React.FC = () => {
               selectedApi: loadedSettings.selectedApi || 'hydra',
               steamApiKey: loadedSettings.steamApiKey || '',
               steamIntegrationEnabled: loadedSettings.steamIntegrationEnabled || false,
+              steamAchievementSource: loadedSettings.steamAchievementSource === 'api' ? 'steamapi' : loadedSettings.steamAchievementSource || 'steamworks',
               hideSteamGamesWithoutAchievements: loadedSettings.hideSteamGamesWithoutAchievements ?? true,
             });
           }
@@ -124,6 +130,7 @@ const SettingsContent: React.FC = () => {
       selectedApi: selectedApi,
       steamApiKey: steamApiKey,
       steamIntegrationEnabled: steamIntegrationEnabled,
+      steamAchievementSource: steamAchievementSource,
       hideSteamGamesWithoutAchievements: hideSteamGamesWithoutAchievements,
     };
     if (JSON.stringify(currentSettings) !== JSON.stringify(savedSettings)) {
@@ -132,7 +139,7 @@ const SettingsContent: React.FC = () => {
     } else {
       setIsDirty(false);
     }
-  }, [selectedLanguage, selectedTheme, selectedDateFormat, selectedTimeFormat, selectedSidebarGameScale, selectedSidebarMarquee, selectedHideHiddenAchievements, selectedGamesViewMode, selectedApi, steamApiKey, steamIntegrationEnabled, hideSteamGamesWithoutAchievements, savedSettings]);
+  }, [selectedLanguage, selectedTheme, selectedDateFormat, selectedTimeFormat, selectedSidebarGameScale, selectedSidebarMarquee, selectedHideHiddenAchievements, selectedGamesViewMode, selectedApi, steamApiKey, steamIntegrationEnabled, steamAchievementSource, hideSteamGamesWithoutAchievements, savedSettings]);
 
 
   const handleSaveChanges = async () => {
@@ -158,6 +165,7 @@ const SettingsContent: React.FC = () => {
       selectedApi: selectedApi,
       steamApiKey: steamApiKey,
       steamIntegrationEnabled: steamIntegrationEnabled,
+      steamAchievementSource: steamAchievementSource,
     };
 
     try {
@@ -177,6 +185,7 @@ const SettingsContent: React.FC = () => {
         selectedApi: selectedApi,
         steamApiKey: steamApiKey,
         steamIntegrationEnabled: steamIntegrationEnabled,
+        steamAchievementSource: steamAchievementSource,
         hideSteamGamesWithoutAchievements: hideSteamGamesWithoutAchievements,
       });
       setIsSaved(true);
@@ -233,6 +242,8 @@ const SettingsContent: React.FC = () => {
           setSteamApiKey={setSteamApiKey}
           steamIntegrationEnabled={steamIntegrationEnabled}
           setSteamIntegrationEnabled={setSteamIntegrationEnabled}
+          steamAchievementSource={steamAchievementSource}
+          setSteamAchievementSource={setSteamAchievementSource}
           hideSteamGamesWithoutAchievements={hideSteamGamesWithoutAchievements}
           setHideSteamGamesWithoutAchievements={setHideSteamGamesWithoutAchievements}
         />;
