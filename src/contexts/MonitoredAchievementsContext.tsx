@@ -79,6 +79,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState(false);
   const [steamAchievementSource, setSteamAchievementSource] = useState<'steamworks' | 'steamapi'>('steamworks');
   const steamUnlistenRef = useRef<(() => void) | null>(null);
+  const isRefreshingLocalGamesRef = useRef(false);
 
   const getLocalAchievementCounts = (game: GameAchievements) => ({
     current: game.achievements.filter((a: any) => a.achieved).length,
@@ -139,6 +140,11 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const setupListener = async () => {
     const unlisten = await onAchievementsUpdate((updatedGames: GameAchievements[]) => {
       setAllGames(prev => {
+        if (isRefreshingLocalGamesRef.current && updatedGames.length === 0 && prev.length > 0) {
+          console.log('[JS] Ignoring transient empty achievements update during active refresh');
+          return prev;
+        }
+
         const currJson = JSON.stringify(prev);
         const nextJson = JSON.stringify(updatedGames);
         if (currJson === nextJson) return prev;
@@ -151,10 +157,17 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   };
 
   const fetchInitial = async () => {
-    const gamesResult = await requestAchievements();
-    if (gamesResult && gamesResult.length > 0) {
-      console.log('[JS] Initial games received from active request:', gamesResult);
-      setAllGames(gamesResult);
+    isRefreshingLocalGamesRef.current = true;
+    try {
+      const gamesResult = await requestAchievements();
+      if (Array.isArray(gamesResult)) {
+        console.log('[JS] Games received from confirmed request:', gamesResult.length);
+        setAllGames(gamesResult);
+      }
+    } catch (error) {
+      console.error('[JS] Failed to refresh local achievements; keeping previous games:', error);
+    } finally {
+      isRefreshingLocalGamesRef.current = false;
     }
   };
 
@@ -187,7 +200,6 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     } else {
       console.log('[Steam Integration] Enabled but Steam not available');
       setIsSteamLoaded(false);
-      setSteamGames([]);
     }
     return null;
   };
