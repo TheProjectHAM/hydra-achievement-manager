@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { getSteamHeaderUrl } from '@/lib/steam-assets';
+import { getSteamHeaderUrl, getSteamLogoUrl } from '@/lib/steam-assets';
 import { XIcon } from 'lucide-react';
 
 interface UnlockModalProps {
@@ -198,6 +198,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
   const [iniLastModifiedByPath, setIniLastModifiedByPath] = useState<Record<string, Date | null>>({});
   const [hasSteamPathForCurrentGame, setHasSteamPathForCurrentGame] = useState(false);
   const [activeProvider, setActiveProvider] = useState<ProviderKey>('steam');
+  const [gameLogoFailed, setGameLogoFailed] = useState(false);
   const isLinux = getAppPlatform() === 'linux';
 
   useEffect(() => {
@@ -205,6 +206,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
       setSelectedPath('');
       setIniLastModifiedByPath({});
       setHasSteamPathForCurrentGame(false);
+      setGameLogoFailed(false);
       setGameWinePaths([]);
       setGlobalPaths([]);
       const gameId = game?.id?.toString();
@@ -307,6 +309,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
   const globalOnlyPaths = globalPaths.filter(p => !hydraPaths.includes(p));
 
   const steamArtUrl = getSteamHeaderUrl(game.id);
+  const gameLogoUrl = getSteamLogoUrl(game.id);
   const providerGroups = useMemo<ProviderGroup[]>(() => ([
     {
       key: 'steam',
@@ -373,12 +376,20 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent showCloseButton={false} className="w-[min(94vw,960px)] max-w-none aspect-[16/9] max-h-[82vh] min-h-[500px] grid grid-rows-[minmax(0,1fr)_auto] overflow-hidden p-0 gap-0 bg-background">
         <DialogTitle className="sr-only">{t('unlockModal.title')}</DialogTitle>
+        <DialogClose
+          render={
+            <button
+              type="button"
+              className="absolute right-1 top-1 z-30 flex h-10 w-10 items-center justify-center border-0 bg-transparent p-0 text-white transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            />
+          }
+        >
+          <XIcon className="h-6 w-6" strokeWidth={2} />
+          <span className="sr-only">Close</span>
+        </DialogClose>
 
         <div className="grid min-h-0 grid-cols-[220px_minmax(0,1fr)] overflow-hidden">
           <aside className="bg-muted/10 p-4">
-            <div className="mb-3 px-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Providers</p>
-            </div>
             <div className="space-y-2">
               {providerGroups.map((group) => {
                 const isActive = group.key === activeProviderGroup.key;
@@ -391,7 +402,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
                     disabled={isDisabled}
                     onClick={() => setActiveProvider(group.key)}
                     className={cn(
-                      'group/provider relative w-full overflow-hidden rounded-xl px-3.5 py-2.5 text-left transition-all duration-200',
+                      'group/provider relative w-full overflow-hidden rounded-md px-3.5 py-2.5 text-left transition-all duration-200',
                       isActive
                         ? 'bg-foreground text-background shadow-sm'
                         : 'bg-muted/55 text-foreground hover:bg-accent',
@@ -421,18 +432,6 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
           <div className="min-w-0 overflow-y-auto">
             <div className="relative h-40 overflow-hidden bg-muted sm:h-48">
-              <DialogClose
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="absolute right-4 top-4 z-20 border border-white/25 bg-background/90 text-foreground shadow-lg backdrop-blur hover:bg-background hover:text-foreground"
-                  />
-                }
-              >
-                <XIcon className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </DialogClose>
               <img
                 src={steamArtUrl}
                 alt=""
@@ -442,18 +441,21 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-black/15" />
-              <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-6">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center text-white drop-shadow-lg">
-                  {activeProviderGroup.icon}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-2xl font-semibold text-white drop-shadow">{game.name}</p>
-                  <p className="mt-1 text-xs font-semibold text-white/70 drop-shadow">
-                    {activeProviderGroup.title} · {activeProviderGroup.subtitle}
-                  </p>
-                </div>
-                <div className="ml-auto hidden border-l border-white/25 pl-4 text-right text-[10px] font-bold uppercase tracking-widest text-white/80 drop-shadow sm:block">
-                  {newAchievementCount} {t('common.achievements').toLowerCase()}
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <div className="flex h-9 min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center text-white [&_svg]:h-7 [&_svg]:w-7">
+                    {activeProviderGroup.icon}
+                  </div>
+                  {gameLogoFailed ? (
+                    <p className="min-w-0 truncate text-2xl font-semibold leading-9 text-white">{game.name}</p>
+                  ) : (
+                    <img
+                      src={gameLogoUrl}
+                      alt={game.name}
+                      className="max-h-10 min-w-0 max-w-[min(360px,70%)] object-contain object-left"
+                      onError={() => setGameLogoFailed(true)}
+                    />
+                  )}
                 </div>
               </div>
             </div>
