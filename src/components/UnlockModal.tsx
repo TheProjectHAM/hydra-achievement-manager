@@ -377,12 +377,12 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-[min(94vw,1040px)] max-w-none aspect-[16/9] max-h-[88vh] min-h-[560px] grid grid-rows-[minmax(0,1fr)_auto] overflow-hidden p-0 gap-0 bg-background">
+      <DialogContent showCloseButton={false} className="w-[min(94vw,960px)] max-w-none aspect-[16/9] max-h-[82vh] min-h-[500px] grid grid-rows-[minmax(0,1fr)_auto] overflow-hidden p-0 gap-0 bg-background">
         <DialogTitle className="sr-only">{t('unlockModal.title')}</DialogTitle>
 
         <div className="grid min-h-0 grid-cols-[220px_minmax(0,1fr)] overflow-hidden">
           <aside className="bg-muted/10 p-4">
-            <div className="mb-4 px-1">
+            <div className="mb-3 px-1">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Providers</p>
             </div>
             <div className="space-y-2">
@@ -397,7 +397,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
                     disabled={isDisabled}
                     onClick={() => setActiveProvider(group.key)}
                     className={cn(
-                      'group/provider relative w-full overflow-hidden rounded-xl px-3.5 py-3 text-left transition-all duration-200',
+                      'group/provider relative w-full overflow-hidden rounded-xl px-3.5 py-2.5 text-left transition-all duration-200',
                       isActive
                         ? 'bg-foreground text-background shadow-sm'
                         : 'bg-muted/55 text-foreground hover:bg-accent',
@@ -416,10 +416,6 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
                           'block truncate text-sm font-semibold',
                           isActive ? 'text-background' : 'text-foreground'
                         )}>{group.title}</span>
-                        <span className={cn(
-                          'block truncate text-[10px] font-semibold',
-                          isActive ? 'text-background/65' : 'text-muted-foreground'
-                        )}>{group.paths.length} path{group.paths.length === 1 ? '' : 's'}</span>
                       </span>
                     </div>
                     {isActive && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-primary" />}
@@ -430,7 +426,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
           </aside>
 
           <div className="min-w-0 overflow-y-auto">
-            <div className="relative h-48 overflow-hidden bg-muted sm:h-56">
+            <div className="relative h-40 overflow-hidden bg-muted sm:h-48">
               <DialogClose
                 render={
                   <Button
