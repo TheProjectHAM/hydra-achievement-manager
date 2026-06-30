@@ -502,6 +502,8 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
         source: 'both',
         achievementsCurrent: mergedCounts.current,
         achievementsTotal: mergedCounts.total,
+        steamAchievementsCurrent: steam.achievementsCurrent,
+        steamAchievementsTotal: steam.achievementsTotal,
       };
     });
 

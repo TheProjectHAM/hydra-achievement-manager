@@ -649,6 +649,11 @@ const App: React.FC = () => {
     !selectedSourceDuplicate
       ? (selectedSourceGameMerged as any).directory as string
       : null;
+  const selectedSourceSteamTotal = Number(
+    (selectedSourceGameMerged as any)?.steamAchievementsTotal ??
+    (selectedSourceGameMerged as any)?.achievementsTotal ??
+    0
+  );
   const sourceSelectionDirectories = [
     ...((selectedSourceDuplicate?.directories || []).map(d => ({
       path: d.path,
@@ -667,7 +672,7 @@ const App: React.FC = () => {
     ...(((selectedSourceGameMerged as any)?.source === 'both' ? [{
       path: steamVdfPath || 'libraryfolders.vdf',
       name: 'Steam',
-      achievementCount: (selectedSourceGameMerged as any)?.achievementsCurrent || 0,
+      achievementCount: selectedSourceSteamTotal,
       lastModified: new Date(),
       source: 'steam' as const
     }] : []))
