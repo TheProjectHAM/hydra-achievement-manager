@@ -452,7 +452,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
                     <img
                       src={gameLogoUrl}
                       alt={game.name}
-                      className="max-h-10 min-w-0 max-w-[min(360px,70%)] object-contain object-left"
+                      className="max-h-12 min-w-0 max-w-[min(430px,76%)] object-contain object-left"
                       onError={() => setGameLogoFailed(true)}
                     />
                   )}
