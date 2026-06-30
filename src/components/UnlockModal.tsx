@@ -334,16 +334,10 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
   useEffect(() => {
     if (!isOpen) return;
-    const selectedProvider = providerGroups.find(group => group.paths.includes(selectedPath));
-    if (selectedProvider) {
-      setActiveProvider(selectedProvider.key);
-      return;
-    }
-
     if (!providerGroups.some(group => group.key === activeProvider && group.paths.length > 0)) {
       setActiveProvider(availableProviderGroups[0]?.key || 'steam');
     }
-  }, [activeProvider, availableProviderGroups, isOpen, providerGroups, selectedPath]);
+  }, [activeProvider, availableProviderGroups, isOpen, providerGroups]);
 
   const activeProviderGroup = providerGroups.find(group => group.key === activeProvider) || availableProviderGroups[0] || providerGroups[0];
 
