@@ -57,7 +57,10 @@ impl SteamIntegration {
         for _ in 0..cycles {
             if let Some(single_client_lock) = single_client {
                 if let Ok(single_client) = single_client_lock.lock() {
-                    single_client.run_callbacks();
+                    if catch_unwind(AssertUnwindSafe(|| single_client.run_callbacks())).is_err() {
+                        log::warn!("Steam callbacks panicked while pumping callbacks");
+                        break;
+                    }
                 }
             }
             thread::sleep(Duration::from_millis(100));
@@ -144,8 +147,8 @@ impl SteamIntegration {
         // O steamworks-rs pode entrar em pânico ou retornar erro se as DLLs não estiverem lá,
         // mas o catch_unwind não é prático aqui por causa de tipos não-unwind-safe.
         // A melhor abordagem é deixar o erro ser capturado pelo match.
-        match Client::init() {
-            Ok((client, single_client)) => {
+        match catch_unwind(AssertUnwindSafe(Client::init)) {
+            Ok(Ok((client, single_client))) => {
                 self.client = Some(Arc::new(Mutex::new(client)));
                 self.single_client = Some(Arc::new(Mutex::new(single_client)));
                 self.enabled = true;
@@ -153,11 +156,18 @@ impl SteamIntegration {
                 log::info!("Steam client initialized successfully");
                 Ok(())
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 log::warn!("Steam integration NOT available (expected if Steam is not running or libs are missing): {:?}", e);
                 self.enabled = false;
                 self.last_init_error = Some(format!("{:?}", e));
                 // Não retornamos erro crítico para não impedir a aplicação de abrir
+                Ok(())
+            }
+            Err(_) => {
+                let message = "Steamworks initialization panicked".to_string();
+                log::warn!("{}", message);
+                self.enabled = false;
+                self.last_init_error = Some(message);
                 Ok(())
             }
         }
@@ -304,51 +314,51 @@ impl SteamIntegration {
             .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
-        let user_stats = client.user_stats();
-        user_stats.request_current_stats();
-        Self::pump_callbacks(&self.single_client, 10);
+        let achievements = catch_unwind(AssertUnwindSafe(|| -> Result<Vec<SteamAchievementData>> {
+            let user_stats = client.user_stats();
+            user_stats.request_current_stats();
+            Self::pump_callbacks(&self.single_client, 10);
 
-        let achievement_names =
-            catch_unwind(AssertUnwindSafe(|| user_stats.get_achievement_names()))
-                .map_err(|_| anyhow::anyhow!("Steam did not return achievements for this AppID"))?;
-
-        let Some(achievement_names) = achievement_names else {
-            drop(guard);
-            return Ok(Vec::new());
-        };
-
-        let mut achievements = Vec::with_capacity(achievement_names.len());
-
-        for name in achievement_names {
-            let helper = user_stats.achievement(&name);
-            let achieved = helper.get().unwrap_or(false);
-            let display_name = helper
-                .get_achievement_display_attribute("name")
-                .unwrap_or("")
-                .to_string();
-            let description = helper
-                .get_achievement_display_attribute("desc")
-                .unwrap_or("")
-                .to_string();
-
-            let fallback_name = name.clone();
-            let friendly_name = if display_name.trim().is_empty() {
-                fallback_name.clone()
-            } else {
-                display_name.clone()
+            let Some(achievement_names) = user_stats.get_achievement_names() else {
+                return Ok(Vec::new());
             };
 
-            achievements.push(SteamAchievementData {
-                apiname: fallback_name,
-                name: friendly_name,
-                display_name,
-                description,
-                achieved,
-                unlock_time: 0,
-                icon: String::new(),
-                icon_gray: String::new(),
-            });
-        }
+            let mut achievements = Vec::with_capacity(achievement_names.len());
+
+            for name in achievement_names {
+                let helper = user_stats.achievement(&name);
+                let achieved = helper.get().unwrap_or(false);
+                let display_name = helper
+                    .get_achievement_display_attribute("name")
+                    .unwrap_or("")
+                    .to_string();
+                let description = helper
+                    .get_achievement_display_attribute("desc")
+                    .unwrap_or("")
+                    .to_string();
+
+                let fallback_name = name.clone();
+                let friendly_name = if display_name.trim().is_empty() {
+                    fallback_name.clone()
+                } else {
+                    display_name.clone()
+                };
+
+                achievements.push(SteamAchievementData {
+                    apiname: fallback_name,
+                    name: friendly_name,
+                    display_name,
+                    description,
+                    achieved,
+                    unlock_time: 0,
+                    icon: String::new(),
+                    icon_gray: String::new(),
+                });
+            }
+
+            Ok(achievements)
+        }))
+        .map_err(|_| anyhow::anyhow!("Steamworks panicked while reading achievements"))??;
 
         drop(guard);
 
@@ -371,40 +381,46 @@ impl SteamIntegration {
             .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
-        let user_stats = client.user_stats();
+        let changed = catch_unwind(AssertUnwindSafe(|| -> Result<bool> {
+            let user_stats = client.user_stats();
 
-        let achievement = user_stats.achievement(achievement_name);
-        let current_state = achievement
-            .get()
-            .map_err(|_| anyhow::anyhow!("Failed to read achievement state"))?;
+            let achievement = user_stats.achievement(achievement_name);
+            let current_state = achievement
+                .get()
+                .map_err(|_| anyhow::anyhow!("Failed to read achievement state"))?;
 
-        if current_state == unlocked {
-            log::debug!(
-                "Achievement '{}' already {}, skipping Steam update",
-                achievement_name,
-                if unlocked { "unlocked" } else { "locked" }
-            );
-            drop(guard);
-            return Ok(());
+            if current_state == unlocked {
+                log::debug!(
+                    "Achievement '{}' already {}, skipping Steam update",
+                    achievement_name,
+                    if unlocked { "unlocked" } else { "locked" }
+                );
+                return Ok(false);
+            }
+
+            if unlocked {
+                achievement
+                    .set()
+                    .map_err(|_| anyhow::anyhow!("Failed to set achievement"))?;
+                log::info!("Achievement '{}' unlocked", achievement_name);
+            } else {
+                achievement
+                    .clear()
+                    .map_err(|_| anyhow::anyhow!("Failed to clear achievement"))?;
+                log::info!("Achievement '{}' locked", achievement_name);
+            }
+
+            // Salva as mudanças
+            user_stats
+                .store_stats()
+                .map_err(|_| anyhow::anyhow!("Failed to store stats"))?;
+            Ok(true)
+        }))
+        .map_err(|_| anyhow::anyhow!("Steamworks panicked while updating achievement"))??;
+
+        if changed {
+            Self::pump_callbacks(&self.single_client, 5);
         }
-
-        if unlocked {
-            achievement
-                .set()
-                .map_err(|_| anyhow::anyhow!("Failed to set achievement"))?;
-            log::info!("Achievement '{}' unlocked", achievement_name);
-        } else {
-            achievement
-                .clear()
-                .map_err(|_| anyhow::anyhow!("Failed to clear achievement"))?;
-            log::info!("Achievement '{}' locked", achievement_name);
-        }
-
-        // Salva as mudanças
-        user_stats
-            .store_stats()
-            .map_err(|_| anyhow::anyhow!("Failed to store stats"))?;
-        Self::pump_callbacks(&self.single_client, 5);
 
         drop(guard);
 
@@ -427,11 +443,14 @@ impl SteamIntegration {
             .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
-        let user_stats = client.user_stats();
-        let achievement = user_stats.achievement(achievement_name);
-        let unlocked = achievement
-            .get()
-            .map_err(|_| anyhow::anyhow!("Failed to get achievement status"))?;
+        let unlocked = catch_unwind(AssertUnwindSafe(|| {
+            let user_stats = client.user_stats();
+            let achievement = user_stats.achievement(achievement_name);
+            achievement
+                .get()
+                .map_err(|_| anyhow::anyhow!("Failed to get achievement status"))
+        }))
+        .map_err(|_| anyhow::anyhow!("Steamworks panicked while reading achievement status"))??;
 
         drop(guard);
 
@@ -446,7 +465,9 @@ impl SteamIntegration {
 
         if let Some(single_client_lock) = &self.single_client {
             if let Ok(guard) = single_client_lock.lock() {
-                guard.run_callbacks();
+                if catch_unwind(AssertUnwindSafe(|| guard.run_callbacks())).is_err() {
+                    log::warn!("Steam callbacks panicked");
+                }
             }
         }
     }
@@ -467,9 +488,13 @@ impl SteamIntegration {
             .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
         let client = &*guard;
 
-        let friends = client.friends();
-        let user_id = client.user().steam_id().raw().to_string();
-        let user_name = friends.name();
+        let (user_id, user_name) = catch_unwind(AssertUnwindSafe(|| {
+            let friends = client.friends();
+            let user_id = client.user().steam_id().raw().to_string();
+            let user_name = friends.name();
+            (user_id, user_name)
+        }))
+        .map_err(|_| anyhow::anyhow!("Steamworks panicked while reading user info"))?;
 
         drop(guard);
 

@@ -88,9 +88,16 @@ impl SteamMonitor {
             loop {
                 // Verifica se deve continuar rodando
                 {
-                    let running_guard = running.lock().unwrap();
-                    if !*running_guard {
-                        break;
+                    match running.lock() {
+                        Ok(running_guard) => {
+                            if !*running_guard {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("Steam monitoring state lock poisoned: {}", e);
+                            break;
+                        }
                     }
                 }
 
