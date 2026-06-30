@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
 import TitleBar from './components/TitleBar';
 import WindowResizeHandles from './components/WindowResizeHandles';
 import Sidebar from './components/Sidebar';
@@ -21,6 +20,13 @@ import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import packageJson from '../package.json';
+import {
+  convertTimestampTimeFormat,
+  dateToTimestamp,
+  emptyTimestamp,
+  isTimestampEmpty,
+  unixSecondsToTimestamp,
+} from './formatters';
 
 type View = 'main' | 'export';
 
@@ -277,37 +283,17 @@ const App: React.FC = () => {
         Object.entries(gameStatuses).forEach(([achievementName, status]) => {
           const timestamp = status.timestamp;
 
-          // Skip empty timestamps
-          if (!timestamp.day || !timestamp.month || !timestamp.year ||
-            !timestamp.hour || !timestamp.minute) {
+          if (isTimestampEmpty(timestamp)) {
             return;
           }
 
-          // Convert timestamps based on timeFormat
-          if (timeFormat === '12h' && !timestamp.ampm) {
+          if ((timeFormat === '12h' && !timestamp.ampm) || (timeFormat === '24h' && timestamp.ampm)) {
+            const convertedTimestamp = convertTimestampTimeFormat(timestamp, timeFormat);
+            if (convertedTimestamp === timestamp) return;
             hasChanges = true;
-            const date = new Date(parseInt(timestamp.year), parseInt(timestamp.month) - 1, parseInt(timestamp.day), parseInt(timestamp.hour), parseInt(timestamp.minute));
             updated[sourceKey][achievementName] = {
               ...status,
-              timestamp: {
-                ...timestamp,
-                hour: format(date, 'hh'),
-                ampm: format(date, 'aa').toUpperCase() as 'AM' | 'PM',
-              },
-            };
-          } else if (timeFormat === '24h' && timestamp.ampm) {
-            hasChanges = true;
-            let hour24 = parseInt(timestamp.hour);
-            if (timestamp.ampm === 'PM' && hour24 < 12) hour24 += 12;
-            else if (timestamp.ampm === 'AM' && hour24 === 12) hour24 = 0;
-
-            const { ampm, ...timestampWithout } = timestamp;
-            updated[sourceKey][achievementName] = {
-              ...status,
-              timestamp: {
-                ...timestampWithout,
-                hour: String(hour24).padStart(2, '0'),
-              },
+              timestamp: convertedTimestamp,
             };
           }
         });
@@ -336,7 +322,7 @@ const App: React.FC = () => {
         [sourceKey]: {
           ...gameStatuses,
           [achievementName]: {
-            ...(currentStatus || { timestamp: { day: '', month: '', year: '', hour: '', minute: '' } }),
+            ...(currentStatus || { timestamp: emptyTimestamp() }),
             completed: newCompletedState,
           },
         },
@@ -394,7 +380,7 @@ const App: React.FC = () => {
           ...gameStatuses,
           [achievementName]: {
             ...currentStatus,
-            timestamp: { day: '', month: '', year: '', hour: '', minute: '' },
+            timestamp: emptyTimestamp(),
           },
         },
       };
@@ -442,21 +428,13 @@ const App: React.FC = () => {
     const isSteam = path.startsWith('steam://');
     const unlockSourcePath = isSteam ? 'steam://' : path;
 
-    // Helper function to generate timestamp based on mode
     const generateTimestamp = (): Timestamp => {
       const date = mode === 'current' ? new Date() : (
         mode === 'custom' ? new Date() : // fallback
           new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000)
       );
 
-      return {
-        day: format(date, 'dd'),
-        month: format(date, 'MM'),
-        year: format(date, 'yyyy'),
-        hour: format(date, timeFormat === '12h' ? 'hh' : 'HH'),
-        minute: format(date, 'mm'),
-        ...(timeFormat === '12h' && { ampm: format(date, 'aa').toUpperCase() as 'AM' | 'PM' })
-      };
+      return dateToTimestamp(date, timeFormat);
     };
 
     // Prepare achievements data.
@@ -477,8 +455,7 @@ const App: React.FC = () => {
       ? allAchievements.flatMap(ach => {
         const status = gameStatuses[ach.internalName];
         if (!status) return [];
-        const hasEmptyTimestamp = !status.timestamp.day && !status.timestamp.month &&
-          !status.timestamp.year && !status.timestamp.hour && !status.timestamp.minute;
+        const hasEmptyTimestamp = isTimestampEmpty(status.timestamp);
 
         return [{
           name: ach.internalName,
@@ -489,9 +466,7 @@ const App: React.FC = () => {
       : Object.entries(gameStatuses)
         .filter(([, status]: [string, AchievementStatus]) => status.completed) // Only include completed achievements for non-steam
         .map(([name, status]: [string, AchievementStatus]) => {
-          // Check if timestamp is empty (all fields are empty strings)
-          const hasEmptyTimestamp = !status.timestamp.day && !status.timestamp.month &&
-            !status.timestamp.year && !status.timestamp.hour && !status.timestamp.minute;
+          const hasEmptyTimestamp = isTimestampEmpty(status.timestamp);
 
           return {
             name,
@@ -536,18 +511,8 @@ const App: React.FC = () => {
 
         result.achievements.forEach((ach: any) => {
           if (ach.achieved) {
-              const unlockTime = Number(ach.unlockTime ?? ach.unlocktime ?? 0);
-            const unlockDate = unlockTime > 0 ? new Date(unlockTime * 1000) : null;
-            const timestamp: Timestamp = unlockDate && !isNaN(unlockDate.getTime())
-              ? {
-                day: format(unlockDate, 'dd'),
-                month: format(unlockDate, 'MM'),
-                year: format(unlockDate, 'yyyy'),
-                hour: format(unlockDate, timeFormat === '12h' ? 'hh' : 'HH'),
-                minute: format(unlockDate, 'mm'),
-                ...(timeFormat === '12h' && { ampm: format(unlockDate, 'aa').toUpperCase() as 'AM' | 'PM' }),
-              }
-              : { day: '', month: '', year: '', hour: '', minute: '' };
+            const unlockTime = Number(ach.unlockTime ?? ach.unlocktime ?? 0);
+            const timestamp = unixSecondsToTimestamp(unlockTime, timeFormat);
 
             newAchievementStatus[ach.apiname || ach.name] = {
               completed: true,

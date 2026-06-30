@@ -5,6 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
 import { SortAscendingIcon, SortDescendingIcon, SteamBrandIcon, WarningIcon } from './Icons';
+import { getSteamLogoFallbackUrls, getSteamLogoUrl } from '@/lib/steam-assets';
 
 interface SidebarProps {
   tabs: Tab[];
@@ -162,18 +163,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 : 'text-sidebar-foreground group-hover:text-sidebar-accent-foreground'
                 }`;
 
-              const steamCdn = import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps';
-              const fallbacks = [
-                `${steamCdn}/${game.gameId}/capsule_sm_120.jpg`,
-                `${steamCdn}/${game.gameId}/capsule_184x69.jpg`,
-                `${steamCdn}/${game.gameId}/capsule_231x87.jpg`,
-                `${steamCdn}/${game.gameId}/capsule_467x181.jpg`,
-                `${steamCdn}/${game.gameId}/capsule_616x353.jpg`,
-                `${steamCdn}/${game.gameId}/library_hero.jpg`,
-                `${steamCdn}/${game.gameId}/library_600x900.jpg`,
-                `${steamCdn}/${game.gameId}/header.jpg`,
-                `${steamCdn}/${game.gameId}/header_292x136.jpg`
-              ];
+              const fallbacks = getSteamLogoFallbackUrls(game.gameId);
 
               return (
                 <button
@@ -191,7 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className={`relative flex-shrink-0 transition-transform duration-300 ${isCollapsed ? 'w-8 h-8 group-hover:scale-105' : gameItemStyle.image}`}>
                     <img
-                      src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${game.gameId}/logo.png`}
+                      src={getSteamLogoUrl(game.gameId)}
                       alt=""
                       className={`w-full h-full object-contain transition-all duration-300 ${!isActive ? 'opacity-80 grayscale-[0.3] group-hover:opacity-100 group-hover:grayscale-0' : ''} ${isCollapsed ? 'drop-shadow-sm' : ''}`}
                       style={{ borderRadius: '4px' }}

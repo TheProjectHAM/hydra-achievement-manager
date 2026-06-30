@@ -33,6 +33,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search as SearchIconLucide } from "lucide-react";
+import {
+  dateToTimestamp,
+  emptyTimestamp,
+  timestampToMillis,
+  unixSecondsToTimestamp,
+} from "../formatters";
 
 const AchievementCard: React.FC<{
   achievement: Achievement;
@@ -53,19 +59,10 @@ const AchievementCard: React.FC<{
 
   const handleSetCurrentTimestamp = () => {
     if (!isCompleted) return;
-    const now = new Date();
-    onTimestampChange("day", String(now.getDate()).padStart(2, "0"));
-    onTimestampChange("month", String(now.getMonth() + 1).padStart(2, "0"));
-    onTimestampChange("year", String(now.getFullYear()));
-    onTimestampChange("minute", String(now.getMinutes()).padStart(2, "0"));
-
-    if (timeFormat === "12h") {
-      const hour12 = now.getHours() % 12 || 12;
-      onTimestampChange("hour", String(hour12).padStart(2, "0"));
-      onTimestampChange("ampm", now.getHours() >= 12 ? "PM" : "AM");
-    } else {
-      onTimestampChange("hour", String(now.getHours()).padStart(2, "0"));
-    }
+    const timestamp = dateToTimestamp(new Date(), timeFormat);
+    Object.entries(timestamp).forEach(([field, value]) => {
+      onTimestampChange(field as keyof Timestamp, value);
+    });
   };
 
   const isHidden = hideHiddenAchievements && achievement.hidden && !isCompleted;
@@ -248,7 +245,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
           name,
           {
             completed: false,
-            timestamp: { day: "", month: "", year: "", hour: "", minute: "" },
+            timestamp: emptyTimestamp(),
           },
           preferredSourcePath,
         );
@@ -260,7 +257,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
           name,
           {
             completed: true,
-            timestamp: { day: "", month: "", year: "", hour: "", minute: "" },
+            timestamp: emptyTimestamp(),
           },
           preferredSourcePath,
         );
@@ -375,40 +372,10 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                   currentStatus.timestamp.day !== "");
 
               if (!isLocallySet) {
-                let timestamp: Timestamp = {
-                  day: "",
-                  month: "",
-                  year: "",
-                  hour: "",
-                  minute: "",
-                };
-
                 const unlockTime = Number(
                   ach.unlockTime ?? ach.unlocktime ?? 0,
                 );
-                if (unlockTime > 0) {
-                  const unlockDate = new Date(unlockTime * 1000);
-                  if (!isNaN(unlockDate.getTime())) {
-                    let hour = String(unlockDate.getHours()).padStart(2, "0");
-                    let ampm: "AM" | "PM" | undefined;
-
-                    if (timeFormat === "12h") {
-                      const hour24 = unlockDate.getHours();
-                      const hour12 = hour24 % 12 || 12;
-                      hour = String(hour12).padStart(2, "0");
-                      ampm = hour24 >= 12 ? "PM" : "AM";
-                    }
-
-                    timestamp = {
-                      day: String(unlockDate.getDate()).padStart(2, "0"),
-                      month: String(unlockDate.getMonth() + 1).padStart(2, "0"),
-                      year: String(unlockDate.getFullYear()),
-                      hour: hour,
-                      minute: String(unlockDate.getMinutes()).padStart(2, "0"),
-                      ...(ampm && { ampm }),
-                    };
-                  }
-                }
+                const timestamp = unixSecondsToTimestamp(unlockTime, timeFormat);
 
                 onAchievementStatusUpdate(
                   game.id,
@@ -477,25 +444,10 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                     currentStatus.timestamp.minute !== "");
 
                 if (!hasBeenModified) {
-                  const unlockDate = new Date(monitoredAch.unlockTime * 1000);
-                  let hour = String(unlockDate.getHours()).padStart(2, "0");
-                  let ampm: "AM" | "PM" | undefined;
-
-                  if (timeFormat === "12h") {
-                    const hour24 = unlockDate.getHours();
-                    const hour12 = hour24 % 12 || 12;
-                    hour = String(hour12).padStart(2, "0");
-                    ampm = hour24 >= 12 ? "PM" : "AM";
-                  }
-
-                  const timestamp: Timestamp = {
-                    day: String(unlockDate.getDate()).padStart(2, "0"),
-                    month: String(unlockDate.getMonth() + 1).padStart(2, "0"),
-                    year: String(unlockDate.getFullYear()),
-                    hour: hour,
-                    minute: String(unlockDate.getMinutes()).padStart(2, "0"),
-                    ...(ampm && { ampm }),
-                  };
+                  const timestamp = unixSecondsToTimestamp(
+                    monitoredAch.unlockTime,
+                    timeFormat,
+                  );
 
                   onAchievementStatusUpdate(
                     game.id,
@@ -528,20 +480,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
 
   const achievements = gameAchievements;
 
-  const getTimestampValue = useCallback((ts: Timestamp) => {
-    if (!ts.day || !ts.month || !ts.year) return 0;
-    const year = parseInt(ts.year);
-    const month = parseInt(ts.month) - 1;
-    const day = parseInt(ts.day);
-    const hour = parseInt(ts.hour || "0");
-    const minute = parseInt(ts.minute || "0");
-
-    let h24 = hour;
-    if (ts.ampm === "PM" && h24 < 12) h24 += 12;
-    else if (ts.ampm === "AM" && h24 === 12) h24 = 0;
-
-    return new Date(year, month, day, h24, minute).getTime();
-  }, []);
+  const getTimestampValue = useCallback(timestampToMillis, []);
 
   const normalizeString = (str: string) => {
     return str
@@ -626,7 +565,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
 
   const defaultStatus: AchievementStatus = {
     completed: false,
-    timestamp: { day: "", month: "", year: "", hour: "", minute: "" },
+    timestamp: emptyTimestamp(),
   };
 
   return (

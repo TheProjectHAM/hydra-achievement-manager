@@ -11,12 +11,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  getSteamBackgroundFallbackUrls,
+  getSteamLogoFallbackUrl,
+  getSteamLogoUrl,
+  isSteamLogoFallbackUrl,
+} from '@/lib/steam-assets';
 
-const MonitoredGameCard: React.FC<{
-  game: GameAchievements;
-  onGameSelect: (game: SteamSearchResult) => void;
-}> = ({ game, onGameSelect }) => {
-  const { t } = useI18n();
+const useGameProgress = (game: GameAchievements) => {
   const { gameNames } = useMonitoredAchievements();
   const gameId = game.gameId;
   const source = (game as any).source;
@@ -24,31 +26,6 @@ const MonitoredGameCard: React.FC<{
   const achievementsCurrent = isSteam ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const gameName = gameNames[gameId] || (game as any).name || gameId;
   const [totalAchievements, setTotalAchievements] = useState<number | null>(isSteam ? (game as any).achievementsTotal : null);
-
-  const steamCdnUrl = import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps';
-  const fallbackImages = [
-    `${steamCdnUrl}/${gameId}/header.jpg`,
-    `${steamCdnUrl}/${gameId}/library_hero.jpg`,
-    `${steamCdnUrl}/${gameId}/capsule_616x353.jpg`,
-    `${steamCdnUrl}/${gameId}/capsule_467x181.jpg`,
-    `${steamCdnUrl}/${gameId}/capsule_231x87.jpg`,
-    `${steamCdnUrl}/${gameId}/logo.png`,
-    `${steamCdnUrl}/${gameId}/library_600x900.jpg`,
-  ];
-
-  const [imageIndex, setImageIndex] = useState(0);
-  const [imageUrl, setImageUrl] = useState(fallbackImages[0]);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [backgroundFailed, setBackgroundFailed] = useState(false);
-  const [hoverLogoFailed, setHoverLogoFailed] = useState(false);
-
-  useEffect(() => {
-    setImageIndex(0);
-    setImageUrl(fallbackImages[0]);
-    setIsImageLoaded(false);
-    setBackgroundFailed(false);
-    setHoverLogoFailed(false);
-  }, [gameId]);
 
   useEffect(() => {
     if (totalAchievements !== null && totalAchievements !== 0) return;
@@ -66,10 +43,52 @@ const MonitoredGameCard: React.FC<{
       }
     };
     fetchTotalAchievements();
-  }, [gameId, isSteam]);
+  }, [game, gameId, isSteam, totalAchievements]);
 
   const finalTotal = totalAchievements ?? game.achievements.length;
   const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
+  const progressPercent = finalTotal > 0 ? Math.round((achievementsCurrent / finalTotal) * 100) : 0;
+  const toSteamSearchResult = (): SteamSearchResult => ({
+    id: parseInt(gameId),
+    name: gameName,
+    achievementsTotal: finalTotal,
+  });
+
+  return {
+    gameId,
+    source,
+    isSteam,
+    achievementsCurrent,
+    gameName,
+    finalTotal,
+    isCompleted,
+    progressPercent,
+    toSteamSearchResult,
+  };
+};
+
+const MonitoredGameCard: React.FC<{
+  game: GameAchievements;
+  onGameSelect: (game: SteamSearchResult) => void;
+}> = ({ game, onGameSelect }) => {
+  const { t } = useI18n();
+  const { gameId, isSteam, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult } = useGameProgress(game);
+
+  const fallbackImages = getSteamBackgroundFallbackUrls(gameId);
+
+  const [imageIndex, setImageIndex] = useState(0);
+  const [imageUrl, setImageUrl] = useState(fallbackImages[0]);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [backgroundFailed, setBackgroundFailed] = useState(false);
+  const [hoverLogoFailed, setHoverLogoFailed] = useState(false);
+
+  useEffect(() => {
+    setImageIndex(0);
+    setImageUrl(fallbackImages[0]);
+    setIsImageLoaded(false);
+    setBackgroundFailed(false);
+    setHoverLogoFailed(false);
+  }, [gameId]);
 
   const handleImageError = () => {
     if (imageIndex < fallbackImages.length - 1) {
@@ -91,7 +110,7 @@ const MonitoredGameCard: React.FC<{
 
   return (
     <div
-      onClick={() => onGameSelect({ id: parseInt(gameId), name: gameName, achievementsTotal: finalTotal })}
+      onClick={() => onGameSelect(toSteamSearchResult())}
       className={`group monitored-game-card relative aspect-[16/9] rounded-md shadow-2xl cursor-pointer transition-all duration-300 border bg-card ${isCompleted ? 'completed-game-card' : 'border-border hover:border-foreground/30'}`}
     >
       <div
@@ -128,15 +147,15 @@ const MonitoredGameCard: React.FC<{
         </div>
       ) : (
         <img
-          src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
+          src={getSteamLogoUrl(gameId)}
           alt=""
           className="absolute -top-1 left-3 z-10 h-16 w-16 object-contain opacity-0 drop-shadow-xl transition-opacity duration-300 group-hover:opacity-100"
           onError={(e) => {
             const img = e.target as HTMLImageElement;
-            if (img.src.includes('capsule_184x69.jpg')) {
+            if (isSteamLogoFallbackUrl(img.src, gameId)) {
               setHoverLogoFailed(true);
             } else {
-              img.src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
+              img.src = getSteamLogoFallbackUrl(gameId);
             }
           }}
         />
@@ -176,35 +195,11 @@ const MonitoredGameRow: React.FC<{
   onGameSelect: (game: SteamSearchResult) => void;
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
-  const { duplicateGames, gameNames } = useMonitoredAchievements();
-  const gameId = game.gameId;
-  const source = (game as any).source;
-  const isSteam = source === 'steam' || source === 'both';
-  const achievementsCurrent = isSteam ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
-  const [totalAchievements, setTotalAchievements] = useState<number | null>(isSteam ? (game as any).achievementsTotal : null);
-
-  const gameName = gameNames[gameId] || (game as any).name || gameId;
+  const { duplicateGames } = useMonitoredAchievements();
+  const { gameId, source, isSteam, achievementsCurrent, gameName, finalTotal, isCompleted, progressPercent, toSteamSearchResult } = useGameProgress(game);
   const duplicates = duplicateGames.find(d => d.gameId === gameId);
   const otherDirsCount = (duplicates?.directories.length || 1) - 1;
   const allPaths = duplicates?.directories.map(d => d.path).join('\n') || game.directory;
-
-  useEffect(() => {
-    if (totalAchievements !== null && totalAchievements !== 0) return;
-    if (isSteam && (game as any).achievementsTotal) return;
-
-    const fetchData = async () => {
-      try {
-        const gameAchievements = await getGameAchievements(gameId);
-        if (gameAchievements && gameAchievements.achievements) {
-          setTotalAchievements(gameAchievements.achievements.length);
-        }
-      } catch (error) {
-        console.error('Error fetching game data:', error);
-        setTotalAchievements(game.achievements.length);
-      }
-    };
-    fetchData();
-  }, [gameId, isSteam]);
 
   const [logoFailed, setLogoFailed] = useState(false);
 
@@ -212,10 +207,7 @@ const MonitoredGameRow: React.FC<{
     setLogoFailed(false);
   }, [gameId]);
 
-  const finalTotal = totalAchievements ?? game.achievements.length;
-  const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
-  const progressPercent = finalTotal > 0 ? Math.round((achievementsCurrent / finalTotal) * 100) : 0;
-  const handleSelect = () => onGameSelect({ id: parseInt(gameId), name: gameName, achievementsTotal: finalTotal });
+  const handleSelect = () => onGameSelect(toSteamSearchResult());
 
   return (
     <TableRow
@@ -237,15 +229,15 @@ const MonitoredGameRow: React.FC<{
           </div>
         ) : (
           <img
-            src={`${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/logo.png`}
+            src={getSteamLogoUrl(gameId)}
             alt=""
             className="h-12 w-12 object-contain drop-shadow-md sm:h-14 sm:w-14"
             onError={(e) => {
               const img = e.target as HTMLImageElement;
-              if (img.src.includes('capsule_184x69.jpg')) {
+              if (isSteamLogoFallbackUrl(img.src, gameId)) {
                 setLogoFailed(true);
               } else {
-                img.src = `${import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps'}/${gameId}/capsule_184x69.jpg`;
+                img.src = getSteamLogoFallbackUrl(gameId);
               }
             }}
           />

@@ -11,6 +11,7 @@ import {
   previewAchievementsRestore,
 } from "../../tauri-api";
 import { useI18n } from "../../contexts/I18nContext";
+import { getSteamLogoFallbackUrls, getSteamLogoUrl } from "@/lib/steam-assets";
 
 type ConflictStrategy = "backup" | "current" | "cancel";
 type SettingsStrategy = "backup" | "current" | "merge";
@@ -119,28 +120,14 @@ const SteamGameLogo: React.FC<{ gameId: string; className?: string }> = ({
   gameId,
   className = "w-8 h-8",
 }) => {
-  const steamCdn =
-    import.meta.env.VITE_STEAM_CDN_URL ||
-    "https://cdn.akamai.steamstatic.com/steam/apps";
-
-  const fallbacks = [
-    `${steamCdn}/${gameId}/capsule_sm_120.jpg`,
-    `${steamCdn}/${gameId}/capsule_184x69.jpg`,
-    `${steamCdn}/${gameId}/capsule_231x87.jpg`,
-    `${steamCdn}/${gameId}/capsule_467x181.jpg`,
-    `${steamCdn}/${gameId}/capsule_616x353.jpg`,
-    `${steamCdn}/${gameId}/library_hero.jpg`,
-    `${steamCdn}/${gameId}/library_600x900.jpg`,
-    `${steamCdn}/${gameId}/header.jpg`,
-    `${steamCdn}/${gameId}/header_292x136.jpg`,
-  ];
+  const fallbacks = getSteamLogoFallbackUrls(gameId);
 
   return (
     <div
       className={`${className} rounded-md border border-border overflow-hidden shrink-0 bg-background`}
     >
       <img
-        src={`${steamCdn}/${gameId}/logo.png`}
+        src={getSteamLogoUrl(gameId)}
         alt=""
         className="w-full h-full object-contain"
         onError={(e) => {

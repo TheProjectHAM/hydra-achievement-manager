@@ -5,6 +5,7 @@ import { FolderIcon, CloseIcon, SteamBrandIcon } from '../Icons';
 import { ApiSource } from '../../types';
 import { getGameNames } from '../../tauri-api';
 import { getAppPlatform } from '@/lib/platform';
+import { getSteamLogoFallbackUrl } from '@/lib/steam-assets';
 
 interface DirectoryConfig {
     path: string;
@@ -69,8 +70,6 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     const [pendingCustomPath, setPendingCustomPath] = useState<string | null>(null);
     const [pendingDetectionPreset, setPendingDetectionPreset] = useState<DetectionPreset>('auto');
     const [isPresetDropdownOpen, setIsPresetDropdownOpen] = useState(false);
-    const steamCdnUrl = import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.cloudflare.steamstatic.com/steam/apps';
-
     const getPresetLabel = (preset?: DetectionPreset) =>
         DETECTION_PRESETS.find(item => item.value === (preset || 'auto'))?.label || t('settings.monitored.presets.auto.label');
 
@@ -106,7 +105,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                             : 'User-added monitored directories',
                     directories: [],
                     gameId: gameId || undefined,
-                    imageUrl: gameId ? `${steamCdnUrl}/${gameId}/capsule_184x69.jpg` : undefined,
+                    imageUrl: gameId ? getSteamLogoFallbackUrl(gameId) : undefined,
                     custom: !dir.is_default,
                 });
             }
@@ -119,7 +118,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
             if (!a.gameId && b.gameId) return 1;
             return a.title.localeCompare(b.title);
         });
-    }, [directories, gameNames, steamCdnUrl]);
+    }, [directories, gameNames]);
 
     useEffect(() => {
         const gameIds = Array.from(new Set(directories.map(d => getGamePrefixId(d.path)).filter(Boolean))) as string[];

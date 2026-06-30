@@ -4,10 +4,10 @@ import { SteamSearchResult } from '../types';
 import { useI18n } from '../contexts/I18nContext';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import { getSteamHeaderUrl } from '@/lib/steam-assets';
 
 const SearchGameCard: React.FC<{ game: SteamSearchResult, onClick: () => void }> = ({ game, onClick }) => {
-  const steamCdn = import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps';
-  const imageUrl = `${steamCdn}/${game.id}/header.jpg`;
+  const imageUrl = getSteamHeaderUrl(game.id);
 
   return (
     <div

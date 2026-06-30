@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { getSteamHeaderUrl } from '@/lib/steam-assets';
 
 interface UnlockModalProps {
   isOpen: boolean;
@@ -83,11 +84,6 @@ const getMetricLabel = (existingAchievementCount: number | null, newAchievementC
       {newAchievementCount}
     </>
   );
-};
-
-const getGameArtUrl = (gameId: string | number) => {
-  const steamCdn = import.meta.env.VITE_STEAM_CDN_URL || 'https://cdn.akamai.steamstatic.com/steam/apps';
-  return `${steamCdn}/${gameId}`;
 };
 
 const PathRow: React.FC<{
@@ -394,8 +390,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
   const hydraPaths = gameWinePaths;
   const globalOnlyPaths = globalPaths.filter(p => !hydraPaths.includes(p));
 
-  const artUrl = getGameArtUrl(game.id);
-  const steamArtUrl = `${artUrl}/header.jpg`;
+  const steamArtUrl = getSteamHeaderUrl(game.id);
 
   const showSteamCustomTimestampWarning =
     selectedPath.startsWith('steam://');

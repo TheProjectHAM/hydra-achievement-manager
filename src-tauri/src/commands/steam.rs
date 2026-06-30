@@ -1,3 +1,4 @@
+use super::language::{map_ui_language_to_hydra_lang, map_ui_language_to_steam_store_lang};
 use super::settings::{load_settings, save_settings};
 use crate::api::{HydraAPI, SteamAPI};
 use crate::steam_integration::SteamAchievementData;
@@ -125,31 +126,6 @@ fn steam_library_entries(folders: Vec<PathBuf>) -> Vec<Value> {
             }
         })
         .collect()
-}
-
-fn map_ui_language_to_steam_store_lang(language: &str) -> &str {
-    match language {
-        "pt-BR" => "brazilian",
-        "es-ES" => "spanish",
-        "ru-RU" => "russian",
-        "fr-FR" => "french",
-        "de-DE" => "german",
-        "it-IT" => "italian",
-        "ja-JP" => "japanese",
-        "zh-CN" => "schinese",
-        "pl-PL" => "polish",
-        "uk-UA" => "ukrainian",
-        _ => "english",
-    }
-}
-
-fn map_ui_language_to_hydra_lang(language: &str) -> &str {
-    match language {
-        "pt-BR" => "pt",
-        "es-ES" => "es",
-        "ru-RU" => "ru",
-        _ => "en",
-    }
 }
 
 async fn enrich_steam_achievement_metadata(

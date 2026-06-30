@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { Timestamp, DateFormat, TimeFormat } from '../types';
+import { Timestamp } from '../types';
 import TimestampSelector from './TimestampSelector';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { ChevronLeftIcon } from './Icons';
 import { Button } from '@/components/ui/button';
+import { dateToTimestamp, emptyTimestamp } from '../formatters';
 
 export type UnlockMode = 'random' | 'current' | 'custom';
 
@@ -37,20 +37,11 @@ const GlobalTimestampManager: React.FC<GlobalTimestampManagerProps> = ({ mode, s
   };
 
   const handleTimestampClear = () => {
-    setTimestamp({ day: '', month: '', year: '', hour: '', minute: '' });
+    setTimestamp(emptyTimestamp());
   };
 
   const handleSetCurrentTimestamp = () => {
-    const now = new Date();
-    const newTimestamp: Timestamp = {
-      day: format(now, 'dd'),
-      month: format(now, 'MM'),
-      year: format(now, 'yyyy'),
-      minute: format(now, 'mm'),
-      hour: format(now, timeFormat === '12h' ? 'hh' : 'HH'),
-      ...(timeFormat === '12h' && { ampm: format(now, 'aa').toUpperCase() as 'AM' | 'PM' })
-    };
-    setTimestamp(newTimestamp);
+    setTimestamp(dateToTimestamp(new Date(), timeFormat));
   };
 
   const modes: { key: UnlockMode; label: string }[] = [
