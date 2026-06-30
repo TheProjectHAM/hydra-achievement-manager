@@ -8,33 +8,33 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #0a0a0b;
+  --background: #0f0f0f;
   --foreground: #ffffff;
-  --card: #1a1a1b;
+  --card: #171717;
   --card-foreground: #ffffff;
-  --popover: #1a1a1b;
+  --popover: #171717;
   --popover-foreground: #ffffff;
   --primary: #ffffff;
-  --primary-foreground: #0a0a0b;
-  --secondary: #1a1a1b;
+  --primary-foreground: #0f0f0f;
+  --secondary: #1f1f1f;
   --secondary-foreground: #ffffff;
-  --muted: #1a1a1b;
-  --muted-foreground: #9ca3af;
-  --accent: rgba(255, 255, 255, 0.03);
+  --muted: #1f1f1f;
+  --muted-foreground: #a3a3a3;
+  --accent: rgba(255, 255, 255, 0.055);
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.05);
-  --input: rgba(255, 255, 255, 0.02);
-  --ring: #9ca3af;
-  --sidebar-background: #0a0a0b;
-  --sidebar-foreground: #9ca3af;
+  --border: rgba(255, 255, 255, 0.075);
+  --input: rgba(255, 255, 255, 0.045);
+  --ring: #a3a3a3;
+  --sidebar-background: #121212;
+  --sidebar-foreground: #a3a3a3;
   --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #0a0a0b;
-  --sidebar-accent: rgba(255, 255, 255, 0.03);
+  --sidebar-primary-foreground: #0f0f0f;
+  --sidebar-accent: rgba(255, 255, 255, 0.055);
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.05);
-  --sidebar-ring: #9ca3af;
+  --sidebar-border: rgba(255, 255, 255, 0.075);
+  --sidebar-ring: #a3a3a3;
 }
 
 .light {
