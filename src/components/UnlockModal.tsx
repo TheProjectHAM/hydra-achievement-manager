@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useI18n } from '../contexts/I18nContext';
 import { getSteamLibraryInfo, getAchievementIniLastModified, getSteamGames, getGameWinePaths, getMonitoredDirectories } from '../tauri-api';
 import { SteamSearchResult } from '../types';
@@ -11,12 +11,13 @@ import { cn } from '@/lib/utils';
 import { getAppPlatform } from '@/lib/platform';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { getSteamHeaderUrl } from '@/lib/steam-assets';
+import { XIcon } from 'lucide-react';
 
 interface UnlockModalProps {
   isOpen: boolean;
@@ -95,9 +96,7 @@ const PathRow: React.FC<{
   steamVdfLastModified?: Date | null;
   newAchievementCount: number;
   onSelect: () => void;
-  isFirst?: boolean;
-  isLast?: boolean;
-}> = ({ path, isSelected, existingAchievementCount, lastModified, steamVdfPath, steamVdfLastModified, newAchievementCount, onSelect, isFirst, isLast }) => {
+}> = ({ path, isSelected, existingAchievementCount, lastModified, steamVdfPath, steamVdfLastModified, newAchievementCount, onSelect }) => {
   const { t } = useI18n();
   const { dateFormat, timeFormat } = useTheme();
   const isSteam = path.startsWith('steam://');
@@ -125,14 +124,7 @@ const PathRow: React.FC<{
   return (
     <div
       className={cn(
-        'group relative overflow-hidden border transition-all duration-200 cursor-pointer min-h-[92px]',
-        isFirst && isLast
-          ? 'rounded-xl'
-          : isFirst
-            ? 'rounded-t-xl rounded-b-none'
-            : isLast
-              ? 'rounded-b-xl rounded-t-none -mt-px'
-              : 'rounded-none -mt-px',
+        'group relative overflow-hidden rounded-xl border transition-all duration-200 cursor-pointer min-h-[92px]',
         isFaded && 'opacity-55',
         isSelected
           ? 'border-foreground/80 bg-accent shadow-[0_0_0_1px_hsl(var(--foreground)/0.35)]'
@@ -185,90 +177,15 @@ const PathRow: React.FC<{
   );
 };
 
-const ChevronIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4.18179 6.18181C4.35753 6.00608 4.64245 6.00608 4.81819 6.18181L7.49999 8.86362L10.1818 6.18181C10.3575 6.00608 10.6424 6.00608 10.8182 6.18181C10.9939 6.35755 10.9939 6.64247 10.8182 6.81821L7.81819 9.81821C7.73379 9.9026 7.61934 9.95001 7.49999 9.95001C7.38064 9.95001 7.26618 9.9026 7.18179 9.81821L4.18179 6.81821C4.00605 6.64247 4.00605 6.35755 4.18179 6.18181Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
-  </svg>
-);
+type ProviderKey = 'steam' | 'hydra' | 'global';
 
-const SectionCard: React.FC<{
+interface ProviderGroup {
+  key: ProviderKey;
   title: string;
-  artUrl?: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  isEmpty?: boolean;
-  emptyMessage?: string;
-  defaultOpen?: boolean;
-}> = ({ title, artUrl, icon, children, isEmpty, emptyMessage, defaultOpen = true }) => {
-  const { t } = useI18n();
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  return (
-    <div className="rounded-xl border border-border overflow-hidden transition-all duration-300">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left hover:bg-accent/40 transition-colors"
-      >
-        {artUrl ? (
-          <div className="relative h-28 w-full overflow-hidden bg-muted">
-            <img
-              src={artUrl}
-              alt=""
-              className="w-full h-full object-cover opacity-50"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2.5 px-4 pb-3">
-              {icon && (
-                <>
-                  <span className="flex items-center justify-center text-foreground/80">{icon}</span>
-                  <span className="text-foreground/30">|</span>
-                </>
-              )}
-              <p className="text-sm font-semibold text-foreground truncate">{title}</p>
-              <ChevronIcon className={cn(
-                'ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-                isOpen && 'rotate-180'
-              )} />
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2.5 px-4 py-3 bg-muted/50">
-            {icon && (
-              <>
-                <span className="flex items-center justify-center text-foreground/80">{icon}</span>
-                <span className="text-foreground/30">|</span>
-              </>
-            )}
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            <ChevronIcon className={cn(
-              'ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-              isOpen && 'rotate-180'
-            )} />
-          </div>
-        )}
-      </button>
-
-      {isOpen && (
-        <div className="divide-y divide-border">
-          {isEmpty ? (
-            <div className="px-4 py-6 flex flex-col items-center justify-center gap-2 text-center">
-              <FolderIcon className="text-xl opacity-20" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
-                {emptyMessage || t('unlockModal.noPathsFound')}
-              </p>
-            </div>
-          ) : (
-            children
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+  subtitle: string;
+  paths: string[];
+  icon: React.ReactNode;
+}
 
 const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, game, newAchievementCount, unlockMode }) => {
   const { t } = useI18n();
@@ -280,6 +197,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
   const [steamVdfLastModified, setSteamVdfLastModified] = useState<Date | null>(null);
   const [iniLastModifiedByPath, setIniLastModifiedByPath] = useState<Record<string, Date | null>>({});
   const [hasSteamPathForCurrentGame, setHasSteamPathForCurrentGame] = useState(false);
+  const [activeProvider, setActiveProvider] = useState<ProviderKey>('steam');
   const isLinux = getAppPlatform() === 'linux';
 
   useEffect(() => {
@@ -384,13 +302,52 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
     }
   };
 
-  if (!isOpen) return null;
-
   const steamPaths = hasSteamPathForCurrentGame ? ['steam://'] : [];
   const hydraPaths = gameWinePaths;
   const globalOnlyPaths = globalPaths.filter(p => !hydraPaths.includes(p));
 
   const steamArtUrl = getSteamHeaderUrl(game.id);
+  const providerGroups = useMemo<ProviderGroup[]>(() => ([
+    {
+      key: 'steam',
+      title: 'Steam',
+      subtitle: steamPaths.length > 0 ? 'Steamworks provider' : 'Unavailable for this game',
+      paths: steamPaths,
+      icon: <SteamBrandIcon className="h-5 w-5" />,
+    },
+    ...(isLinux ? [{
+      key: 'hydra' as const,
+      title: 'Hydra',
+      subtitle: hydraPaths.length > 0 ? 'Per-game Wine prefixes' : 'No Hydra prefix found',
+      paths: hydraPaths,
+      icon: <HydraIcon className="h-5 w-5" />,
+    }] : []),
+    {
+      key: 'global',
+      title: t('unlockModal.globalPaths'),
+      subtitle: globalOnlyPaths.length > 0 ? 'Shared monitored folders' : 'No global path available',
+      paths: globalOnlyPaths,
+      icon: <FolderIcon className="h-5 w-5" />,
+    },
+  ]), [globalOnlyPaths, hydraPaths, isLinux, steamPaths, t]);
+  const availableProviderGroups = providerGroups.filter(group => group.paths.length > 0);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const selectedProvider = providerGroups.find(group => group.paths.includes(selectedPath));
+    if (selectedProvider) {
+      setActiveProvider(selectedProvider.key);
+      return;
+    }
+
+    if (!providerGroups.some(group => group.key === activeProvider && group.paths.length > 0)) {
+      setActiveProvider(availableProviderGroups[0]?.key || 'steam');
+    }
+  }, [activeProvider, availableProviderGroups, isOpen, providerGroups, selectedPath]);
+
+  const activeProviderGroup = providerGroups.find(group => group.key === activeProvider) || availableProviderGroups[0] || providerGroups[0];
+
+  if (!isOpen) return null;
 
   const showSteamCustomTimestampWarning =
     selectedPath.startsWith('steam://');
@@ -399,7 +356,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
       ? t('unlockModal.steamCustomTimestampWarning')
       : t('unlockModal.steamCustomTimestampWarning');
 
-  const renderPathItem = (path: string, isFirst = false, isLast = false) => {
+  const renderPathItem = (path: string) => {
     const existingInfo = getExistingFileInfo(path);
     return (
       <PathRow
@@ -412,81 +369,138 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
         steamVdfLastModified={steamVdfLastModified}
         newAchievementCount={newAchievementCount}
         onSelect={() => setSelectedPath(path)}
-        isFirst={isFirst}
-        isLast={isLast}
       />
     );
   };
-
-  const renderPathList = (paths: string[]) =>
-    paths.map((path, index) => renderPathItem(path, index === 0, index === paths.length - 1));
 
   const hasAnyPath = steamPaths.length > 0 || (isLinux && hydraPaths.length > 0) || globalOnlyPaths.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl h-[620px] flex flex-col overflow-hidden p-0 gap-0 bg-background [&_[data-slot='dialog-close']]:top-5 [&_[data-slot='dialog-close']]:right-5 [&_[data-slot='dialog-close']]:h-8 [&_[data-slot='dialog-close']]:w-8">
-        <DialogHeader className="relative px-6 pt-6 pb-4 border-b border-border">
-          <DialogTitle className="text-lg font-semibold tracking-tight pr-8">{t('unlockModal.title')}</DialogTitle>
-        </DialogHeader>
+      <DialogContent showCloseButton={false} className="w-[min(94vw,1040px)] max-w-none aspect-[16/9] max-h-[88vh] min-h-[560px] grid grid-rows-[minmax(0,1fr)_auto] overflow-hidden p-0 gap-0 bg-background">
+        <DialogTitle className="sr-only">{t('unlockModal.title')}</DialogTitle>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="space-y-4">
-            {steamPaths.length > 0 && (
-              <SectionCard
-                title="Steam"
-                artUrl={steamArtUrl}
-                icon={<SteamBrandIcon className="w-5 h-5" />}
+        <div className="grid min-h-0 grid-cols-[220px_minmax(0,1fr)] overflow-hidden">
+          <aside className="bg-muted/10 p-4">
+            <div className="mb-4 px-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Providers</p>
+            </div>
+            <div className="space-y-2">
+              {providerGroups.map((group) => {
+                const isActive = group.key === activeProviderGroup.key;
+                const isDisabled = group.paths.length === 0;
+
+                return (
+                  <button
+                    key={group.key}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => setActiveProvider(group.key)}
+                    className={cn(
+                      'group/provider relative w-full overflow-hidden rounded-xl px-3.5 py-3 text-left transition-all duration-200',
+                      isActive
+                        ? 'bg-foreground text-background shadow-sm'
+                        : 'bg-muted/55 text-foreground hover:bg-accent',
+                      isDisabled && 'cursor-not-allowed opacity-35 hover:bg-muted/55'
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        'flex h-7 w-7 shrink-0 items-center justify-center transition-colors',
+                        isActive ? 'text-background' : 'text-muted-foreground group-hover/provider:text-foreground'
+                      )}>
+                        {group.icon}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={cn(
+                          'block truncate text-sm font-semibold',
+                          isActive ? 'text-background' : 'text-foreground'
+                        )}>{group.title}</span>
+                        <span className={cn(
+                          'block truncate text-[10px] font-semibold',
+                          isActive ? 'text-background/65' : 'text-muted-foreground'
+                        )}>{group.paths.length} path{group.paths.length === 1 ? '' : 's'}</span>
+                      </span>
+                    </div>
+                    {isActive && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          <div className="min-w-0 overflow-y-auto">
+            <div className="relative h-48 overflow-hidden bg-muted sm:h-56">
+              <DialogClose
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute right-4 top-4 z-20 border border-white/25 bg-background/90 text-foreground shadow-lg backdrop-blur hover:bg-background hover:text-foreground"
+                  />
+                }
               >
-                {renderPathList(steamPaths)}
-              </SectionCard>
-            )}
-
-            {isLinux && hydraPaths.length > 0 && (
-              <SectionCard
-                title="Hydra"
-                artUrl={steamArtUrl}
-                icon={<HydraIcon className="w-5 h-5" />}
-              >
-                {renderPathList(hydraPaths)}
-              </SectionCard>
-            )}
-
-            {globalOnlyPaths.length > 0 && (
-              <SectionCard
-                title={t('unlockModal.globalPaths')}
-                artUrl={steamArtUrl}
-                icon={<FolderIcon className="w-5 h-5" />}
-                isEmpty={false}
-              >
-                {renderPathList(globalOnlyPaths)}
-              </SectionCard>
-            )}
-
-            {!hasAnyPath && (
-              <div className="p-10 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 text-center border-muted/60 bg-muted/20">
-                <FolderIcon className="text-3xl opacity-20" />
-                <p className="text-xs font-bold opacity-50 uppercase tracking-widest leading-relaxed text-muted-foreground">
-                  {t('unlockModal.noPathsFound')}
-                </p>
+                <XIcon className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
+              <img
+                src={steamArtUrl}
+                alt=""
+                className="h-full w-full object-cover opacity-70"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-black/15" />
+              <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-6">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center text-white drop-shadow-lg">
+                  {activeProviderGroup.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-2xl font-semibold text-white drop-shadow">{game.name}</p>
+                  <p className="mt-1 text-xs font-semibold text-white/70 drop-shadow">
+                    {activeProviderGroup.title} · {activeProviderGroup.subtitle}
+                  </p>
+                </div>
+                <div className="ml-auto hidden border-l border-white/25 pl-4 text-right text-[10px] font-bold uppercase tracking-widest text-white/80 drop-shadow sm:block">
+                  {newAchievementCount} {t('common.achievements').toLowerCase()}
+                </div>
               </div>
-            )}
+            </div>
+
+            <div className="p-5">
+              {hasAnyPath && activeProviderGroup.paths.length > 0 ? (
+                <div className="grid gap-3">
+                  {activeProviderGroup.paths.map(renderPathItem)}
+                </div>
+              ) : (
+                <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-muted/60 bg-muted/20 p-10 text-center">
+                  <FolderIcon className="text-3xl opacity-20" />
+                  <p className="text-xs font-bold uppercase tracking-widest leading-relaxed text-muted-foreground/60">
+                    {hasAnyPath ? activeProviderGroup.subtitle : t('unlockModal.noPathsFound')}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 p-6 pt-4 border-t border-border bg-background">
-          {showSteamCustomTimestampWarning && (
-            <div className="w-full rounded-md border px-3 py-2 text-[10px] font-semibold leading-relaxed bg-muted/50 text-muted-foreground">
-              {steamWarningMessage}
+        <div className="grid grid-cols-[220px_minmax(0,1fr)] bg-background">
+          <div className="bg-muted/10" />
+          <div className="flex flex-col gap-3 p-5 pt-2">
+            {showSteamCustomTimestampWarning && (
+              <div className="w-full rounded-md border px-3 py-2 text-[10px] font-semibold leading-relaxed bg-muted/50 text-muted-foreground">
+                {steamWarningMessage}
+              </div>
+            )}
+            <div className="flex w-full gap-3">
+              <Button variant="outline" onClick={onClose} className="flex-1">
+                {t('unlockModal.cancel')}
+              </Button>
+              <Button onClick={handleConfirm} disabled={!selectedPath} className="flex-1">
+                {t('unlockModal.unlockHere')}
+              </Button>
             </div>
-          )}
-          <div className="flex w-full gap-3">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              {t('unlockModal.cancel')}
-            </Button>
-            <Button onClick={handleConfirm} disabled={!selectedPath} className="flex-1">
-              {t('unlockModal.unlockHere')}
-            </Button>
           </div>
         </div>
       </DialogContent>
