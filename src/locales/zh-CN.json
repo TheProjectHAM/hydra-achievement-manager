@@ -131,6 +131,7 @@
       "description": "根据您的偏好自定义应用的外观和感觉。",
       "lightTheme": "浅色",
       "darkTheme": "深色",
+      "breezeDarkTheme": "Breeze Dark",
       "sidebar": "侧边栏",
       "resetSidebarWidth": "重置侧边栏宽度",
       "resetSidebarWidthDesc": "将侧边栏恢复为默认宽度。",

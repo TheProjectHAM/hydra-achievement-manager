@@ -374,7 +374,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-[min(94vw,960px)] max-w-none aspect-[16/9] max-h-[82vh] min-h-[500px] grid grid-rows-[minmax(0,1fr)_auto] overflow-hidden p-0 gap-0 bg-background">
+      <DialogContent showCloseButton={false} className="w-[min(94vw,960px)] max-w-none aspect-[16/9] max-h-[82vh] min-h-[500px] overflow-hidden p-0 bg-background">
         <DialogTitle className="sr-only">{t('unlockModal.title')}</DialogTitle>
         <DialogClose
           render={
@@ -388,12 +388,13 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
           <span className="sr-only">Close</span>
         </DialogClose>
 
-        <div className="grid min-h-0 grid-cols-[220px_minmax(0,1fr)] overflow-hidden">
-          <aside className="bg-muted/10 p-4">
-            <div className="space-y-2">
+        <div className="grid min-h-0 grid-cols-[200px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
+          <aside className="row-span-2 flex flex-col border-r border-border/40 bg-muted/20">
+            <nav className="flex-1 space-y-1 p-3">
               {providerGroups.map((group) => {
                 const isActive = group.key === activeProviderGroup.key;
                 const isDisabled = group.paths.length === 0;
+                const count = group.paths.length;
 
                 return (
                   <button
@@ -402,32 +403,30 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
                     disabled={isDisabled}
                     onClick={() => setActiveProvider(group.key)}
                     className={cn(
-                      'group/provider relative w-full overflow-hidden rounded-md px-3.5 py-2.5 text-left transition-all duration-200',
+                      'group/provider relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150',
                       isActive
-                        ? 'bg-foreground text-background shadow-sm'
-                        : 'bg-muted/55 text-foreground hover:bg-accent',
-                      isDisabled && 'cursor-not-allowed opacity-35 hover:bg-muted/55'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground/80 hover:bg-accent hover:text-foreground',
+                      isDisabled && 'cursor-not-allowed opacity-40'
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className={cn(
-                        'flex h-7 w-7 shrink-0 items-center justify-center transition-colors',
-                        isActive ? 'text-background' : 'text-muted-foreground group-hover/provider:text-foreground'
-                      )}>
-                        {group.icon}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className={cn(
-                          'block truncate text-sm font-semibold',
-                          isActive ? 'text-background' : 'text-foreground'
-                        )}>{group.title}</span>
-                      </span>
-                    </div>
-                    {isActive && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-primary" />}
+                    <span className={cn(
+                      'flex h-6 w-6 shrink-0 items-center justify-center transition-colors',
+                      isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover/provider:text-foreground'
+                    )}>
+                      {group.icon}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{group.title}</span>
+                    <span className={cn(
+                      'tabular-nums text-xs font-semibold',
+                      isActive ? 'text-primary-foreground/80' : 'text-muted-foreground/60'
+                    )}>
+                      {count > 0 ? count : '—'}
+                    </span>
                   </button>
                 );
               })}
-            </div>
+            </nav>
           </aside>
 
           <div className="min-w-0 overflow-y-auto">
@@ -475,21 +474,18 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
               )}
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-[220px_minmax(0,1fr)] bg-background">
-          <div className="bg-muted/10" />
-          <div className="flex flex-col gap-3 p-5 pt-2">
+          <div className="flex flex-col gap-2 px-5 py-3">
             {showSteamCustomTimestampWarning && (
               <div className="w-full rounded-md border px-3 py-2 text-[10px] font-semibold leading-relaxed bg-muted/50 text-muted-foreground">
                 {steamWarningMessage}
               </div>
             )}
-            <div className="flex w-full gap-3">
-              <Button variant="outline" onClick={onClose} className="flex-1">
+            <div className="flex w-full gap-2">
+              <Button variant="ghost" onClick={onClose} className="flex-1 h-9 text-sm font-medium text-muted-foreground hover:text-foreground">
                 {t('unlockModal.cancel')}
               </Button>
-              <Button onClick={handleConfirm} disabled={!selectedPath} className="flex-1">
+              <Button onClick={handleConfirm} disabled={!selectedPath} className="flex-1 h-9 text-sm font-semibold">
                 {t('unlockModal.unlockHere')}
               </Button>
             </div>

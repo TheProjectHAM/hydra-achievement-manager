@@ -132,6 +132,7 @@
       "description": "Personalizza l'aspetto dell'applicazione secondo le tue preferenze.",
       "lightTheme": "Chiaro",
       "darkTheme": "Scuro",
+      "breezeDarkTheme": "Breeze Dark",
       "sidebar": "Barra laterale",
       "resetSidebarWidth": "Reimposta larghezza barra laterale",
       "resetSidebarWidthDesc": "Ripristina la larghezza predefinita della barra laterale.",

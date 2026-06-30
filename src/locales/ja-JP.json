@@ -131,6 +131,7 @@
       "description": "アプリケーションの見た目を好みに合わせてカスタマイズします。",
       "lightTheme": "ライト",
       "darkTheme": "ダーク",
+      "breezeDarkTheme": "Breeze Dark",
       "sidebar": "サイドバー",
       "resetSidebarWidth": "サイドバー幅をリセット",
       "resetSidebarWidthDesc": "サイドバーをデフォルト幅に戻します。",

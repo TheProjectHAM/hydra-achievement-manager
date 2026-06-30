@@ -131,6 +131,7 @@
       "description": "Налаштуйте зовнішній вигляд програми за своїми вподобаннями.",
       "lightTheme": "Світла",
       "darkTheme": "Темна",
+      "breezeDarkTheme": "Breeze Dark",
       "sidebar": "Бічна панель",
       "resetSidebarWidth": "Скинути ширину бічної панелі",
       "resetSidebarWidthDesc": "Відновлює бічну панель до стандартної ширини.",

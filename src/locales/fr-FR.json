@@ -132,6 +132,7 @@
       "description": "Personnalisez l'apparence de l'application selon vos préférences.",
       "lightTheme": "Clair",
       "darkTheme": "Sombre",
+      "breezeDarkTheme": "Breeze Dark",
       "sidebar": "Barre latérale",
       "resetSidebarWidth": "Réinitialiser la largeur de la barre latérale",
       "resetSidebarWidthDesc": "Restaure la largeur par défaut de la barre latérale.",

@@ -14,7 +14,8 @@ export type Theme =
   | 'catppuccin'
   | 'github-dark'
   | 'solarized-dark'
-  | 'one-dark';
+  | 'one-dark'
+  | 'breeze-dark';
 export type GamesViewMode = 'grid' | 'list';
 
 const DEFAULT_SIDEBAR_WIDTH = 288;
@@ -114,7 +115,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       'catppuccin',
       'github-dark',
       'solarized-dark',
-      'one-dark'
+      'one-dark',
+      'breeze-dark'
     );
     root.classList.add(theme);
     root.classList.toggle('dark', isDarkTheme(theme));

@@ -131,6 +131,7 @@
       "description": "Dostosuj wygląd aplikacji do swoich preferencji.",
       "lightTheme": "Jasny",
       "darkTheme": "Ciemny",
+      "breezeDarkTheme": "Breeze Dark",
       "sidebar": "Boczne menu",
       "resetSidebarWidth": "Resetuj szerokość bocznego menu",
       "resetSidebarWidthDesc": "Przywraca domyślną szerokość bocznego menu.",

@@ -196,6 +196,7 @@ const AppearanceSettings: React.FC<{
       { id: 'github-dark', name: t('settings.appearance.githubDarkTheme'), palette: ['#0d1117', '#161b22', '#58a6ff'] },
       { id: 'solarized-dark', name: t('settings.appearance.solarizedDarkTheme'), palette: ['#002b36', '#073642', '#268bd2'] },
       { id: 'one-dark', name: t('settings.appearance.oneDarkTheme'), palette: ['#282c34', '#353b45', '#61afef'] },
+      { id: 'breeze-dark', name: t('settings.appearance.breezeDarkTheme'), palette: ['#202326', '#141618', '#3daee9'] },
     ];
 
     return (

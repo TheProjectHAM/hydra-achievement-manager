@@ -132,6 +132,7 @@
       "description": "Настройте внешний вид приложения по своему усмотрению.",
       "lightTheme": "Светлая",
       "darkTheme": "Тёмная",
+      "breezeDarkTheme": "Breeze Dark",
       "sidebar": "Боковая панель",
       "resetSidebarWidth": "Сбросить ширину боковой панели",
       "resetSidebarWidthDesc": "Восстанавливает боковую панель до ширины по умолчанию.",

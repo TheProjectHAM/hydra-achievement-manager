@@ -66,7 +66,8 @@ const SetupWizard: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
     { id: 'catppuccin', name: t('settings.appearance.catppuccinTheme'), preview: ['#1e1e2e', '#313244', '#f5c2e7'] },
     { id: 'github-dark', name: t('settings.appearance.githubDarkTheme'), preview: ['#0d1117', '#30363d', '#58a6ff'] },
     { id: 'solarized-dark', name: t('settings.appearance.solarizedDarkTheme'), preview: ['#002b36', '#073642', '#2aa198'] },
-    { id: 'one-dark', name: t('settings.appearance.oneDarkTheme'), preview: ['#282c34', '#3e4451', '#61afef'] }
+    { id: 'one-dark', name: t('settings.appearance.oneDarkTheme'), preview: ['#282c34', '#3e4451', '#61afef'] },
+    { id: 'breeze-dark', name: t('settings.appearance.breezeDarkTheme'), preview: ['#202326', '#141618', '#3daee9'] }
   ]), [t]);
 
   const stepLabels = [
