@@ -33,15 +33,15 @@ pub async fn get_achievement_ini_last_modified(
     let expanded = crate::parser::expand_path(&path);
     let target_path = if preset == DirectoryDetectionPreset::Auto {
         let game_dir = expanded.join(&game_id);
-        match crate::parser::AchievementParser::find_achievement_file_in_game_dir(&game_dir, &game_id) {
+        match crate::parser::AchievementParser::find_achievement_file_in_game_dir(
+            &game_dir, &game_id,
+        ) {
             Some((path, _)) => path,
             None => return Ok(None),
         }
     } else {
         let (path, _) = crate::parser::AchievementParser::achievement_file_for_config(
-            &expanded,
-            &game_id,
-            preset,
+            &expanded, &game_id, preset,
         );
         path
     };
@@ -78,7 +78,10 @@ pub async fn add_monitored_directory(
             let normalized_path = expanded.to_string_lossy().to_string();
             let preset = detection_preset.unwrap_or_default();
 
-            if let Some(existing) = configs.iter_mut().find(|c| c.path == normalized_path && !c.is_default) {
+            if let Some(existing) = configs
+                .iter_mut()
+                .find(|c| c.path == normalized_path && !c.is_default)
+            {
                 existing.detection_preset = preset;
                 monitor.set_directories(configs.clone());
                 monitor.restart_monitoring().map_err(|e| e.to_string())?;
@@ -103,7 +106,9 @@ pub async fn add_monitored_directory(
         }
     };
 
-    let mut settings = load_settings(app_handle.clone()).await.unwrap_or(serde_json::json!({}));
+    let mut settings = load_settings(app_handle.clone())
+        .await
+        .unwrap_or(serde_json::json!({}));
     settings["monitoredConfigs"] = serde_json::to_value(&configs).map_err(|e| e.to_string())?;
     let _ = save_settings(settings, app_handle).await;
 
@@ -145,7 +150,9 @@ pub async fn toggle_monitored_directory(
         }
     };
 
-    let mut settings = load_settings(app_handle.clone()).await.unwrap_or(serde_json::json!({}));
+    let mut settings = load_settings(app_handle.clone())
+        .await
+        .unwrap_or(serde_json::json!({}));
     settings["monitoredConfigs"] = serde_json::to_value(&configs).map_err(|e| e.to_string())?;
     let _ = save_settings(settings, app_handle).await;
 
@@ -154,7 +161,9 @@ pub async fn toggle_monitored_directory(
 
 /// Solicita os achievements atuais
 #[tauri::command]
-pub async fn request_achievements(state: tauri::State<'_, crate::AppState>) -> Result<Vec<GameAchievements>, String> {
+pub async fn request_achievements(
+    state: tauri::State<'_, crate::AppState>,
+) -> Result<Vec<GameAchievements>, String> {
     let monitor_lock = state.monitor.lock().map_err(|e| e.to_string())?;
     if let Some(monitor) = &*monitor_lock {
         Ok(monitor.get_current_achievements())
@@ -185,7 +194,9 @@ pub async fn remove_monitored_directory(
         }
     };
 
-    let mut settings = load_settings(app_handle.clone()).await.unwrap_or(serde_json::json!({}));
+    let mut settings = load_settings(app_handle.clone())
+        .await
+        .unwrap_or(serde_json::json!({}));
     settings["monitoredConfigs"] = serde_json::to_value(&configs).map_err(|e| e.to_string())?;
     let _ = save_settings(settings, app_handle).await;
 
@@ -214,7 +225,8 @@ pub async fn set_wine_prefix_path(
             .ok_or_else(|| "Monitor not initialized".to_string())?;
 
         let current = monitor.get_directories();
-        let custom_dirs: Vec<DirectoryConfig> = current.iter().filter(|d| !d.is_default).cloned().collect();
+        let custom_dirs: Vec<DirectoryConfig> =
+            current.iter().filter(|d| !d.is_default).cloned().collect();
 
         let default_enabled: std::collections::HashMap<String, bool> = current
             .iter()
@@ -235,9 +247,12 @@ pub async fn set_wine_prefix_path(
         next
     };
 
-    let mut settings = load_settings(app_handle.clone()).await.unwrap_or(serde_json::json!({}));
+    let mut settings = load_settings(app_handle.clone())
+        .await
+        .unwrap_or(serde_json::json!({}));
     settings["winePrefixPath"] = Value::String(trimmed.to_string());
-    settings["monitoredConfigs"] = serde_json::to_value(&updated_directories).map_err(|e| e.to_string())?;
+    settings["monitoredConfigs"] =
+        serde_json::to_value(&updated_directories).map_err(|e| e.to_string())?;
     save_settings(settings, app_handle).await?;
 
     Ok(updated_directories)
@@ -255,8 +270,7 @@ pub async fn get_game_wine_paths(game_id: String) -> Result<Vec<DirectoryConfig>
     }
 
     use crate::commands::directories::{
-        build_wine_prefix_dirs_for_game,
-        find_existing_achievement_dirs_for_game_in_prefix,
+        build_wine_prefix_dirs_for_game, find_existing_achievement_dirs_for_game_in_prefix,
     };
 
     let user_data = crate::parser::expand_path("~/.config/hydralauncher");

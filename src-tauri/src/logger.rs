@@ -41,6 +41,14 @@ fn display_target(target: &str) -> String {
     leaf.split('_')
         .filter(|part| !part.is_empty())
         .map(|part| {
+            let upper = part.to_ascii_uppercase();
+            if matches!(
+                upper.as_str(),
+                "API" | "ID" | "VDF" | "DLL" | "URL" | "HTTP"
+            ) {
+                return upper;
+            }
+
             let mut chars = part.chars();
             match chars.next() {
                 Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),

@@ -1,6 +1,7 @@
 use super::language::{map_ui_language_to_hydra_lang, map_ui_language_to_steam_store_lang};
 use super::settings::{load_settings, save_settings};
-use crate::api::{HydraAPI, SteamAPI};
+use crate::integrations::hydra::HydraApi;
+use crate::integrations::steam::SteamWebApi;
 use crate::models::{DirectoryConfig, DirectoryDetectionPreset, UnlockOptions};
 use crate::parser::AchievementParser;
 use crate::unlocker::AchievementUnlocker;
@@ -43,7 +44,7 @@ pub async fn get_game_achievements(
                     steam_api_key = key.trim().to_string();
                 }
                 if let Some(id) = settings.get("steamId").and_then(|v| v.as_str()) {
-                    saved_steam_id = SteamAPI::normalize_steam_id(id).unwrap_or_default();
+                    saved_steam_id = SteamWebApi::normalize_steam_id(id).unwrap_or_default();
                 }
                 if let Some(lang) = settings.get("language").and_then(|v| v.as_str()) {
                     settings_language = Some(lang.to_string());
@@ -74,7 +75,7 @@ pub async fn get_game_achievements(
                 let _ = steam_monitor.shutdown();
             }
 
-            id.and_then(|id| SteamAPI::normalize_steam_id(&id))
+            id.and_then(|id| SteamWebApi::normalize_steam_id(&id))
         } else {
             None
         }
@@ -83,14 +84,18 @@ pub async fn get_game_achievements(
     let mut steam_id = active_steam_id.unwrap_or_else(|| saved_steam_id.clone());
 
     if steam_id.is_empty() {
-        if let Ok(Some(profile)) = crate::connections::steam::get_steam_profile() {
+        if let Ok(Some(profile)) = crate::integrations::steam::get_steam_profile() {
             steam_id =
-                SteamAPI::normalize_steam_id(&profile.steam_id64).unwrap_or(profile.steam_id64);
+                SteamWebApi::normalize_steam_id(&profile.steam_id64).unwrap_or(profile.steam_id64);
         }
     }
 
     if !steam_id.is_empty() && steam_id != saved_steam_id {
-        let _ = save_settings(serde_json::json!({ "steamId": steam_id.clone() }), app_handle.clone()).await;
+        let _ = save_settings(
+            serde_json::json!({ "steamId": steam_id.clone() }),
+            app_handle.clone(),
+        )
+        .await;
     }
 
     let language = language
@@ -123,30 +128,35 @@ pub async fn get_game_achievements(
             .parse()
             .map_err(|e: std::num::ParseIntError| e.to_string())?;
         let mut schema_achievements =
-            SteamAPI::get_game_achievements(app_id, &steam_api_key, steam_language)
+            SteamWebApi::get_game_achievements(app_id, &steam_api_key, steam_language)
                 .await
                 .map_err(|e| e.to_string())?;
 
         if !steam_id.is_empty() {
-            let player_achievements_result =
-                match SteamAPI::get_player_achievements(app_id, &steam_api_key, &steam_id).await {
-                    Ok(player_achievements) => Ok(player_achievements),
-                    Err(error) => {
-                        if SteamAPI::is_player_achievements_forbidden(&error) {
-                            log::debug!(
+            let player_achievements_result = match SteamWebApi::get_player_achievements(
+                app_id,
+                &steam_api_key,
+                &steam_id,
+            )
+            .await
+            {
+                Ok(player_achievements) => Ok(player_achievements),
+                Err(error) => {
+                    if SteamWebApi::is_player_achievements_forbidden(&error) {
+                        log::debug!(
                                 "Steam player achievements for app {} are not accessible through Steam Web API (profile/game details may be private)",
                                 app_id
                             );
-                        } else {
-                            log::warn!(
-                                "Steam Web API achievements failed for app {} ({}).",
-                                app_id,
-                                error
-                            );
-                        }
-                        Err(error)
+                    } else {
+                        log::warn!(
+                            "Steam Web API achievements failed for app {} ({}).",
+                            app_id,
+                            error
+                        );
                     }
-                };
+                    Err(error)
+                }
+            };
 
             if let Ok(player_achievements) = player_achievements_result {
                 let player_map: HashMap<String, i32> = player_achievements
@@ -171,7 +181,7 @@ pub async fn get_game_achievements(
         }
         serde_json::to_value(schema_achievements).map_err(|e| e.to_string())?
     } else {
-        let result = HydraAPI::get_game_achievements(&game_id, Some(hydra_language))
+        let result = HydraApi::get_game_achievements(&game_id, Some(hydra_language))
             .await
             .map_err(|e| e.to_string())?;
 
@@ -182,7 +192,7 @@ pub async fn get_game_achievements(
             let mut steam_status_map: HashMap<String, (i32, i64)> = HashMap::new();
 
             if !steam_api_key.is_empty() && !steam_id.is_empty() {
-                let player_achievements_result = match SteamAPI::get_player_achievements(
+                let player_achievements_result = match SteamWebApi::get_player_achievements(
                     app_id,
                     &steam_api_key,
                     &steam_id,
@@ -191,7 +201,7 @@ pub async fn get_game_achievements(
                 {
                     Ok(player_achievements) => Ok(player_achievements),
                     Err(error) => {
-                        if SteamAPI::is_player_achievements_forbidden(&error) {
+                        if SteamWebApi::is_player_achievements_forbidden(&error) {
                             log::debug!(
                                 "Steam player achievement status for app {} is not accessible through Steam Web API (profile/game details may be private)",
                                 app_id
@@ -276,18 +286,23 @@ pub async fn get_game_achievements(
     if let Ok(steam_lock) = state.steam_monitor.lock() {
         if let Some(steam_monitor) = &*steam_lock {
             if steam_monitor.is_enabled() {
-                if let Ok(_app_id) = game_id.parse::<u32>() {
-                    for achievement in achievements_array.iter_mut() {
-                        let name = achievement
-                            .get("name")
-                            .and_then(|v| v.as_str())
-                            .or_else(|| achievement.get("apiname").and_then(|v| v.as_str()));
+                if let Ok(app_id) = game_id.parse::<u32>() {
+                    if steam_monitor.switch_app_id(app_id).is_ok() {
+                        for achievement in achievements_array.iter_mut() {
+                            let name = achievement
+                                .get("name")
+                                .and_then(|v| v.as_str())
+                                .or_else(|| achievement.get("apiname").and_then(|v| v.as_str()));
 
-                        if let Some(name) = name {
-                            if let Ok(unlocked) = steam_monitor.get_achievement_status(name) {
-                                if let Some(obj) = achievement.as_object_mut() {
-                                    if unlocked {
-                                        obj.insert("achieved".to_string(), serde_json::json!(true));
+                            if let Some(name) = name {
+                                if let Ok(unlocked) = steam_monitor.get_achievement_status(name) {
+                                    if let Some(obj) = achievement.as_object_mut() {
+                                        if unlocked {
+                                            obj.insert(
+                                                "achieved".to_string(),
+                                                serde_json::json!(true),
+                                            );
+                                        }
                                     }
                                 }
                             }

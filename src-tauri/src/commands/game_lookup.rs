@@ -6,13 +6,20 @@ use std::collections::HashMap;
 use tauri::AppHandle;
 
 /// Função interna para obter o nome de um jogo
-async fn fetch_game_name_internal(game_id: &str, steam_store_language: &str) -> Result<String, String> {
-    let base_url =
-        std::env::var("STEAM_STORE_API_URL").unwrap_or_else(|_| "https://store.steampowered.com/api".to_string());
+async fn fetch_game_name_internal(
+    game_id: &str,
+    steam_store_language: &str,
+) -> Result<String, String> {
+    let base_url = std::env::var("STEAM_STORE_API_URL")
+        .unwrap_or_else(|_| "https://store.steampowered.com/api".to_string());
 
-    let url = format!("{}/appdetails?appids={}&l={}", base_url, game_id, steam_store_language);
+    let url = format!(
+        "{}/appdetails?appids={}&l={}",
+        base_url, game_id, steam_store_language
+    );
 
-    let client = crate::utils::http::get_client().map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client = crate::utils::http::get_client()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
     let response = client
         .get(&url)
@@ -53,8 +60,14 @@ pub async fn get_game_name(game_id: String, app_handle: AppHandle) -> Result<Str
 
     match fetch_game_name_internal(&game_id, steam_store_language).await {
         Ok(name) => {
-            let _ =
-                CacheManager::update_game(&app_handle, game_id.clone(), Some(name.clone()), None, None, None);
+            let _ = CacheManager::update_game(
+                &app_handle,
+                game_id.clone(),
+                Some(name.clone()),
+                None,
+                None,
+                None,
+            );
             Ok(name)
         }
         Err(_) => Ok(game_id),
@@ -63,7 +76,10 @@ pub async fn get_game_name(game_id: String, app_handle: AppHandle) -> Result<Str
 
 /// Obtém nomes de múltiplos jogos
 #[tauri::command]
-pub async fn get_game_names(game_ids: Vec<String>, app_handle: AppHandle) -> Result<HashMap<String, String>, String> {
+pub async fn get_game_names(
+    game_ids: Vec<String>,
+    app_handle: AppHandle,
+) -> Result<HashMap<String, String>, String> {
     let mut names = HashMap::new();
     let mut missing_ids: Vec<String> = Vec::new();
     let language = read_language_from_settings(&app_handle);
@@ -85,8 +101,14 @@ pub async fn get_game_names(game_ids: Vec<String>, app_handle: AppHandle) -> Res
     for game_id in missing_ids {
         match fetch_game_name_internal(&game_id, steam_store_language).await {
             Ok(name) => {
-                let _ =
-                    CacheManager::update_game(&app_handle, game_id.clone(), Some(name.clone()), None, None, None);
+                let _ = CacheManager::update_game(
+                    &app_handle,
+                    game_id.clone(),
+                    Some(name.clone()),
+                    None,
+                    None,
+                    None,
+                );
                 names.insert(game_id, name);
             }
             Err(_) => {
@@ -100,19 +122,26 @@ pub async fn get_game_names(game_ids: Vec<String>, app_handle: AppHandle) -> Res
 
 /// Busca jogos Steam
 #[tauri::command]
-pub async fn search_steam_games(query: String, app_handle: AppHandle) -> Result<Vec<SteamGameSearchResult>, String> {
+pub async fn search_steam_games(
+    query: String,
+    app_handle: AppHandle,
+) -> Result<Vec<SteamGameSearchResult>, String> {
     let trimmed_query = query.trim();
     let mut results = Vec::new();
     let language = read_language_from_settings(&app_handle);
     let steam_store_language = map_ui_language_to_steam_store_lang(&language);
 
     if let Ok(app_id) = trimmed_query.parse::<u32>() {
-        let base_url =
-            std::env::var("STEAM_STORE_API_URL").unwrap_or_else(|_| "https://store.steampowered.com/api".to_string());
+        let base_url = std::env::var("STEAM_STORE_API_URL")
+            .unwrap_or_else(|_| "https://store.steampowered.com/api".to_string());
 
-        let url = format!("{}/appdetails?appids={}&l={}", base_url, app_id, steam_store_language);
+        let url = format!(
+            "{}/appdetails?appids={}&l={}",
+            base_url, app_id, steam_store_language
+        );
 
-        let client = crate::utils::http::get_client().map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+        let client = crate::utils::http::get_client()
+            .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
         let response = client
             .get(&url)
@@ -141,7 +170,8 @@ pub async fn search_steam_games(query: String, app_handle: AppHandle) -> Result<
         }
     }
 
-    let base_url = std::env::var("STEAM_STORE_API_URL").unwrap_or_else(|_| "https://store.steampowered.com/api".to_string());
+    let base_url = std::env::var("STEAM_STORE_API_URL")
+        .unwrap_or_else(|_| "https://store.steampowered.com/api".to_string());
 
     let search_url = format!(
         "{}/storesearch/?term={}&l={}&cc=us&snr=1_4_4__12",
@@ -150,7 +180,8 @@ pub async fn search_steam_games(query: String, app_handle: AppHandle) -> Result<
         steam_store_language
     );
 
-    let search_client = crate::utils::http::get_client().map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let search_client = crate::utils::http::get_client()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
     let response = search_client
         .get(&search_url)

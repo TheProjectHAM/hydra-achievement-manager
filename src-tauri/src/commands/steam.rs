@@ -1,7 +1,8 @@
 use super::language::{map_ui_language_to_hydra_lang, map_ui_language_to_steam_store_lang};
 use super::settings::{load_settings, save_settings};
-use crate::api::{HydraAPI, SteamAPI};
-use crate::steam_integration::SteamAchievementData;
+use crate::integrations::hydra::HydraApi;
+use crate::integrations::steam::SteamWebApi;
+use crate::integrations::steam::{SteamAchievementData, SteamGame};
 use crate::utils::CacheManager;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -150,7 +151,7 @@ async fn enrich_steam_achievement_metadata(
         .unwrap_or("en-US");
 
     if !steam_api_key.is_empty() {
-        match SteamAPI::get_game_achievements(
+        match SteamWebApi::get_game_achievements(
             app_id,
             steam_api_key,
             map_ui_language_to_steam_store_lang(language),
@@ -222,7 +223,9 @@ async fn enrich_steam_achievement_metadata(
                 }
 
                 if !steam_id.is_empty() {
-                    match SteamAPI::get_player_achievements(app_id, steam_api_key, steam_id).await {
+                    match SteamWebApi::get_player_achievements(app_id, steam_api_key, steam_id)
+                        .await
+                    {
                         Ok(player_achievements) => {
                             let unlock_times: HashMap<_, _> = player_achievements
                                 .into_iter()
@@ -271,7 +274,7 @@ async fn enrich_steam_achievement_metadata(
         }
     }
 
-    match HydraAPI::get_game_achievements(
+    match HydraApi::get_game_achievements(
         &app_id.to_string(),
         Some(map_ui_language_to_hydra_lang(language)),
     )
@@ -536,7 +539,7 @@ pub async fn get_steam_user_info(
 pub async fn get_steam_games(
     state: tauri::State<'_, crate::AppState>,
     app_handle: AppHandle,
-) -> Result<Vec<crate::steam_integration::SteamGame>, String> {
+) -> Result<Vec<SteamGame>, String> {
     let mut games = {
         let steam_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
         if let Some(steam_monitor) = &*steam_lock {
@@ -564,7 +567,7 @@ pub async fn get_steam_games(
     let saved_steam_id = settings
         .get("steamId")
         .and_then(|v| v.as_str())
-        .and_then(SteamAPI::normalize_steam_id)
+        .and_then(SteamWebApi::normalize_steam_id)
         .unwrap_or_default();
 
     let active_steam_id = if use_steam_api {
@@ -586,7 +589,7 @@ pub async fn get_steam_games(
                 let _ = steam_monitor.shutdown();
             }
 
-            id.and_then(|id| SteamAPI::normalize_steam_id(&id))
+            id.and_then(|id| SteamWebApi::normalize_steam_id(&id))
         } else {
             None
         }
@@ -597,9 +600,9 @@ pub async fn get_steam_games(
     let mut steam_id = active_steam_id.unwrap_or_else(|| saved_steam_id.clone());
 
     if use_steam_api && steam_id.is_empty() {
-        if let Ok(Some(profile)) = crate::connections::steam::get_steam_profile() {
+        if let Ok(Some(profile)) = crate::integrations::steam::get_steam_profile() {
             steam_id =
-                SteamAPI::normalize_steam_id(&profile.steam_id64).unwrap_or(profile.steam_id64);
+                SteamWebApi::normalize_steam_id(&profile.steam_id64).unwrap_or(profile.steam_id64);
         }
     }
 
@@ -623,7 +626,7 @@ pub async fn get_steam_games(
 
         if use_steam_api && !steam_api_key.is_empty() && !steam_id.is_empty() {
             if let Ok(app_id) = game.game_id.parse::<u32>() {
-                let player_result = match SteamAPI::get_player_achievements(
+                let player_result = match SteamWebApi::get_player_achievements(
                     app_id,
                     &steam_api_key,
                     &steam_id,
@@ -632,7 +635,7 @@ pub async fn get_steam_games(
                 {
                     Ok(player_achievements) => Ok(player_achievements),
                     Err(error) => {
-                        if SteamAPI::is_player_achievements_forbidden(&error) {
+                        if SteamWebApi::is_player_achievements_forbidden(&error) {
                             log::info!(
                                 "Steam Web API counters unavailable for app {} because player achievements are private/forbidden",
                                 app_id
@@ -668,7 +671,7 @@ pub async fn get_steam_games(
                         }
                     }
                     Err(error) => {
-                        if SteamAPI::is_player_achievements_forbidden(&error) {
+                        if SteamWebApi::is_player_achievements_forbidden(&error) {
                             log::info!(
                                 "Steam Web API did not return player counters for app {} due to forbidden/private player data",
                                 app_id
@@ -695,26 +698,23 @@ pub async fn get_steam_game_achievements(
     app_id: u32,
     state: tauri::State<'_, crate::AppState>,
     app_handle: AppHandle,
-) -> Result<Vec<crate::steam_integration::SteamAchievementData>, String> {
+) -> Result<Vec<SteamAchievementData>, String> {
     let result = {
         let steam_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
         if let Some(steam_monitor) = &*steam_lock {
-            let result =
-                (|| -> Result<Vec<crate::steam_integration::SteamAchievementData>, String> {
-                    steam_monitor.initialize().map_err(|e| e.to_string())?;
-                    if !steam_monitor.is_enabled() {
-                        return Err(
-                            "Steam integration not available or Steam not running".to_string()
-                        );
-                    }
+            let result = (|| -> Result<Vec<SteamAchievementData>, String> {
+                steam_monitor.initialize().map_err(|e| e.to_string())?;
+                if !steam_monitor.is_enabled() {
+                    return Err("Steam integration not available or Steam not running".to_string());
+                }
 
-                    steam_monitor
-                        .switch_app_id(app_id)
-                        .map_err(|e| e.to_string())?;
-                    steam_monitor
-                        .get_game_achievements(app_id)
-                        .map_err(|e| e.to_string())
-                })();
+                steam_monitor
+                    .switch_app_id(app_id)
+                    .map_err(|e| e.to_string())?;
+                steam_monitor
+                    .get_game_achievements(app_id)
+                    .map_err(|e| e.to_string())
+            })();
 
             let _ = steam_monitor.shutdown();
             result

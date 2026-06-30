@@ -33,8 +33,13 @@ pub async fn close_window(window: tauri::WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn set_window_decorations(window: tauri::WebviewWindow, decorations: bool) -> Result<(), String> {
-    window.set_decorations(decorations).map_err(|e| e.to_string())
+pub async fn set_window_decorations(
+    window: tauri::WebviewWindow,
+    decorations: bool,
+) -> Result<(), String> {
+    window
+        .set_decorations(decorations)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -47,7 +52,9 @@ pub async fn open_devtools(window: tauri::WebviewWindow) {
 }
 
 #[tauri::command]
-pub async fn get_window_decoration_info(window: tauri::WebviewWindow) -> Result<serde_json::Value, String> {
+pub async fn get_window_decoration_info(
+    window: tauri::WebviewWindow,
+) -> Result<serde_json::Value, String> {
     let decorated = window.is_decorated().map_err(|e| e.to_string())?;
     let session_type = std::env::var("XDG_SESSION_TYPE").ok();
     let current_desktop = std::env::var("XDG_CURRENT_DESKTOP").ok();

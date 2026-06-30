@@ -30,6 +30,7 @@ pnpm-debug.log*
 Thumbs.db
 
 # Tauri / Rust
+target/
 src-tauri/target/
 src-tauri/gen/
 src-tauri/resources/steam_api64.dll

@@ -1,4 +1,6 @@
-use crate::models::{AchievementEntry, Cracker, DirectoryConfig, DirectoryDetectionPreset, GameAchievements};
+use crate::models::{
+    AchievementEntry, Cracker, DirectoryConfig, DirectoryDetectionPreset, GameAchievements,
+};
 use anyhow::{Context, Result};
 use serde_json::Value;
 use std::fs;
@@ -276,14 +278,8 @@ impl AchievementParser {
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
-                    let achieved = obj
-                        .get("earned")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
-                    let unlock_time = obj
-                        .get("earned_time")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
+                    let achieved = obj.get("earned").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let unlock_time = obj.get("earned_time").and_then(|v| v.as_i64()).unwrap_or(0);
 
                     achievements.push(AchievementEntry {
                         name,
@@ -455,7 +451,8 @@ impl AchievementParser {
     /// Valores em hex. `0101` = desbloqueado.
     fn process_3dm(content: &str) -> Result<Vec<AchievementEntry>> {
         let sections = Self::parse_ini(content);
-        let mut states: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut states: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         let mut times: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
         for (section_name, pairs) in sections {
@@ -539,8 +536,9 @@ impl AchievementParser {
 
         let mut achievements = Vec::new();
 
-        let entries = fs::read_dir(directory_path)
-            .with_context(|| format!("Failed to read FLT directory: {}", directory_path.display()))?;
+        let entries = fs::read_dir(directory_path).with_context(|| {
+            format!("Failed to read FLT directory: {}", directory_path.display())
+        })?;
 
         for entry in entries.flatten() {
             if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false) {
@@ -570,8 +568,9 @@ impl AchievementParser {
     /// ]
     /// ```
     fn process_steam_cache(content: &str, file_path: &Path) -> Result<Vec<AchievementEntry>> {
-        let json: Value = serde_json::from_str(content)
-            .with_context(|| format!("Failed to parse Steam cache JSON: {}", file_path.display()))?;
+        let json: Value = serde_json::from_str(content).with_context(|| {
+            format!("Failed to parse Steam cache JSON: {}", file_path.display())
+        })?;
 
         let mut achievements = Vec::new();
 
@@ -587,10 +586,7 @@ impl AchievementParser {
                         .get("bAchieved")
                         .and_then(|v| v.as_bool())
                         .unwrap_or(false);
-                    let unlock_time = obj
-                        .get("rtUnlocked")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
+                    let unlock_time = obj.get("rtUnlocked").and_then(|v| v.as_i64()).unwrap_or(0);
 
                     // Ignora entradas sem nome
                     if !name.is_empty() {
@@ -669,7 +665,11 @@ impl AchievementParser {
                 vec!["achievements.ini", "Achievements.ini"]
             }
             Cracker::OnlineFix => {
-                vec!["Stats/Achievements.ini", "Achievements.ini", "achievements.ini"]
+                vec![
+                    "Stats/Achievements.ini",
+                    "Achievements.ini",
+                    "achievements.ini",
+                ]
             }
             Cracker::Goldberg | Cracker::Empress => vec!["achievements.json"],
             Cracker::Rld => vec!["achievements.ini"],
@@ -689,7 +689,10 @@ impl AchievementParser {
         let mut games = Vec::new();
 
         if !directory_path.exists() {
-            log::warn!("Scan directory does not exist: {}", directory_path.display());
+            log::warn!(
+                "Scan directory does not exist: {}",
+                directory_path.display()
+            );
             return Ok(games);
         }
         log::info!("Scanning directory: {}", directory_path.display());
@@ -703,7 +706,8 @@ impl AchievementParser {
                     let game_id = entry.file_name().to_string_lossy().to_string();
 
                     // Tenta encontrar arquivo de conquista neste diretório
-                    let achievement_file = Self::find_achievement_file_in_game_dir(&entry.path(), &game_id);
+                    let achievement_file =
+                        Self::find_achievement_file_in_game_dir(&entry.path(), &game_id);
 
                     if let Some((achievement_file, cracker)) = achievement_file {
                         log::info!(
@@ -764,7 +768,10 @@ impl AchievementParser {
         let mut games = Vec::new();
 
         if !directory_path.exists() {
-            log::warn!("Scan directory does not exist: {}", directory_path.display());
+            log::warn!(
+                "Scan directory does not exist: {}",
+                directory_path.display()
+            );
             return Ok(games);
         }
 
@@ -778,11 +785,8 @@ impl AchievementParser {
 
             let game_id = entry.file_name().to_string_lossy().to_string();
             let game_dir = entry.path();
-            let (achievement_file, cracker) = Self::preset_achievement_file(
-                &game_dir,
-                &game_id,
-                config.detection_preset,
-            );
+            let (achievement_file, cracker) =
+                Self::preset_achievement_file(&game_dir, &game_id, config.detection_preset);
 
             if !achievement_file.exists() {
                 continue;
@@ -830,11 +834,7 @@ impl AchievementParser {
                     all_games.extend(games);
                 }
                 Err(e) => {
-                    log::error!(
-                        "Error parsing directory {}: {}",
-                        expanded_path.display(),
-                        e
-                    );
+                    log::error!("Error parsing directory {}: {}", expanded_path.display(), e);
                 }
             }
         }
@@ -883,10 +883,17 @@ impl AchievementParser {
                     (game_dir.join("achievements.ini"), Cracker::Codex)
                 }
             }
-            DirectoryDetectionPreset::CodexIni => (game_dir.join("achievements.ini"), Cracker::Codex),
-            DirectoryDetectionPreset::GoldbergJson => (game_dir.join("achievements.json"), Cracker::Goldberg),
+            DirectoryDetectionPreset::CodexIni => {
+                (game_dir.join("achievements.ini"), Cracker::Codex)
+            }
+            DirectoryDetectionPreset::GoldbergJson => {
+                (game_dir.join("achievements.json"), Cracker::Goldberg)
+            }
             DirectoryDetectionPreset::EmpressJson => (
-                game_dir.join("remote").join(game_id).join("achievements.json"),
+                game_dir
+                    .join("remote")
+                    .join(game_id)
+                    .join("achievements.json"),
                 Cracker::Empress,
             ),
             DirectoryDetectionPreset::OnlineFix => (
@@ -894,7 +901,10 @@ impl AchievementParser {
                 Cracker::OnlineFix,
             ),
             DirectoryDetectionPreset::Skidrow => (
-                game_dir.join("SteamEmu").join("UserStats").join("achiev.ini"),
+                game_dir
+                    .join("SteamEmu")
+                    .join("UserStats")
+                    .join("achiev.ini"),
                 Cracker::Skidrow,
             ),
             DirectoryDetectionPreset::CreamApi => (
@@ -905,7 +915,9 @@ impl AchievementParser {
                 game_dir.join("User").join("Achievements.ini"),
                 Cracker::SmartSteamEmu,
             ),
-            DirectoryDetectionPreset::Razor1911 => (game_dir.join("achievement"), Cracker::Razor1911),
+            DirectoryDetectionPreset::Razor1911 => {
+                (game_dir.join("achievement"), Cracker::Razor1911)
+            }
         }
     }
 
@@ -935,7 +947,10 @@ impl AchievementParser {
         for filename in candidates {
             let path = game_dir.join(filename);
             if path.exists() {
-                return Some((path.clone(), detect_cracker_from_path(&path.to_string_lossy())));
+                return Some((
+                    path.clone(),
+                    detect_cracker_from_path(&path.to_string_lossy()),
+                ));
             }
         }
 
@@ -1053,10 +1068,12 @@ mod tests {
             .expect("write user_stats");
         AchievementWriter::write_3dm_ini(&three_dm_path, &achievements).expect("write 3dm");
 
-        let parsed_user_stats = AchievementParser::parse_achievement_file(&user_stats_path, Cracker::UserStats)
-            .expect("parse user_stats");
-        let parsed_three_dm = AchievementParser::parse_achievement_file(&three_dm_path, Cracker::ThreeDm)
-            .expect("parse 3dm");
+        let parsed_user_stats =
+            AchievementParser::parse_achievement_file(&user_stats_path, Cracker::UserStats)
+                .expect("parse user_stats");
+        let parsed_three_dm =
+            AchievementParser::parse_achievement_file(&three_dm_path, Cracker::ThreeDm)
+                .expect("parse 3dm");
 
         assert_eq!(parsed_user_stats, achievements);
         assert_eq!(parsed_three_dm, achievements);

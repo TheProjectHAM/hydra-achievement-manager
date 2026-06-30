@@ -1,10 +1,11 @@
-use super::types::HydraConnectionProfile;
+use super::hydra_types::HydraConnectionProfile;
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn get_hydra_profile() -> Result<Option<HydraConnectionProfile>, String> {
-    let db_path = hydra_db_path().ok_or_else(|| "Could not resolve Hydra database path".to_string())?;
+    let db_path =
+        hydra_db_path().ok_or_else(|| "Could not resolve Hydra database path".to_string())?;
 
     if !db_path.exists() {
         return Ok(None);
@@ -37,7 +38,8 @@ fn hydra_db_path() -> Option<PathBuf> {
 }
 
 fn hydra_data_files(db_path: &Path) -> Result<Vec<PathBuf>, String> {
-    let entries = fs::read_dir(db_path).map_err(|e| format!("Failed to read Hydra database: {}", e))?;
+    let entries =
+        fs::read_dir(db_path).map_err(|e| format!("Failed to read Hydra database: {}", e))?;
 
     Ok(entries
         .filter_map(Result::ok)

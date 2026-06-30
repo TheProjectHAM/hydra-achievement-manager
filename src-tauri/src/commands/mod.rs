@@ -10,4 +10,4 @@ pub mod settings;
 pub mod steam;
 pub mod ui;
 
-pub use directories::build_default_directory_configs;
+pub use crate::integrations::hydra::build_default_directory_configs;

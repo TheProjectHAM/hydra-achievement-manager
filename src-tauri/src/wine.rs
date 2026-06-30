@@ -34,9 +34,7 @@ impl Wine {
 
         // 2. Prefixo por objectId
         if let Some(oid) = object_id {
-            let per_game = user_data_path
-                .join("wine-prefixes")
-                .join(oid);
+            let per_game = user_data_path.join("wine-prefixes").join(oid);
             if per_game.exists() {
                 return Some(per_game);
             }
@@ -162,9 +160,14 @@ impl Umu {
         let home = dirs::home_dir().unwrap_or_default();
         vec![
             // Steam Common
-            home.join(".steam").join("steam").join("steamapps").join("common"),
+            home.join(".steam")
+                .join("steam")
+                .join("steamapps")
+                .join("common"),
             // Compatibility Tools (user)
-            home.join(".steam").join("steam").join("compatibilitytools.d"),
+            home.join(".steam")
+                .join("steam")
+                .join("compatibilitytools.d"),
             // Compatibility Tools (system)
             PathBuf::from("/usr/share/steam/compatibilitytools.d"),
         ]
@@ -200,10 +203,7 @@ impl Umu {
 
                 let dir_path = entry.path();
                 if Self::is_valid_proton_directory(&dir_path) {
-                    let version_name = entry
-                        .file_name()
-                        .to_string_lossy()
-                        .to_string();
+                    let version_name = entry.file_name().to_string_lossy().to_string();
                     versions.push(ProtonInfo {
                         path: dir_path.to_string_lossy().to_string(),
                         version_name,

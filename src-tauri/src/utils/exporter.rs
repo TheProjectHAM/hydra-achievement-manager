@@ -1,4 +1,4 @@
-use crate::api::HydraAPI;
+use crate::integrations::hydra::HydraApi;
 use crate::models::ExportProgress;
 use anyhow::{Context, Result};
 use std::fs;
@@ -28,7 +28,7 @@ impl AchievementExporter {
         };
 
         // Busca achievements
-        let game_achievements = HydraAPI::get_game_achievements(game_id, Some(hydra_language))
+        let game_achievements = HydraApi::get_game_achievements(game_id, Some(hydra_language))
             .await
             .context("Failed to fetch achievements from Hydra API")?;
 

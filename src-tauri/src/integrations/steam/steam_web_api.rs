@@ -1,13 +1,13 @@
-use crate::api::hydra::HydraAPI;
+use crate::integrations::hydra::HydraApi;
 use crate::models::{HydraAchievement, SteamAchievement};
 use anyhow::{Context, Result};
 use reqwest::StatusCode;
 use serde_json::Value;
 use std::collections::HashMap;
 
-pub struct SteamAPI;
+pub struct SteamWebApi;
 
-impl SteamAPI {
+impl SteamWebApi {
     const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
 
     pub fn normalize_steam_id(input: &str) -> Option<String> {
@@ -48,6 +48,64 @@ impl SteamAPI {
         format!("{}***{}", &steam_id[..4], &steam_id[steam_id.len() - 4..])
     }
 
+    fn response_preview(body: &str) -> String {
+        let normalized = body.split_whitespace().collect::<Vec<_>>().join(" ");
+        normalized.chars().take(300).collect()
+    }
+
+    fn is_no_stats_response(body: &str) -> bool {
+        serde_json::from_str::<Value>(body)
+            .map(|value| Self::is_no_stats_value(&value))
+            .unwrap_or_else(|_| body.contains("Requested app has no stats"))
+    }
+
+    fn is_no_stats_value(body: &Value) -> bool {
+        body.get("playerstats")
+            .and_then(|player_stats| player_stats.get("error"))
+            .and_then(|error| error.as_str())
+            .is_some_and(|error| error.eq_ignore_ascii_case("Requested app has no stats"))
+    }
+
+    async fn read_json_response(
+        response: reqwest::Response,
+        label: &str,
+        app_id: u32,
+    ) -> Result<Value> {
+        let status = response.status();
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("unknown")
+            .to_string();
+        let body_text = response
+            .text()
+            .await
+            .with_context(|| format!("Failed to read {} response body", label))?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!(
+                "{} request failed for app {} with status {} (content-type: {}, body: {})",
+                label,
+                app_id,
+                status,
+                content_type,
+                Self::response_preview(&body_text)
+            ));
+        }
+
+        serde_json::from_str::<Value>(&body_text).with_context(|| {
+            format!(
+                "Failed to parse {} response as JSON for app {} (status: {}, content-type: {}, body: {})",
+                label,
+                app_id,
+                status,
+                content_type,
+                Self::response_preview(&body_text)
+            )
+        })
+    }
+
     /// Busca achievements de um jogo usando a API Steam
     pub async fn get_game_achievements(
         app_id: u32,
@@ -77,10 +135,7 @@ impl SteamAPI {
             anyhow::anyhow!("Network error: {}", e)
         })?;
 
-        let body: Value = response
-            .json()
-            .await
-            .context("Failed to parse Steam schema response as JSON")?;
+        let body = Self::read_json_response(response, "Steam schema", app_id).await?;
 
         if !body.is_object() {
             log::warn!(
@@ -102,17 +157,16 @@ impl SteamAPI {
             .and_then(|stats| stats.get("achievements"));
 
         let Some(achievements_value) = achievements_value else {
-            log::warn!(
-                "Steam schema response for app {} did not contain availableGameStats. Full payload: {}",
-                app_id,
-                body
+            log::info!(
+                "Steam schema response for app {} did not expose achievement schema",
+                app_id
             );
 
             return Ok(steam_achievements);
         };
 
         let Some(ach_array) = achievements_value.as_array() else {
-            log::warn!(
+            log::info!(
                 "Steam schema response for app {} had achievements field, but it was not an array. Full payload: {}",
                 app_id,
                 body
@@ -185,7 +239,7 @@ impl SteamAPI {
             || missing_icon_count > 0
             || missing_gray_icon_count > 0
         {
-            log::warn!(
+            log::info!(
                 "Steam schema response for app {} was partial: missing_name={}, missing_displayName={}, missing_description={}, missing_icon={}, missing_icongray={}",
                 app_id,
                 missing_name_count,
@@ -197,14 +251,13 @@ impl SteamAPI {
         }
 
         if steam_achievements.is_empty() {
-            log::warn!(
-                "Steam schema response for app {} returned zero valid achievements. Full payload: {}",
-                app_id,
-                body
+            log::info!(
+                "Steam schema response for app {} returned zero valid achievements",
+                app_id
             );
         }
 
-        if let Ok(hydra_result) = HydraAPI::get_game_achievements(
+        if let Ok(hydra_result) = HydraApi::get_game_achievements(
             &app_id.to_string(),
             Some(&Self::map_language(language)),
         )
@@ -299,21 +352,49 @@ impl SteamAPI {
 
         let status = response.status();
         if !status.is_success() {
+            let content_type = response
+                .headers()
+                .get(reqwest::header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or("unknown")
+                .to_string();
+            let body_text = response
+                .text()
+                .await
+                .context("Failed to read Steam player achievements error body")?;
+
+            if Self::is_no_stats_response(&body_text) {
+                log::info!(
+                    "Steam player achievements for app {} are unavailable because the app exposes no stats through Steam Web API",
+                    app_id
+                );
+                return Ok(Vec::new());
+            }
+
             if status == StatusCode::FORBIDDEN {
                 return Err(anyhow::anyhow!(
                     "Steam player achievements request failed with status 403 Forbidden. Check if the Steam profile and Game details are public, and if the Web API key is valid for this account"
                 ));
             }
+
             return Err(anyhow::anyhow!(
-                "Steam player achievements request failed with status {}",
-                status
+                "Steam player achievements request failed for app {} with status {} (content-type: {}, body: {})",
+                app_id,
+                status,
+                content_type,
+                Self::response_preview(&body_text)
             ));
         }
 
-        let body: Value = response
-            .json()
-            .await
-            .context("Failed to parse player achievements response")?;
+        let body = Self::read_json_response(response, "Steam player achievements", app_id).await?;
+
+        if Self::is_no_stats_value(&body) {
+            log::info!(
+                "Steam player achievements for app {} are unavailable because the app exposes no stats through Steam Web API",
+                app_id
+            );
+            return Ok(Vec::new());
+        }
 
         let mut achievements = Vec::new();
 
@@ -394,10 +475,9 @@ impl SteamAPI {
             .await
             .map_err(|e| anyhow::anyhow!("Failed to fetch global stats: {}", e))?;
 
-        let body: Value = response
-            .json()
-            .await
-            .context("Failed to parse global stats response")?;
+        let body =
+            Self::read_json_response(response, "Steam global achievement percentages", app_id)
+                .await?;
 
         let mut results = Vec::new();
         if let Some(root) = body.get("achievementpercentages") {

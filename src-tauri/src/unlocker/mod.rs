@@ -1,5 +1,8 @@
-use crate::models::{AchievementEntry, Cracker, DirectoryDetectionPreset, Timestamp, TimeFormat, UnlockMode, UnlockOptions};
-use crate::parser::{expand_path, detect_cracker_from_path, AchievementParser};
+use crate::models::{
+    AchievementEntry, Cracker, DirectoryDetectionPreset, TimeFormat, Timestamp, UnlockMode,
+    UnlockOptions,
+};
+use crate::parser::{detect_cracker_from_path, expand_path, AchievementParser};
 use anyhow::{Context, Result};
 use chrono::{Datelike, NaiveDateTime, Timelike};
 use rand::Rng;
@@ -62,7 +65,10 @@ impl AchievementWriter {
         let mut content = String::new();
         for ach in achievements {
             content.push_str(&format!("[{}]\n", ach.name));
-            content.push_str(&format!("Achieved={}\n", if ach.achieved { "1" } else { "0" }));
+            content.push_str(&format!(
+                "Achieved={}\n",
+                if ach.achieved { "1" } else { "0" }
+            ));
             content.push_str(&format!("UnlockTime={}\n", ach.unlock_time));
             content.push('\n');
         }
@@ -210,7 +216,10 @@ impl AchievementWriter {
         let mut content = String::from("[Achievements]\n");
         for ach in achievements {
             let flag = if ach.achieved { "1" } else { "0" };
-            content.push_str(&format!("{}={}@{}@{}\n", ach.name, flag, ach.unlock_time, ach.name));
+            content.push_str(&format!(
+                "{}={}@{}@{}\n",
+                ach.name, flag, ach.unlock_time, ach.name
+            ));
         }
 
         fs::write(file_path, content)
@@ -346,8 +355,12 @@ impl AchievementWriter {
         achievements: &[AchievementEntry],
     ) -> Result<()> {
         let directory_path = directory_path.as_ref();
-        fs::create_dir_all(directory_path)
-            .with_context(|| format!("Failed to create FLT directory: {}", directory_path.display()))?;
+        fs::create_dir_all(directory_path).with_context(|| {
+            format!(
+                "Failed to create FLT directory: {}",
+                directory_path.display()
+            )
+        })?;
 
         // Remove arquivos de conquistas que não estão mais desbloqueadas
         if let Ok(entries) = fs::read_dir(directory_path) {
@@ -366,8 +379,9 @@ impl AchievementWriter {
             if ach.achieved {
                 let file_path = directory_path.join(&ach.name);
                 if !file_path.exists() {
-                    fs::write(&file_path, "")
-                        .with_context(|| format!("Failed to write FLT file: {}", file_path.display()))?;
+                    fs::write(&file_path, "").with_context(|| {
+                        format!("Failed to write FLT file: {}", file_path.display())
+                    })?;
                 }
             }
         }
@@ -508,14 +522,9 @@ impl AchievementUnlocker {
                         TimeFormat::TwentyFourHour => format!("{:02}", random_date.hour()),
                     },
                     ampm: match time_format {
-                        TimeFormat::TwelveHour => Some(
-                            if random_date.hour() >= 12 {
-                                "PM"
-                            } else {
-                                "AM"
-                            }
-                            .to_string(),
-                        ),
+                        TimeFormat::TwelveHour => {
+                            Some(if random_date.hour() >= 12 { "PM" } else { "AM" }.to_string())
+                        }
                         TimeFormat::TwentyFourHour => None,
                     },
                 }
@@ -548,12 +557,8 @@ impl AchievementUnlocker {
         let game_dir = expanded_path.join(&options.game_id);
 
         // Detecta qual arquivo existe e qual cracker usar
-        let (file_path, cracker) = Self::detect_achievement_file(
-            &game_dir,
-            &expanded_path,
-            &options.game_id,
-            preset,
-        );
+        let (file_path, cracker) =
+            Self::detect_achievement_file(&game_dir, &expanded_path, &options.game_id, preset);
 
         // Escreve no formato correto
         AchievementWriter::write_achievements(&file_path, &achievement_entries, cracker)?;

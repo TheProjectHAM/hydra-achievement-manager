@@ -1,11 +1,9 @@
 use crate::models::{HydraAchievement, HydraGameAchievements};
 use anyhow::{Context, Result};
 
+pub struct HydraApi;
 
-
-pub struct HydraAPI;
-
-impl HydraAPI {
+impl HydraApi {
     /// Busca achievements de um jogo usando a API Hydra
     pub async fn get_game_achievements(
         game_id: &str,
@@ -13,7 +11,7 @@ impl HydraAPI {
     ) -> Result<HydraGameAchievements> {
         let base_url = std::env::var("HYDRA_API_URL")
             .unwrap_or_else(|_| "https://hydra-api-us-east-1.losbroxas.org".to_string());
-            
+
         let url = format!(
             "{}/games/achievements?shop=steam&objectId={}",
             base_url, game_id
@@ -32,17 +30,18 @@ impl HydraAPI {
         log::info!("Fetching Hydra achievements from: {}", final_url);
 
         let client = crate::utils::http::get_client().map_err(|e| {
-             log::error!("Failed to create HTTP client: {}", e);
-             anyhow::anyhow!("Internal HTTP client error: {}", e)
+            log::error!("Failed to create HTTP client: {}", e);
+            anyhow::anyhow!("Internal HTTP client error: {}", e)
         })?;
 
-        let response = client.get(&final_url).send().await
-            .map_err(|e| {
-                log::error!("Hydra API Request Failed (reqwest): Error={:?}", e);
-                anyhow::anyhow!("Failed to fetch from Hydra API: {}", e)
-            })?;
+        let response = client.get(&final_url).send().await.map_err(|e| {
+            log::error!("Hydra API Request Failed (reqwest): Error={:?}", e);
+            anyhow::anyhow!("Failed to fetch from Hydra API: {}", e)
+        })?;
 
-        let achievements: Vec<HydraAchievement> = response.json().await
+        let achievements: Vec<HydraAchievement> = response
+            .json()
+            .await
             .context("Failed to parse Hydra API response")?;
 
         Ok(HydraGameAchievements {

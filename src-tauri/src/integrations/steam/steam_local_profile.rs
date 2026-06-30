@@ -1,4 +1,4 @@
-use super::types::{SteamConnectionProfile, SteamSubAccount};
+use super::steam_profile_types::{SteamConnectionProfile, SteamSubAccount};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -31,10 +31,7 @@ pub fn get_steam_profile() -> Result<Option<SteamConnectionProfile>, String> {
         return Ok(None);
     };
 
-    let primary_idx = all_users
-        .iter()
-        .position(|u| u.most_recent)
-        .unwrap_or(0);
+    let primary_idx = all_users.iter().position(|u| u.most_recent).unwrap_or(0);
 
     let user = &all_users[primary_idx];
     let steam_id64 = user.steam_id64.clone();
@@ -49,14 +46,26 @@ pub fn get_steam_profile() -> Result<Option<SteamConnectionProfile>, String> {
     let avatar_hash = localconfig
         .as_deref()
         .and_then(|text| find_vdf_value_near_account(text, &account_id.to_string(), "avatar"))
-        .or_else(|| localconfig.as_deref().and_then(|text| find_vdf_value(text, "avatar")));
+        .or_else(|| {
+            localconfig
+                .as_deref()
+                .and_then(|text| find_vdf_value(text, "avatar"))
+        });
 
     let persona_name = localconfig
         .as_deref()
         .and_then(|text| find_vdf_value_near_account(text, &account_id.to_string(), "name"))
-        .or_else(|| localconfig.as_deref().and_then(|text| find_vdf_value(text, "PersonaName")))
+        .or_else(|| {
+            localconfig
+                .as_deref()
+                .and_then(|text| find_vdf_value(text, "PersonaName"))
+        })
         .or(user.persona_name.clone())
-        .unwrap_or_else(|| user.account_name.clone().unwrap_or_else(|| "Steam Profile".to_string()));
+        .unwrap_or_else(|| {
+            user.account_name
+                .clone()
+                .unwrap_or_else(|| "Steam Profile".to_string())
+        });
 
     let local_avatar_path = steam_path
         .join("config")

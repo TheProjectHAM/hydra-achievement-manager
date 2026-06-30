@@ -40,7 +40,8 @@ pub fn save_settings_value(app_handle: &AppHandle, settings: &Value) -> Result<(
 pub fn merge_settings(app_handle: &AppHandle, patch: &Value) -> Result<(), String> {
     let mut final_settings = load_settings_or_default(app_handle);
 
-    if let (Some(existing_obj), Some(new_obj)) = (final_settings.as_object_mut(), patch.as_object()) {
+    if let (Some(existing_obj), Some(new_obj)) = (final_settings.as_object_mut(), patch.as_object())
+    {
         for (key, value) in new_obj {
             existing_obj.insert(key.clone(), value.clone());
         }

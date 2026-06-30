@@ -94,9 +94,7 @@ impl AchievementMonitor {
                 loop {
                     match rx.recv_timeout(std::time::Duration::from_millis(100)) {
                         Ok(Ok(event)) => {
-                            if event.paths.iter().any(|p| {
-                                Self::is_achievement_file(p)
-                            }) {
+                            if event.paths.iter().any(|p| Self::is_achievement_file(p)) {
                                 last_event_time = std::time::Instant::now();
                                 pending_update = true;
                             }
@@ -108,13 +106,12 @@ impl AchievementMonitor {
                                     "Debounce period finished. Refreshing achievement data..."
                                 );
 
-                                let enabled_directories: Vec<DirectoryConfig> = directories
-                                    .iter()
-                                    .filter(|d| d.enabled)
-                                    .cloned()
-                                    .collect();
+                                let enabled_directories: Vec<DirectoryConfig> =
+                                    directories.iter().filter(|d| d.enabled).cloned().collect();
 
-                                let games = AchievementParser::parse_directory_configs(&enabled_directories);
+                                let games = AchievementParser::parse_directory_configs(
+                                    &enabled_directories,
+                                );
                                 log::info!(
                                     "Refresh complete (debounced). Found {} games.",
                                     games.len()

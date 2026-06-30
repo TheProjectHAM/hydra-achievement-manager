@@ -1,20 +1,17 @@
 // Módulos
-pub mod api;
 pub mod commands;
-pub mod connections;
+pub mod integrations;
 pub mod logger;
 pub mod models;
 pub mod monitor;
 pub mod parser;
-pub mod steam_integration;
-pub mod steam_monitor;
 pub mod unlocker;
 pub mod utils;
 pub mod wine;
 
+use integrations::steam::SteamMonitor;
 use monitor::AchievementMonitor;
 use std::sync::Mutex;
-use steam_monitor::SteamMonitor;
 use tauri::Manager;
 
 // Estado global do monitor
@@ -26,9 +23,7 @@ pub struct AppState {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(
-            crate::logger::build().build(),
-        )
+        .plugin(crate::logger::build().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -129,7 +124,8 @@ pub fn run() {
             let mut loaded_settings: Option<serde_json::Value> = None;
             if settings_path.exists() {
                 if let Ok(settings_data) = std::fs::read_to_string(&settings_path) {
-                    loaded_settings = serde_json::from_str::<serde_json::Value>(&settings_data).ok();
+                    loaded_settings =
+                        serde_json::from_str::<serde_json::Value>(&settings_data).ok();
                 }
             }
 
@@ -149,10 +145,13 @@ pub fn run() {
                 .map(|v| v.to_string());
 
             let mut monitored_configs: Vec<DirectoryConfig> =
-                crate::commands::build_default_directory_configs(saved_wine_prefix.as_deref());
+                crate::integrations::hydra::build_default_directory_configs(
+                    saved_wine_prefix.as_deref(),
+                );
 
             if let Some(settings) = &loaded_settings {
-                if let Some(configs_val) = settings.get("monitoredConfigs").and_then(|v| v.as_array())
+                if let Some(configs_val) =
+                    settings.get("monitoredConfigs").and_then(|v| v.as_array())
                 {
                     let saved_configs: Vec<DirectoryConfig> = configs_val
                         .iter()
@@ -169,7 +168,8 @@ pub fn run() {
                             }
                         }
 
-                        if let Some(existing) = monitored_configs.iter_mut().find(|c| c.path == saved.path)
+                        if let Some(existing) =
+                            monitored_configs.iter_mut().find(|c| c.path == saved.path)
                         {
                             existing.enabled = saved.enabled;
                         } else if !saved.is_default {
