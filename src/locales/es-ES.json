@@ -96,7 +96,8 @@
     "unlockHere": "Desbloquear aquí",
     "existingAchievements": "{count} logros existentes",
     "lastModified": "Última modificación: {date}",
-    "newTotal": "Nuevo total: {count} logros"
+    "newTotal": "Nuevo total: {count} logros",
+    "newPath": "Nueva ruta"
   },
   "directorySelectionModal": {
     "title": "Seleccionar directorio para {gameName}",

@@ -100,7 +100,8 @@
     "lastModified": "Last modified: {date}",
     "newTotal": "New total: {count} achievements",
     "noPathsFound": "No monitored paths found for this game. Configure directories in Settings → Paths.",
-    "globalPaths": "Global Paths"
+    "globalPaths": "Global Paths",
+    "newPath": "New path"
   },
   "unlockToasts": {
     "successTitle": "Unlock completed",

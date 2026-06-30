@@ -118,7 +118,7 @@ const PathRow: React.FC<{
     ? t('unlockModal.lastModified', { date: formattedSteamVdfLastModified || '--' })
     : t('unlockModal.lastModified', { date: formattedLastModified || '--' });
   const statusText = getMetricLabel(existingAchievementCount, newAchievementCount);
-  const badgeText = isSteam ? 'Steam' : hasExistingFile ? statusText : 'New path';
+  const badgeText = isSteam ? 'Steam' : hasExistingFile ? statusText : t('unlockModal.newPath');
   const isFaded = !isSteam && !hasExistingFile && !isSelected;
 
   return (

@@ -86,7 +86,8 @@
     "unlockHere": "ここでアンロック",
     "existingAchievements": "既存の実績: {count}",
     "lastModified": "最終更新: {date}",
-    "newTotal": "新しい合計: {count} 実績"
+    "newTotal": "新しい合計: {count} 実績",
+    "newPath": "新しいパス"
   },
   "directorySelectionModal": {
     "title": "{gameName} のディレクトリを選択",

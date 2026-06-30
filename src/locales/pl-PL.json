@@ -86,7 +86,8 @@
     "unlockHere": "Odblokuj tutaj",
     "existingAchievements": "{count} istniejących osiągnięć",
     "lastModified": "Ostatnia modyfikacja: {date}",
-    "newTotal": "Nowy łączny: {count} osiągnięć"
+    "newTotal": "Nowy łączny: {count} osiągnięć",
+    "newPath": "Nowa ścieżka"
   },
   "directorySelectionModal": {
     "title": "Wybierz katalog dla {gameName}",

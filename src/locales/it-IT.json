@@ -87,7 +87,8 @@
     "unlockHere": "Sblocca qui",
     "existingAchievements": "{count} obiettivi esistenti",
     "lastModified": "Ultima modifica: {date}",
-    "newTotal": "Nuovo totale: {count} obiettivi"
+    "newTotal": "Nuovo totale: {count} obiettivi",
+    "newPath": "Nuovo percorso"
   },
   "directorySelectionModal": {
     "title": "Seleziona directory per {gameName}",

@@ -87,7 +87,8 @@
     "unlockHere": "Разблокировать здесь",
     "existingAchievements": "{count} существующих достижений",
     "lastModified": "Последнее изменение: {date}",
-    "newTotal": "Новый итог: {count} достижений"
+    "newTotal": "Новый итог: {count} достижений",
+    "newPath": "Новый путь"
   },
   "directorySelectionModal": {
     "title": "Выберите каталог для {gameName}",

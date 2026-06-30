@@ -87,7 +87,8 @@
     "unlockHere": "Déverrouiller ici",
     "existingAchievements": "{count} succès existants",
     "lastModified": "Dernière modification: {date}",
-    "newTotal": "Nouveau total: {count} succès"
+    "newTotal": "Nouveau total: {count} succès",
+    "newPath": "Nouveau chemin"
   },
   "directorySelectionModal": {
     "title": "Sélectionner le répertoire pour {gameName}",

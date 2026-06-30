@@ -86,7 +86,8 @@
     "unlockHere": "在此解锁",
     "existingAchievements": "{count} 个现有成就",
     "lastModified": "最后修改: {date}",
-    "newTotal": "新总数: {count} 成就"
+    "newTotal": "新总数: {count} 成就",
+    "newPath": "新路径"
   },
   "directorySelectionModal": {
     "title": "选择 {gameName} 的目录",
