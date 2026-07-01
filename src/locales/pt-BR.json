@@ -48,7 +48,15 @@
     "initialStateTitle": "Encontre novos jogos",
     "initialStatePrompt": "Use a barra de pesquisa acima para encontrar jogos na Steam.",
     "delistedHint": "Dica: Para jogos removidos da loja, pesquise usando o AppID diretamente.",
-    "totalAchievements": "{count} Conquistas"
+    "totalAchievements": "{count} Conquistas",
+    "searchSource": "Fonte de Pesquisa",
+    "allSources": "Todas as Fontes",
+    "allSourcesDesc": "Pesquisar em todas as plataformas",
+    "steamHydra": "Steam / Hydra",
+    "steamHydraDesc": "Jogos da Steam Store e Hydra",
+    "retroachievements": "RetroAchievements",
+    "retroachievementsDesc": "Jogos retrô clássicos",
+    "searchFilters": "Filtros de pesquisa"
   },
   "globalTimestampManager": {
     "title": "Timestamp para conquistas nulas",
@@ -349,7 +357,9 @@
       "restoreBlockedSteamNotDetected": "Jogo não detectado",
       "restoreBlockedPath": "Caminho ausente",
       "saveDialogTitle": "Salvar backup de conquistas",
-      "openDialogTitle": "Selecionar backup de conquistas"
+      "openDialogTitle": "Selecionar backup de conquistas",
+      "restoreSuccess": "Restore concluído com sucesso! {restored} entradas restauradas, {skipped} ignoradas.",
+      "backupCreated": "Backup criado com sucesso!"
     },
     "appearance": {
       "tab": "Aparência",

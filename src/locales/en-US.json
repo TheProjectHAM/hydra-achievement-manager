@@ -48,7 +48,15 @@
     "initialStateTitle": "Search for new games",
     "initialStatePrompt": "Use the search bar above to find games on Steam.",
     "delistedHint": "Tip: For games removed from the store, search using the AppID directly.",
-    "totalAchievements": "{count} Achievements"
+    "totalAchievements": "{count} Achievements",
+    "searchSource": "Search Source",
+    "allSources": "All Sources",
+    "allSourcesDesc": "Search across all platforms",
+    "steamHydra": "Steam / Hydra",
+    "steamHydraDesc": "Steam Store & Hydra games",
+    "retroachievements": "RetroAchievements",
+    "retroachievementsDesc": "Classic retro games",
+    "searchFilters": "Search filters"
   },
   "globalTimestampManager": {
     "title": "Timestamp for null achievements",
@@ -349,7 +357,9 @@
       "restoreBlockedSteamNotDetected": "Game not detected",
       "restoreBlockedPath": "Missing path",
       "saveDialogTitle": "Save achievements backup",
-      "openDialogTitle": "Select achievements backup"
+      "openDialogTitle": "Select achievements backup",
+      "restoreSuccess": "Restore completed successfully! {restored} entries restored, {skipped} skipped.",
+      "backupCreated": "Backup created successfully!"
     },
     "appearance": {
       "tab": "Appearance",
