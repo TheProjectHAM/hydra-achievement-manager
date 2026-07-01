@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '../../contexts/I18nContext';
-import { FolderIcon, CloseIcon, SteamBrandIcon } from '../Icons';
+import { FolderIcon, CloseIcon, SteamBrandIcon, HydraIcon } from '../Icons';
 import { ApiSource } from '../../types';
 import { getGameNames } from '../../tauri-api';
 import { getAppPlatform } from '@/lib/platform';
 import { getSteamLogoFallbackUrl } from '@/lib/steam-assets';
+import { AlertCircle, CheckCircle2, ChevronDown, Database, FolderOpen, Plus, RefreshCw, Settings2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DirectoryConfig {
     path: string;
@@ -44,6 +46,80 @@ interface DirectoryGroup {
     imageUrl?: string;
     custom: boolean;
 }
+
+const StatusPill: React.FC<{ active: boolean; activeLabel: string; inactiveLabel: string }> = ({ active, activeLabel, inactiveLabel }) => (
+    <span className={cn(
+        'inline-flex h-5 items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold',
+        active ? 'border-border bg-accent text-foreground' : 'border-border bg-background text-muted-foreground',
+    )}>
+        {active ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
+        {active ? activeLabel : inactiveLabel}
+    </span>
+);
+
+const SectionCard: React.FC<{
+    icon: React.ReactNode;
+    title: string;
+    description?: string;
+    badge?: React.ReactNode;
+    action?: React.ReactNode;
+    children: React.ReactNode;
+}> = ({ icon, title, description, badge, action, children }) => (
+    <section className="overflow-hidden rounded-xl border border-border bg-card/60">
+        <div className="flex items-center justify-between gap-3 p-3">
+            <div className="flex min-w-0 items-center gap-3">
+                <div className="flex flex-shrink-0 items-center justify-center text-muted-foreground">
+                    {icon}
+                </div>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-foreground">{title}</p>
+                        {badge}
+                    </div>
+                    {description && <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{description}</p>}
+                </div>
+            </div>
+            {action && <div className="flex-shrink-0">{action}</div>}
+        </div>
+        <div className="border-t border-border p-3">
+            {children}
+        </div>
+    </section>
+);
+
+const InlineSettingsRow: React.FC<{
+    icon: React.ReactNode;
+    title: string;
+    description?: string;
+    detail?: React.ReactNode;
+    action: React.ReactNode;
+}> = ({ icon, title, description, detail, action }) => (
+    <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 p-3">
+        <div className="flex min-w-0 items-center gap-3">
+            <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
+            <div className="min-w-0">
+                <p className="truncate text-xs font-semibold text-foreground">{title}</p>
+                {description && <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{description}</p>}
+                {detail}
+            </div>
+        </div>
+        <div className="flex-shrink-0">{action}</div>
+    </div>
+);
+
+const ToggleSwitch: React.FC<{ checked: boolean; disabled?: boolean; onClick: () => void; title?: string }> = ({ checked, disabled = false, onClick, title }) => (
+    <button
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+            'relative h-5 w-9 rounded-full transition-all duration-300',
+            disabled ? 'cursor-not-allowed bg-muted opacity-50' : checked ? 'bg-foreground' : 'bg-accent',
+        )}
+        title={title}
+    >
+        <div className={cn('absolute top-1 h-3 w-3 rounded-full bg-background shadow-sm transition-all duration-300', checked ? 'left-[22px]' : 'left-1')} />
+    </button>
+);
 
 const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     selectedApi,
@@ -294,69 +370,54 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
         is_default: true,
     };
 
-    const neutralBadgeStyle = "bg-accent border-border text-foreground";
-
     return (
-        <div className="space-y-6 animate-modal-in">
+        <div className="space-y-3 animate-modal-in">
             <div className="flex flex-col gap-2">
                 <h4 className="text-sm font-semibold text-foreground">
                     {t('settings.monitored.title')}
                 </h4>
-                <p className="text-xs font-medium opacity-60 leading-relaxed text-foreground">
+                <p className="text-xs font-medium leading-relaxed text-muted-foreground">
                     {t('settings.monitored.description')}
                 </p>
             </div>
 
-            {/* Cache Management Section */}
-            <div className="border border-border rounded-md p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm bg-muted">
-                <div className="flex items-center gap-6">
-                    <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-foreground">
-                            {t('settings.monitored.appCacheTitle')}
-                        </h4>
-                        <p className="text-xs font-medium leading-relaxed max-w-md opacity-60 text-foreground">
-                            {t('settings.monitored.appCacheDescription')}
-                        </p>
-                        <p className="text-[10px] font-medium mt-1 opacity-80 text-foreground">
-                            {t('settings.monitored.currentSize')}: {cacheSize}
-                        </p>
-                    </div>
-                </div>
-
-                <button
-                    onClick={handleClearCache}
-                    disabled={clearingCache}
-                    className={`flex items-center justify-center gap-3 px-6 py-3 rounded-md text-[10px] font-semibold transition-all border border-border shadow-sm text-foreground ${clearingCache
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-accent active:scale-95'
-                        }`}
-                >
-                    {clearingCache ? t('settings.monitored.clearingCache') : t('settings.monitored.clearCache')}
-                </button>
-            </div>
+            <InlineSettingsRow
+                icon={<Database className="h-4 w-4" />}
+                title={t('settings.monitored.appCacheTitle')}
+                description={t('settings.monitored.appCacheDescription')}
+                detail={<p className="mt-1 text-[10px] font-semibold text-muted-foreground">{t('settings.monitored.currentSize')}: {cacheSize}</p>}
+                action={
+                    <button
+                        onClick={handleClearCache}
+                        disabled={clearingCache}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
+                    >
+                        <RefreshCw className={cn('h-3 w-3', clearingCache && 'animate-spin')} />
+                        {clearingCache ? t('settings.monitored.clearingCache') : t('settings.monitored.clearCache')}
+                    </button>
+                }
+            />
 
             {isLinux && (
-                <div className="border border-border rounded-md p-6 flex flex-col gap-4 shadow-sm bg-muted">
-                    <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-foreground">
-                            {t('settings.monitored.winePrefixTitle')}
-                        </h4>
-                        <p className="text-xs font-medium leading-relaxed opacity-60 text-foreground">
-                            {t('settings.monitored.winePrefixDescription')}
-                        </p>
+                <div className="rounded-md border border-border bg-muted/50 p-3">
+                    <div className="mb-3 flex min-w-0 items-center gap-3">
+                        <Settings2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-foreground">{t('settings.monitored.winePrefixTitle')}</p>
+                            <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{t('settings.monitored.winePrefixDescription')}</p>
+                        </div>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row">
                         <input
                             value={winePrefixPath}
                             onChange={(e) => setWinePrefixPath(e.target.value)}
                             placeholder={t('settings.monitored.winePrefixPlaceholder')}
-                            className="flex-1 h-11 px-4 rounded-md border border-border text-xs font-semibold placeholder:text-muted-foreground bg-muted text-foreground"
+                            className="h-10 flex-1 rounded-md border border-border bg-background px-3 text-xs font-semibold text-foreground placeholder:text-muted-foreground"
                         />
                         <button
                             onClick={handleSaveWinePrefix}
                             disabled={isSavingWinePrefix || !winePrefixPath.trim()}
-                            className={`h-11 px-5 rounded-md text-[10px] font-semibold border border-border transition-all text-foreground ${isSavingWinePrefix || !winePrefixPath.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent active:scale-95'}`}
+                            className="h-10 rounded-md border border-border bg-accent px-4 text-[10px] font-semibold text-foreground transition-all disabled:opacity-50"
                         >
                             {isSavingWinePrefix ? t('settings.monitored.savingPrefix') : t('settings.monitored.savePrefix')}
                         </button>
@@ -364,20 +425,58 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 </div>
             )}
 
-            <div className="space-y-3">
+            <section className="overflow-hidden rounded-xl border border-border bg-card/60">
+                <div className="flex items-center justify-between gap-3 p-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                        <FolderOpen className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                                <p className="truncate text-sm font-medium text-foreground">{t('settings.monitored.title')}</p>
+                                <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                                    {isLinux ? (activePathTab === 'global' ? globalPathCount : hydraPathCount) : globalPathCount} {t('settings.monitored.pathsLabel')}
+                                </span>
+                            </div>
+                            <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{t('settings.monitored.description')}</p>
+                        </div>
+                    </div>
+                    {(!isLinux || activePathTab === 'global') && !pendingCustomPath && (
+                        <button
+                            onClick={handleAddDirectory}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground"
+                        >
+                            <Plus className="h-3 w-3" />
+                            {t('settings.monitored.addDirectory')}
+                        </button>
+                    )}
+                </div>
+            <div className="space-y-3 border-t border-border p-3">
                 {isLinux && (
-                    <div className="grid grid-cols-2 gap-2 rounded-xl border border-border p-1 bg-muted">
+                    <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-background p-1">
                         <button
                             onClick={() => setActivePathTab('global')}
-                            className={`h-10 rounded-lg text-[10px] font-semibold transition-all ${activePathTab === 'global' ? 'shadow-sm bg-accent' : 'opacity-55 hover:opacity-100 bg-transparent'} text-foreground`}
+                            className={cn(
+                                'flex h-11 items-center justify-between gap-3 rounded px-3 text-left transition-colors',
+                                activePathTab === 'global' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                            )}
                         >
-                            {t('settings.monitored.globalTab')} · {globalPathCount}
+                            <span className="flex min-w-0 items-center gap-2">
+                                <FolderOpen className="h-4 w-4 flex-shrink-0" />
+                                <span className="truncate text-[10px] font-semibold">{t('settings.monitored.globalTab')}</span>
+                            </span>
+                            <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">{globalPathCount}</span>
                         </button>
                         <button
                             onClick={() => setActivePathTab('hydra')}
-                            className={`h-10 rounded-lg text-[10px] font-semibold transition-all ${activePathTab === 'hydra' ? 'shadow-sm bg-accent' : 'opacity-55 hover:opacity-100 bg-transparent'} text-foreground`}
+                            className={cn(
+                                'flex h-11 items-center justify-between gap-3 rounded px-3 text-left transition-colors',
+                                activePathTab === 'hydra' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                            )}
                         >
-                            {t('settings.monitored.hydraLauncherTab')} · {hydraGroups.length}
+                            <span className="flex min-w-0 items-center gap-2">
+                                <HydraIcon className="h-4 w-4 flex-shrink-0" />
+                                <span className="truncate text-[10px] font-semibold">{t('settings.monitored.hydraLauncherTab')}</span>
+                            </span>
+                            <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">{hydraPathCount}</span>
                         </button>
                     </div>
                 )}
@@ -385,38 +484,28 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 {(!isLinux || activePathTab === 'global') && (
                     <div
                         key={steamDirectory.path}
-                        className={`group flex items-center justify-between p-4 rounded-xl border border-border transition-all duration-300 bg-muted ${!steamDirectory.enabled ? 'opacity-50 grayscale' : 'hover:shadow-lg'}`}
+                        className={cn('group flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 p-3 transition-colors hover:bg-accent/45', !steamDirectory.enabled && 'opacity-60 grayscale')}
                     >
                         <div className="flex items-center gap-4 min-w-0 flex-1">
-                            <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-                                <SteamBrandIcon className="w-5 h-5 opacity-80" />
-                            </div>
+                            <SteamBrandIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground opacity-80" />
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                     <p className="text-xs font-semibold truncate text-foreground">{t('settings.monitored.steamLabel')}</p>
-                                    <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border bg-accent border-border text-foreground">{t('settings.monitored.defaultBadge')}</span>
+                                    <StatusPill active activeLabel={t('settings.monitored.defaultBadge')} inactiveLabel="" />
                                 </div>
-                                <p className="text-[10px] font-medium opacity-40 truncate text-foreground">{formatUsersForDisplay(steamDirectory.path)}</p>
+                                <p className="truncate text-[10px] font-medium text-muted-foreground">{formatUsersForDisplay(steamDirectory.path)}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <p className="text-[10px] font-semibold opacity-60 text-foreground">
+                            <p className="text-[10px] font-semibold text-muted-foreground">
                                  {steamGamesFound} {t('settings.monitored.gamesLabel')}
                             </p>
-                            <button
+                            <ToggleSwitch
+                                checked={steamIntegrationEnabled}
                                 onClick={() => setSteamIntegrationEnabled(!steamIntegrationEnabled)}
                                 disabled={selectedApi !== 'steam' || isSteamMissing}
-                                className={`w-9 h-5 rounded-full transition-all duration-300 relative ${
-                                    (selectedApi !== 'steam' || isSteamMissing)
-                                        ? 'bg-gray-500/30 opacity-50 cursor-not-allowed'
-                                        : steamIntegrationEnabled
-                                            ? 'bg-emerald-500'
-                                            : 'bg-gray-500/30'
-                                }`}
                                 title={steamIntegrationEnabled ? t('settings.api.steamIntegrationDisable') : t('settings.api.steamIntegrationEnable')}
-                            >
-                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${steamIntegrationEnabled ? 'left-[22px]' : 'left-1'}`} />
-                            </button>
+                            />
                         </div>
                     </div>
                 )}
@@ -426,14 +515,14 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                         <div className="animate-pulse font-semibold text-xs">Loading...</div>
                     </div>
                 ) : directories.length === 0 ? (
-                    <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center border-border">
-                        <FolderIcon className="text-4xl opacity-10" />
-                        <p className="text-xs font-medium opacity-30">{t('settings.monitored.noDirectories')}</p>
+                    <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-8 text-center">
+                        <FolderIcon className="text-4xl text-muted-foreground opacity-30" />
+                        <p className="text-xs font-medium text-muted-foreground">{t('settings.monitored.noDirectories')}</p>
                     </div>
                 ) : visibleGroups.length === 0 ? (
-                    <div className="p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 text-center border-border">
-                        <FolderIcon className="text-4xl opacity-10" />
-                        <p className="text-xs font-medium opacity-30">
+                    <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-8 text-center">
+                        <FolderIcon className="text-4xl text-muted-foreground opacity-30" />
+                        <p className="text-xs font-medium text-muted-foreground">
                             {isLinux && activePathTab === 'hydra' ? t('settings.monitored.noHydraPrefixes') : t('settings.monitored.noDirectories')}
                         </p>
                     </div>
@@ -445,15 +534,15 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                         return (
                             <div
                                 key={group.key}
-                                className="rounded-xl border border-border overflow-hidden transition-all duration-300 bg-muted"
+                                className="overflow-hidden rounded-xl border border-border bg-card transition-shadow duration-300 ease-out hover:shadow-sm"
                             >
                                 <button
                                     onClick={() => toggleGroup(group.key)}
-                                    className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-accent transition-colors"
+                                    className="flex w-full items-center justify-between gap-4 p-3 text-left transition-colors hover:bg-accent/45"
                                 >
                                     <div className="flex items-center gap-4 min-w-0 flex-1">
                                         {group.imageUrl ? (
-                                            <div className="w-20 h-11 rounded-md overflow-hidden bg-accent border border-border flex-shrink-0">
+                                             <div className="h-11 w-20 flex-shrink-0 overflow-hidden rounded-md border border-border bg-muted">
                                                 <img
                                                     src={group.imageUrl}
                                                     alt=""
@@ -463,67 +552,65 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                                     }}
                                                 />
                                             </div>
+                                        ) : group.gameId ? (
+                                             <HydraIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground opacity-80" />
                                         ) : (
-                                            <div className="w-11 h-11 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-                                                <FolderIcon className="text-xl opacity-60" />
-                                            </div>
+                                             <FolderIcon className="flex-shrink-0 text-xl text-muted-foreground opacity-70" />
                                         )}
 
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <p className="text-xs font-semibold truncate text-foreground">{group.title}</p>
                                                 {group.gameId && (
-                                                    <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border bg-accent border-border text-foreground">{t('settings.monitored.gameBadge')}</span>
+                                                     <StatusPill active activeLabel={t('settings.monitored.gameBadge')} inactiveLabel="" />
                                                 )}
                                                 {!group.custom && (
-                                                    <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border bg-accent border-border text-foreground">{t('settings.monitored.defaultBadge')}</span>
+                                                     <StatusPill active activeLabel={t('settings.monitored.defaultBadge')} inactiveLabel="" />
                                                 )}
                                             </div>
-                                            <p className="text-[10px] font-medium opacity-50 truncate text-foreground">{group.subtitle}</p>
+                                             <p className="truncate text-[10px] font-medium text-muted-foreground">{group.subtitle}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-3 flex-shrink-0">
-                                        <span className="text-[9px] font-semibold opacity-60 text-foreground">
-                                            {enabledCount}/{group.directories.length} {t('settings.monitored.pathsLabel')}
-                                        </span>
-                                        <span className={`text-xs transition-transform text-muted-foreground ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                         <span className="text-[9px] font-semibold text-muted-foreground">
+                                             {enabledCount}/{group.directories.length} {t('settings.monitored.pathsLabel')}
+                                         </span>
+                                        <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', isExpanded && 'rotate-180')} />
                                     </div>
                                 </button>
 
                                 {isExpanded && (
-                                    <div className="border-t border-border divide-y divide-border">
+                                    <div className="divide-y divide-border border-t border-border bg-background">
                                         {group.directories.map((dir) => (
                                             <div
                                                 key={dir.path}
-                                                className={`group flex items-center justify-between p-3 pl-5 gap-4 transition-all ${!dir.enabled ? 'opacity-50 grayscale' : ''}`}
+                                                className={cn('group flex items-center justify-between gap-4 p-3 pl-5 transition-colors hover:bg-accent/45', !dir.enabled && 'opacity-60 grayscale')}
                                             >
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        <FolderIcon className="text-sm opacity-50 flex-shrink-0" />
-                                                         <p className="text-[10px] font-semibold truncate text-foreground">{dir.name.replace(/^Wine \([^)]*\) \/ /, '')}</p>
+                                                        <FolderIcon className="flex-shrink-0 text-sm text-muted-foreground" />
+                                                         <p className="truncate text-[10px] font-semibold text-foreground">{dir.name.replace(/^Wine \([^)]*\) \/ /, '')}</p>
                                                         {!dir.is_default && (dir.detectionPreset || 'auto') !== 'auto' && (
-                                                            <span className="text-[7px] font-semibold px-1.5 py-0.5 rounded-sm border flex-shrink-0 bg-accent border-border text-foreground">{getPresetLabel(dir.detectionPreset)}</span>
+                                                            <span className="h-5 flex-shrink-0 rounded-md border border-border bg-accent px-1.5 text-[9px] font-semibold leading-5 text-foreground">{getPresetLabel(dir.detectionPreset)}</span>
                                                         )}
                                                     </div>
-                                                    <p className="text-[9px] font-medium opacity-40 truncate mt-1 text-foreground">
+                                                    <p className="mt-1 truncate text-[9px] font-medium text-muted-foreground">
                                                         {formatUsersForDisplay(getRelativeWinePath(dir.path))}
                                                     </p>
                                                 </div>
 
                                                 <div className="flex items-center gap-3 flex-shrink-0">
-                                                    <button
+                                                    <ToggleSwitch
+                                                        checked={dir.enabled}
                                                         onClick={() => handleToggleDirectory(dir.path)}
-                                                        className={`w-9 h-5 rounded-full transition-all duration-300 relative ${dir.enabled ? 'bg-emerald-500' : 'bg-gray-500/30'}`}
                                                         title={dir.enabled ? t('settings.monitored.disableMonitoring') : t('settings.monitored.enableMonitoring')}
-                                                    >
-                                                        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${dir.enabled ? 'left-[22px]' : 'left-1'}`} />
-                                                    </button>
+                                                    />
 
                                                     {!dir.is_default && (
                                                         <button
                                                             onClick={() => handleRemoveDirectory(dir.path)}
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                                            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-accent hover:text-foreground group-hover:opacity-100"
                                                             title={t('settings.monitored.removeDirectory')}
                                                         >
                                                             <CloseIcon className="text-lg" />
@@ -539,21 +626,20 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                     })
                 )}
 
-                {(!isLinux || activePathTab === 'global') && (
-                    pendingCustomPath ? (
-                        <div className="rounded-xl border border-border p-4 space-y-3 bg-muted">
+                {(!isLinux || activePathTab === 'global') && pendingCustomPath && (
+                        <div className="space-y-3 rounded-md border border-border bg-muted/50 p-3">
                             <div className="space-y-1">
                                 <p className="text-[10px] font-semibold text-foreground">{t('settings.monitored.customDetectionPreset')}</p>
-                                <p className="text-[10px] font-semibold opacity-50 truncate text-foreground" title={pendingCustomPath}>{formatUsersForDisplay(pendingCustomPath)}</p>
+                                <p className="truncate text-[10px] font-medium text-muted-foreground" title={pendingCustomPath}>{formatUsersForDisplay(pendingCustomPath)}</p>
                             </div>
 
                             <div className="relative">
                                 <button
                                     type="button"
                                     onClick={() => setIsPresetDropdownOpen(!isPresetDropdownOpen)}
-                                    className="w-full h-11 border border-border rounded-md px-3 flex items-center justify-between transition-all duration-300 bg-muted"
+                                    className="flex h-10 w-full items-center justify-between rounded-md border border-border bg-background px-3 transition-all duration-300"
                                 >
-                                    <span className="text-xs font-bold truncate text-foreground">
+                                    <span className="truncate text-xs font-semibold text-foreground">
                                         {DETECTION_PRESETS.find(p => p.value === pendingDetectionPreset)?.label}
                                     </span>
                                     <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-300 text-muted-foreground ${isPresetDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -574,13 +660,13 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                                             setIsPresetDropdownOpen(false);
                                                         }}
                                                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors ${pendingDetectionPreset === preset.value
-                                                            ? 'bg-border text-foreground shadow-sm'
+                                                             ? 'bg-accent text-foreground shadow-sm'
                                                             : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                                                             }`}
                                                     >
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="text-xs font-bold truncate">{preset.label}</p>
-                                                            <p className="text-[10px] opacity-60 truncate">{preset.description}</p>
+                                                            <p className="truncate text-xs font-semibold">{preset.label}</p>
+                                                            <p className="truncate text-[10px] text-muted-foreground">{preset.description}</p>
                                                         </div>
                                                         {pendingDetectionPreset === preset.value && (
                                                             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-2 bg-foreground" />
@@ -593,7 +679,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                 )}
                             </div>
 
-                                <p className="text-[10px] font-medium opacity-55 leading-relaxed text-foreground">
+                                <p className="text-[10px] font-medium leading-relaxed text-muted-foreground">
                                  {t('settings.monitored.customDetectionPresetDesc')}
                                 </p>
 
@@ -604,29 +690,21 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                           setPendingCustomPath(null);
                                           setPendingDetectionPreset('auto');
                                       }}
-                                    className="h-10 rounded-md border border-border text-[10px] font-semibold transition-all hover:bg-accent text-foreground"
+                                    className="h-10 rounded-md border border-border bg-background text-[10px] font-semibold text-foreground transition-all hover:bg-accent"
                                 >
                                     {t('common.cancel')}
                                 </button>
                                 <button
                                     onClick={handleConfirmCustomDirectory}
-                                    className="h-10 rounded-md text-[10px] font-semibold transition-all shadow-sm bg-foreground text-background"
+                                    className="h-10 rounded-md bg-foreground text-[10px] font-semibold text-background transition-all shadow-sm"
                                 >
                                     {t('settings.monitored.addPreset')}
                                 </button>
                             </div>
                         </div>
-                    ) : (
-                        <button
-                            onClick={handleAddDirectory}
-                            className="w-full h-14 border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all duration-300 hover:bg-accent active:scale-[0.98] border-border text-muted-foreground"
-                        >
-                            <span className="text-2xl opacity-60">+</span>
-                            <span className="text-[10px] font-semibold">{t('settings.monitored.addDirectory')}</span>
-                        </button>
-                    )
                 )}
             </div>
+            </section>
         </div >
     );
 };

@@ -135,10 +135,11 @@ const MonitoredGameCard: React.FC<{
   return (
     <div
       onClick={() => onGameSelect(toSteamSearchResult())}
-      className={`group monitored-game-card relative aspect-[16/9] rounded-md shadow-2xl cursor-pointer transition-all duration-300 border bg-card ${isCompleted ? 'completed-game-card' : 'border-border hover:border-foreground/30'}`}
+      className={`group monitored-game-card relative aspect-[16/9] rounded-md shadow-2xl cursor-pointer transition-all duration-300 border bg-card p-px ${isCompleted ? 'completed-game-card border-transparent' : 'border-border hover:border-foreground/30'}`}
     >
+      <div className="relative z-10 h-full w-full overflow-hidden rounded-[5px]">
       <div
-        className={`absolute inset-0 overflow-hidden rounded-md bg-cover bg-center transition-opacity duration-500 ${isImageLoaded ? 'opacity-100' : 'opacity-80'}`}
+        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${isImageLoaded ? 'opacity-100' : 'opacity-80'}`}
         style={{ backgroundImage: `url(${imageUrl})`, backgroundColor: '#000' }}
       />
       <img src={imageUrl} onError={handleImageError} onLoad={() => setIsImageLoaded(true)} style={{ display: 'none' }} alt="" />
@@ -151,7 +152,7 @@ const MonitoredGameCard: React.FC<{
         </div>
       )}
 
-      <div className="absolute inset-0 overflow-hidden rounded-md bg-gradient-to-b from-black/60 via-transparent via-50% to-black/90"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent via-50% to-black/90"></div>
 
       {isCompleted && (
         <div className="absolute top-2.5 right-2.5 z-10 animate-fade-in">
@@ -188,9 +189,9 @@ const MonitoredGameCard: React.FC<{
       <div className="relative flex flex-col justify-end h-full p-4 text-white">
         <div className="flex items-center justify-between mb-2 gap-3 min-w-0">
           <h3 className="font-semibold text-sm truncate min-w-0 leading-tight drop-shadow-md flex items-center gap-2">
-            {isSteam && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-70" />}
-            {isRetroAchievements && <RetroAchievementsIcon className="w-4 h-4 shrink-0 opacity-70" />}
-            {isHydra && <HydraIcon className="w-4 h-4 shrink-0 opacity-70" />}
+            {isSteam && <SteamBrandIcon className="h-5 w-5 shrink-0 opacity-75" />}
+            {isRetroAchievements && <RetroAchievementsIcon className="h-5 w-5 shrink-0 opacity-75" />}
+            {isHydra && <HydraIcon className="h-5 w-5 shrink-0 opacity-75" />}
             <span className="truncate">{gameName}</span>
           </h3>
           <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-[0_1px_2px_rgba(0,0,0,0.85)] backdrop-blur-[2px] flex-shrink-0">
@@ -211,7 +212,8 @@ const MonitoredGameCard: React.FC<{
         </div>
       </div>
 
-      <div className="absolute inset-0 overflow-hidden rounded-md pointer-events-none transition-shadow duration-300 group-hover:ring-1 group-hover:ring-inset group-hover:ring-white/5"></div>
+      <div className="absolute inset-0 pointer-events-none transition-shadow duration-300 group-hover:ring-1 group-hover:ring-inset group-hover:ring-white/5"></div>
+      </div>
     </div>
   );
 };

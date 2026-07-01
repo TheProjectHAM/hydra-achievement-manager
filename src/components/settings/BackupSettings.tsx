@@ -12,6 +12,8 @@ import {
 } from "../../tauri-api";
 import { useI18n } from "../../contexts/I18nContext";
 import { getSteamLogoFallbackUrls, getSteamLogoUrl } from "@/lib/steam-assets";
+import { Archive, CheckCircle2, FileUp, RefreshCw, RotateCcw, Settings2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ConflictStrategy = "backup" | "current" | "cancel";
 type SettingsStrategy = "backup" | "current" | "merge";
@@ -65,20 +67,20 @@ const ToggleRow: React.FC<{
   enabled: boolean;
   onChange: (enabled: boolean) => void;
 }> = ({ label, description, enabled, onChange }) => (
-  <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3 bg-background">
+  <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 p-3">
     <div className="min-w-0">
-      <p className="text-xs font-bold text-foreground">
+      <p className="text-xs font-semibold text-foreground">
         {label}
       </p>
       {description && (
-        <p className="text-[10px] opacity-65 mt-1 text-foreground">
+        <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}
     </div>
     <button
       onClick={() => onChange(!enabled)}
-      className={`relative w-11 h-6 rounded-full transition-all duration-300 p-1 ${enabled ? "bg-foreground" : "bg-accent"}`}
+      className={`relative h-6 w-11 rounded-full p-1 transition-all duration-300 ${enabled ? "bg-foreground" : "bg-accent"}`}
       aria-label={label}
       aria-pressed={enabled}
     >
@@ -116,6 +118,36 @@ const ThemedCheckbox: React.FC<{
       <path d="M20 6L9 17l-5-5" />
     </svg>
   </button>
+);
+
+const SectionCard: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  badge?: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ icon, title, description, badge, action, children }) => (
+  <section className="overflow-hidden rounded-xl border border-border bg-card/60">
+    <div className="flex items-center justify-between gap-3 p-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex flex-shrink-0 items-center justify-center text-muted-foreground">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium text-foreground">{title}</p>
+            {badge}
+          </div>
+          {description && <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{description}</p>}
+        </div>
+      </div>
+      {action && <div className="flex-shrink-0">{action}</div>}
+    </div>
+    <div className="border-t border-border p-3">
+      {children}
+    </div>
+  </section>
 );
 
 const SteamGameLogo: React.FC<{ gameId: string; className?: string }> = ({
@@ -625,25 +657,39 @@ const BackupSettings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-modal-in">
+    <div className="space-y-3 animate-modal-in">
       {successMessage && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-[11px] font-semibold text-green-600 dark:text-green-400">
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-3 text-[11px] font-semibold text-foreground">
+          <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
           {successMessage}
         </div>
       )}
-      <div className="border border-border rounded-xl p-6 shadow-sm space-y-4 bg-muted">
-        <div className="flex items-center justify-between gap-3">
-          <h5 className="text-xs font-semibold text-foreground">
-            {t("settings.backup.createSection")}
-          </h5>
-          <button
-            onClick={loadBackupCandidates}
-            disabled={loadingGames}
-            className="h-9 px-4 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-50 text-foreground"
-          >
-            {loadingGames ? t("settings.backup.loading") : t("settings.backup.refresh")}
-          </button>
-        </div>
+      <SectionCard
+        icon={<Archive className="h-4 w-4" />}
+        title={t("settings.backup.createSection")}
+        description={t("settings.backup.selectedGames", { count: selectedBackupCount })}
+        action={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadBackupCandidates}
+              disabled={loadingGames}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
+            >
+              <RefreshCw className={cn("h-3 w-3", loadingGames && "animate-spin")} />
+              {loadingGames ? t("settings.backup.loading") : t("settings.backup.refresh")}
+            </button>
+            <button
+              onClick={handleCreateBackup}
+              disabled={creatingBackup || (selectedBackupCount === 0 && !includeSettingsInBackup)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-foreground bg-foreground px-3 text-[10px] font-semibold text-background disabled:opacity-50"
+            >
+              <Archive className="h-3 w-3" />
+              {creatingBackup ? t("settings.backup.creating") : t("settings.backup.createButton")}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
 
         <ToggleRow
           label={t("settings.backup.includeSettings")}
@@ -653,34 +699,34 @@ const BackupSettings: React.FC = () => {
         />
 
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold opacity-70 text-foreground">
+          <p className="text-[11px] font-semibold text-muted-foreground">
             {t("settings.backup.selectedGames", { count: selectedBackupCount })}
           </p>
           <button
             onClick={toggleSelectAllBackup}
             disabled={!hasAnyGame}
-            className="h-8 px-3 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-40 text-foreground"
+            className="h-8 rounded-md border border-border bg-background px-3 text-[10px] font-semibold text-foreground transition-colors hover:bg-accent disabled:opacity-40"
           >
             {allSelected ? t("settings.backup.unselectAll") : t("settings.backup.selectAll")}
           </button>
         </div>
 
-        <div className="max-h-56 overflow-y-auto rounded-md border border-border">
+        <div className="max-h-56 overflow-y-auto rounded-md border border-border bg-background">
           {groups.length === 0 ? (
-            <div className="p-4 text-[11px] opacity-60 text-foreground">
+            <div className="p-4 text-[11px] font-medium text-muted-foreground">
               {t("settings.backup.noGames")}
             </div>
           ) : (
             groups.map((group) => (
               <label
                 key={group.gameId}
-                className="flex items-center justify-between gap-3 p-3 border-b border-border last:border-b-0 cursor-pointer text-foreground"
+                className="flex cursor-pointer items-center justify-between gap-3 border-b border-border p-3 text-foreground transition-colors last:border-b-0 hover:bg-accent/45"
               >
                 <div className="min-w-0 flex items-center gap-3">
                   <SteamGameLogo gameId={group.gameId} />
                   <div className="min-w-0">
-                    <p className="text-xs font-bold truncate">{group.name}</p>
-                    <p className="text-[10px] opacity-60 truncate">
+                    <p className="truncate text-xs font-semibold">{group.name}</p>
+                    <p className="truncate text-[10px] font-medium text-muted-foreground">
                       {group.gameId} • {group.entries.length} {t("settings.backup.entries")} • {group.unlockedAchievements}/{group.totalAchievements} {t("common.achievements").toLowerCase()}
                     </p>
                   </div>
@@ -695,63 +741,58 @@ const BackupSettings: React.FC = () => {
           )}
         </div>
 
-        <div className="border border-border rounded-lg p-3 flex items-center justify-between gap-4 bg-background">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold opacity-70 text-foreground">
-              {t("settings.backup.createSection")}
-            </p>
-            <p className="text-[11px] font-semibold opacity-80 text-foreground">
-              {t("settings.backup.selectedGames", { count: selectedBackupCount })}
-            </p>
-            {lastBackupPath && (
-              <p className="text-[10px] opacity-60 truncate max-w-[420px] text-foreground">
-                {t("settings.backup.lastBackupPath")}: {lastBackupPath}
-              </p>
-            )}
-          </div>
-
-          <button
-            onClick={handleCreateBackup}
-            disabled={creatingBackup || (selectedBackupCount === 0 && !includeSettingsInBackup)}
-            className="h-11 px-5 rounded-md text-[10px] font-semibold border bg-foreground text-background border-foreground transition-all disabled:opacity-50 shrink-0"
-          >
-            {creatingBackup ? t("settings.backup.creating") : t("settings.backup.createButton")}
-          </button>
-        </div>
-      </div>
-
-      <div className="border border-border rounded-xl p-6 shadow-sm space-y-4 bg-muted">
-        <div className="flex items-center justify-between gap-3">
-          <h5 className="text-xs font-semibold text-foreground">
-            {t("settings.backup.restoreSection")}
-          </h5>
-          <button
-            onClick={handleChooseBackupFile}
-            disabled={loadingPreview || restoring}
-            className="h-9 px-4 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-50 text-foreground"
-          >
-            {loadingPreview ? t("settings.backup.loading") : t("settings.backup.chooseFile")}
-          </button>
-        </div>
-
-        {backupPath && (
-          <p className="text-[11px] opacity-70 break-all text-foreground">
-            {backupPath}
+        {lastBackupPath && (
+          <p className="truncate px-1 text-[10px] font-medium text-muted-foreground">
+            {t("settings.backup.lastBackupPath")}: {lastBackupPath}
           </p>
         )}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        icon={<FileUp className="h-4 w-4" />}
+        title={t("settings.backup.restoreSection")}
+        description={backupPath || t("settings.backup.chooseFile")}
+        action={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleChooseBackupFile}
+              disabled={loadingPreview || restoring}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
+            >
+              <FileUp className="h-3 w-3" />
+              {loadingPreview ? t("settings.backup.loading") : t("settings.backup.chooseFile")}
+            </button>
+            {previewItems.length > 0 && (
+              <button
+                onClick={handleApplyRestore}
+                disabled={restoring || selectedRestoreCount === 0}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-foreground bg-foreground px-3 text-[10px] font-semibold text-background disabled:opacity-50"
+              >
+                <RotateCcw className="h-3 w-3" />
+                {restoring ? t("settings.backup.restoring") : t("settings.backup.restoreButton")}
+              </button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-3">
 
         {settingsPreview.included && (
-          <div className="border border-border rounded-lg p-4 space-y-3 bg-background">
+          <div className="space-y-3 rounded-md border border-border bg-muted/50 p-3">
             <div className="flex items-center justify-between gap-3">
-              <label className="flex items-center gap-2 text-[11px] font-semibold text-foreground">
-                <ThemedCheckbox
-                  checked={restoreSettingsEnabled}
-                  onChange={setRestoreSettingsEnabled}
-                  label={t("settings.backup.restoreSettings")}
-                />
-                {t("settings.backup.restoreSettings")}
-              </label>
-              <p className="text-[10px] opacity-70 text-foreground">
+              <div className="flex min-w-0 items-center gap-3">
+                <Settings2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                <label className="flex min-w-0 cursor-pointer items-center gap-2 text-[11px] font-semibold text-foreground">
+                  <ThemedCheckbox
+                    checked={restoreSettingsEnabled}
+                    onChange={setRestoreSettingsEnabled}
+                    label={t("settings.backup.restoreSettings")}
+                  />
+                  <span className="truncate">{t("settings.backup.restoreSettings")}</span>
+                </label>
+              </div>
+              <p className="text-[10px] font-medium text-muted-foreground">
                 {t("settings.backup.settingsStats", {
                   total: settingsPreview.totalKeys,
                   conflicts: settingsPreview.conflictingKeys,
@@ -778,12 +819,12 @@ const BackupSettings: React.FC = () => {
         {previewItems.length > 0 && (
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold opacity-70 text-foreground">
+              <p className="text-[11px] font-semibold text-muted-foreground">
                 {t("settings.backup.selectedEntries", { count: selectedRestoreCount })}
               </p>
               <button
                 onClick={toggleRestoreAll}
-              className="h-8 px-3 rounded-md text-[10px] font-semibold border border-border transition-all text-foreground"
+                className="h-8 rounded-md border border-border bg-background px-3 text-[10px] font-semibold text-foreground transition-colors hover:bg-accent"
               >
                 {selectedRestoreCount === selectableRestoreIndices.size
                   ? t("settings.backup.unselectAll")
@@ -791,7 +832,7 @@ const BackupSettings: React.FC = () => {
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto rounded-md border border-border">
+            <div className="max-h-72 overflow-y-auto rounded-md border border-border bg-background">
               {previewItems.map((item) => {
                 const name = previewNames[item.gameId] || item.gameId;
                 const strategy = conflictStrategyByIndex[item.index] || "backup";
@@ -817,7 +858,7 @@ const BackupSettings: React.FC = () => {
                 return (
                   <div
                     key={item.index}
-                    className="p-3 border-b border-border last:border-b-0 text-foreground"
+                    className="border-b border-border p-3 text-foreground transition-colors last:border-b-0 hover:bg-accent/45"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <label className={`flex items-start gap-3 min-w-0 flex-1 ${isBlocked ? "cursor-not-allowed opacity-85" : "cursor-pointer"}`}>
@@ -832,8 +873,8 @@ const BackupSettings: React.FC = () => {
                           <SteamGameLogo gameId={item.gameId} />
                           <div className="min-w-0">
                     <p className="text-xs font-semibold truncate">{name}</p>
-                            <p className="text-[10px] opacity-60 truncate">{item.gameId} • {item.directory}</p>
-                            <p className="text-[10px] opacity-70">
+                            <p className="truncate text-[10px] font-medium text-muted-foreground">{item.gameId} • {item.directory}</p>
+                            <p className="text-[10px] font-medium text-muted-foreground">
                               {t("settings.backup.restoreStats", {
                                 backup: item.backupAchievements,
                                 existing: item.existingAchievements,
@@ -842,7 +883,7 @@ const BackupSettings: React.FC = () => {
                               })}
                             </p>
                             {warning && (
-                              <p className="text-[10px] font-semibold mt-1 text-amber-600">
+                              <p className="mt-1 text-[10px] font-semibold text-amber-600">
                                 {warning}
                               </p>
                             )}
@@ -851,7 +892,7 @@ const BackupSettings: React.FC = () => {
                       </label>
 
                       {isBlocked ? (
-                        <span className="text-[10px] font-semibold opacity-80 whitespace-nowrap">{blockedBadge}</span>
+                        <span className="whitespace-nowrap text-[10px] font-semibold text-muted-foreground">{blockedBadge}</span>
                       ) : item.willReplace ? (
                         <CompactDropdown
                           value={strategy}
@@ -863,7 +904,7 @@ const BackupSettings: React.FC = () => {
                           ]}
                         />
                       ) : (
-                        <span className="text-[10px] font-semibold opacity-70">{t("settings.backup.noConflict")}</span>
+                        <span className="text-[10px] font-semibold text-muted-foreground">{t("settings.backup.noConflict")}</span>
                       )}
                     </div>
                   </div>
@@ -871,22 +912,15 @@ const BackupSettings: React.FC = () => {
               })}
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold opacity-80 text-foreground">
+            <div className="flex items-center justify-end gap-3 px-1">
+              <p className="text-[11px] font-semibold text-muted-foreground">
                 {t("settings.backup.conflictsSelected", { count: willReplaceCount })}
               </p>
-
-              <button
-                onClick={handleApplyRestore}
-                disabled={restoring || selectedRestoreCount === 0}
-                className="h-11 px-5 rounded-md text-[10px] font-semibold border border-border transition-all disabled:opacity-50 text-foreground"
-              >
-                {restoring ? t("settings.backup.restoring") : t("settings.backup.restoreButton")}
-              </button>
             </div>
           </>
         )}
-      </div>
+        </div>
+      </SectionCard>
     </div>
   );
 };

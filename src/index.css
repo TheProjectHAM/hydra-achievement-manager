@@ -499,15 +499,14 @@ body {
 }
 
 .completed-game-card {
-  border-color: var(--border);
+  border-color: transparent;
 }
 
 .completed-game-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 20;
-  padding: 1px;
+  z-index: 0;
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
@@ -521,14 +520,6 @@ body {
     rgba(255, 64, 128, 0.85)
   );
   background-size: 300% 100%;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
   transition: opacity 200ms ease;
 }
 
