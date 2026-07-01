@@ -312,28 +312,6 @@ const App: React.FC = () => {
       ? sourcePath
       : (selectedGame?.id === gameId ? selectedGameSourcePath : null);
     const sourceKey = getStatusSourceKey(gameId, resolvedSourcePath);
-    const currentStatus = achievementStatus[sourceKey]?.[achievementName];
-
-    if (resolvedSourcePath?.startsWith('retroachievements://') && currentStatus?.completed) {
-      try {
-        const achievementId = Number(achievementName);
-        if (!Number.isFinite(achievementId) || achievementId <= 0) {
-          throw new Error(`Invalid RetroAchievements achievement id: ${achievementName}`);
-        }
-        await deleteRetroAchievementUnlock(achievementId);
-        toast.success('RetroAchievements unlock removed', {
-          description: `Achievement ${achievementName} was reset on RetroAchievements.`,
-          duration: 4000,
-        });
-      } catch (error) {
-        console.error('Error deleting RetroAchievements unlock:', error);
-        toast.error('RetroAchievements reset failed', {
-          description: getErrorMessage(error),
-          duration: 8000,
-        });
-        return;
-      }
-    }
 
     setAchievementStatus(prev => {
       const gameStatuses = prev[sourceKey] || {};
@@ -501,9 +479,15 @@ const App: React.FC = () => {
     const unlockedCount = achievements.filter((a) => a.completed).length;
 
     if (isRetroAchievements) {
-      if (unlockedCount === 0) {
+      const removedAchievements = (allAchievements || []).filter((achievement) => {
+        if (!achievement.unlocked) return false;
+        const status = gameStatuses[achievement.internalName];
+        return status?.completed === false;
+      });
+
+      if (unlockedCount === 0 && removedAchievements.length === 0) {
         toast.error('No RetroAchievements selected', {
-          description: 'Select at least one locked achievement to unlock.',
+          description: 'Select at least one achievement to unlock or unselect an unlocked achievement to reset.',
           duration: 4000,
         });
         return;
@@ -514,7 +498,7 @@ const App: React.FC = () => {
         const username = String(settings?.retroAchievementsUsername || '').trim();
         const runtimeToken = String(settings?.retroAchievementsRuntimeToken || '').trim();
 
-        if (!username || !runtimeToken) {
+        if (unlockedCount > 0 && (!username || !runtimeToken)) {
           toast.error(t('unlockToasts.retroRuntimeLoginRequiredTitle'), {
             description: t('unlockToasts.retroRuntimeLoginRequiredMessage'),
             duration: 6000,
@@ -523,6 +507,18 @@ const App: React.FC = () => {
         }
 
         const unlocked: Array<{ name: string; completed: boolean }> = [];
+        const removed: Array<{ name: string; completed: boolean }> = [];
+
+        for (const achievement of removedAchievements) {
+          const achievementId = Number(achievement.internalName);
+          if (!Number.isFinite(achievementId) || achievementId <= 0) {
+            throw new Error(`Invalid RetroAchievements achievement id: ${achievement.internalName}`);
+          }
+
+          await deleteRetroAchievementUnlock(achievementId);
+          removed.push({ name: achievement.internalName, completed: false });
+        }
+
         for (const achievement of achievements.filter((achievement) => achievement.completed)) {
           const achievementId = Number(achievement.name);
           if (!Number.isFinite(achievementId) || achievementId <= 0) {
@@ -539,9 +535,9 @@ const App: React.FC = () => {
           unlocked.push({ name: achievement.name, completed: true });
         }
 
-        manuallyUpdateGame(gameId, unlocked, false);
-        toast.success('RetroAchievements unlocked', {
-          description: `Unlocked ${unlocked.length} achievement${unlocked.length === 1 ? '' : 's'} in softcore mode.`,
+        manuallyUpdateGame(gameId, [...removed, ...unlocked], false);
+        toast.success('RetroAchievements updated', {
+          description: `Unlocked ${unlocked.length} and reset ${removed.length} achievement${removed.length === 1 ? '' : 's'}.`,
           duration: 4000,
         });
 
@@ -560,6 +556,9 @@ const App: React.FC = () => {
         setAchievementStatus(prev => ({
           ...prev,
           [getStatusSourceKey(selectedGame.id, unlockSourcePath)]: newAchievementStatus,
+        }));
+        window.dispatchEvent(new CustomEvent('achievements-source-updated', {
+          detail: { gameId: selectedGame.id, sourcePath: unlockSourcePath },
         }));
       } catch (error) {
         console.error('Error unlocking RetroAchievements:', error);

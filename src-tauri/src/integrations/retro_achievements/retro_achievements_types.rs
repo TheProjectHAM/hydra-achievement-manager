@@ -72,6 +72,14 @@ pub struct RetroAchievementsRuntimeLogin {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RetroAchievementsWebSessionLogin {
+    pub cookie: String,
+    pub xsrf_token: String,
+    pub cookie_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RetroAchievementsPatchMemAddrSample {
     pub achievement_id: String,
     pub length: usize,

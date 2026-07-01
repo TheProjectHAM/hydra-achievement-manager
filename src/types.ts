@@ -67,6 +67,7 @@ export interface Achievement {
   displayName: string;
   description: string;
   icon: string;
+  iconLocked?: string;
   percent?: number;
   hidden?: boolean;
   unlocked?: boolean;
@@ -156,6 +157,12 @@ export interface RetroAchievementsRuntimeLogin {
   softcoreScore: number;
   messages: number;
   avatarUrl?: string | null;
+}
+
+export interface RetroAchievementsWebSessionLogin {
+  cookie: string;
+  xsrfToken: string;
+  cookieCount: number;
 }
 
 export interface RetroAchievementsPatchDataProbe {

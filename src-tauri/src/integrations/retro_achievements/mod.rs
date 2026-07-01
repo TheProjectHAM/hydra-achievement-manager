@@ -6,5 +6,5 @@ pub use retro_achievements_types::{
     RetroAchievement, RetroAchievementsAwardRequest, RetroAchievementsAwardResponseInner,
     RetroAchievementsCredentials, RetroAchievementsGame, RetroAchievementsPatchDataProbe,
     RetroAchievementsPatchMemAddrSample, RetroAchievementsProfile, RetroAchievementsRuntimeLogin,
-    RetroAchievementsSearchResult,
+    RetroAchievementsSearchResult, RetroAchievementsWebSessionLogin,
 };

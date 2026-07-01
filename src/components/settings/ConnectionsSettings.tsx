@@ -5,8 +5,10 @@ import { useI18n } from '../../contexts/I18nContext';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertCircle, CheckCircle2, Database, Eye, EyeOff, FolderOpen, Globe2, KeyRound, Loader2, LockKeyhole, RefreshCw, SlidersHorizontal, UserRound } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { getHydraConnectionProfile, getRetroAchievementsConnectionProfile, getSteamConnectionProfile, loadSettings, loginRetroAchievementsRuntimeWithPassword, testRetroAchievementsConnection } from '../../tauri-api';
+import { getHydraConnectionProfile, getRetroAchievementsConnectionProfile, getSteamConnectionProfile, loadSettings, loginRetroAchievementsRuntimeWithPassword, loginRetroAchievementsWebSession, testRetroAchievementsConnection } from '../../tauri-api';
 import { SteamAchievementSource } from '../../types';
 
 type ConnectionKind = 'steam' | 'hydra' | 'retroachievements';
@@ -112,17 +114,33 @@ const ConnectionCard: React.FC<ConnectionCardProps> = ({ profile, expanded, onTo
 const SettingsRow: React.FC<{
   title: string;
   description?: string;
+  badge?: React.ReactNode;
   trailing: React.ReactNode;
   disabled?: boolean;
-}> = ({ title, description, trailing, disabled = false }) => (
-  <div className={cn('flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/50 p-3', disabled && 'opacity-60')}>
+}> = ({ title, description, badge, trailing, disabled = false }) => (
+  <div className={cn('flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 p-3', disabled && 'opacity-60')}>
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-semibold text-foreground truncate">{title}</p>
+      <div className="flex items-center gap-2">
+        <p className="truncate text-xs font-semibold text-foreground">{title}</p>
+        {badge}
+      </div>
       {description && <p className="mt-0.5 text-[10px] font-medium text-muted-foreground leading-relaxed">{description}</p>}
     </div>
     <div className="flex-shrink-0">{trailing}</div>
   </div>
 );
+
+const StatusPill: React.FC<{ active: boolean; activeLabel: string; inactiveLabel: string }> = ({ active, activeLabel, inactiveLabel }) => (
+  <span className={cn(
+    'inline-flex h-5 items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold',
+    active ? 'border-border bg-accent text-foreground' : 'border-border bg-background text-muted-foreground'
+  )}>
+    {active ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
+    {active ? activeLabel : inactiveLabel}
+  </span>
+);
+
+const RequiredMark = () => <span className="text-[10px] font-bold text-muted-foreground" title="Required">*</span>;
 
 const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   steamIntegrationEnabled,
@@ -145,22 +163,31 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   const [isRetryingConnection, setIsRetryingConnection] = useState(false);
   const [retroUsername, setRetroUsername] = useState('');
   const [retroApiKey, setRetroApiKey] = useState('');
+  const [showRetroApiKey, setShowRetroApiKey] = useState(false);
   const [retroStatus, setRetroStatus] = useState<string | null>(null);
   const [retroRuntimePassword, setRetroRuntimePassword] = useState('');
+  const [showRetroPassword, setShowRetroPassword] = useState(false);
   const [retroRuntimeStatus, setRetroRuntimeStatus] = useState<string | null>(null);
   const [hasRetroRuntimeToken, setHasRetroRuntimeToken] = useState(false);
   const [isRetroRuntimeLoggingIn, setIsRetroRuntimeLoggingIn] = useState(false);
   const [retroWebCookie, setRetroWebCookie] = useState('');
-  const [retroXsrfToken, setRetroXsrfToken] = useState('');
   const [retroWebSessionStatus, setRetroWebSessionStatus] = useState<string | null>(null);
+  const [isRetroWebSessionLoggingIn, setIsRetroWebSessionLoggingIn] = useState(false);
+  const [retroDisclaimerAccepted, setRetroDisclaimerAccepted] = useState(false);
+  const [retroDisclaimerChecked, setRetroDisclaimerChecked] = useState(false);
+  const [steamDisclaimerAccepted, setSteamDisclaimerAccepted] = useState(false);
+  const [steamDisclaimerChecked, setSteamDisclaimerChecked] = useState(false);
   const [savedRetroUsername, setSavedRetroUsername] = useState('');
   const [savedRetroApiKey, setSavedRetroApiKey] = useState('');
+  const [savedRetroPassword, setSavedRetroPassword] = useState('');
   const lastSteamMissingReasonRef = useRef<string | null>(null);
   const lastRetroValidationKeyRef = useRef<string | null>(null);
   const retroValidationRunRef = useRef(0);
 
   const canEnableSteamIntegration = !isSteamMissing;
   const connectedCount = profiles.length;
+  const hasSteamLibraryPath = !!steamLibPath;
+  const hasSteamDllPath = !!steamDllPath;
 
   const isSteamClientNotRunningReason = (reason: string | null) => {
     if (!reason) return false;
@@ -223,12 +250,14 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
       settings: {
         retroAchievementsUsername: username,
         retroAchievementsApiKey: apiKey,
+        retroAchievementsPassword: retroRuntimePassword,
       },
     });
     setSavedRetroUsername(username);
     setSavedRetroApiKey(apiKey);
+    setSavedRetroPassword(retroRuntimePassword);
     window.dispatchEvent(new Event('settings-saved'));
-    setRetroStatus('RetroAchievements credentials saved.');
+    setRetroStatus(null);
   };
 
   const handleRetroRuntimeLogin = async () => {
@@ -247,14 +276,15 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
         settings: {
           retroAchievementsUsername: result.username || username,
           retroAchievementsRuntimeToken: result.token,
+          retroAchievementsPassword: password,
         },
       });
       setRetroUsername(result.username || username);
       setSavedRetroUsername(result.username || username);
-      setRetroRuntimePassword('');
+      setSavedRetroPassword(password);
       setHasRetroRuntimeToken(true);
       window.dispatchEvent(new Event('settings-saved'));
-      setRetroRuntimeStatus('Login successful. Token saved locally; password was not saved.');
+      setRetroRuntimeStatus(null);
     } catch (error) {
       console.error('RetroAchievements runtime login failed:', error);
       setHasRetroRuntimeToken(false);
@@ -264,15 +294,48 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
     }
   };
 
-  const saveRetroWebSession = async () => {
+  const handleRetroWebSessionLogin = async () => {
+    try {
+      setIsRetroWebSessionLoggingIn(true);
+      setRetroWebSessionStatus(t('settings.connections.retroWebSessionLoggingIn'));
+      const result = await loginRetroAchievementsWebSession();
+      setRetroWebCookie(result.cookie);
+      await invoke<void>('save_settings', {
+        settings: {
+          retroAchievementsWebCookie: result.cookie,
+          retroAchievementsXsrfToken: result.xsrfToken,
+        },
+      });
+      window.dispatchEvent(new Event('settings-saved'));
+      setRetroWebSessionStatus(null);
+    } catch (error) {
+      console.error('RetroAchievements web session login failed:', error);
+      setRetroWebSessionStatus(`Web session login failed: ${String(error)}`);
+    } finally {
+      setIsRetroWebSessionLoggingIn(false);
+    }
+  };
+
+  const acceptRetroDisclaimer = async () => {
     await invoke<void>('save_settings', {
       settings: {
-        retroAchievementsWebCookie: retroWebCookie.trim(),
-        retroAchievementsXsrfToken: retroXsrfToken.trim(),
+        retroAchievementsDisclaimerAccepted: true,
       },
     });
+    setRetroDisclaimerAccepted(true);
+    setRetroDisclaimerChecked(false);
     window.dispatchEvent(new Event('settings-saved'));
-    setRetroWebSessionStatus(t('settings.connections.retroWebSessionSaved'));
+  };
+
+  const acceptSteamDisclaimer = async () => {
+    await invoke<void>('save_settings', {
+      settings: {
+        steamDisclaimerAccepted: true,
+      },
+    });
+    setSteamDisclaimerAccepted(true);
+    setSteamDisclaimerChecked(false);
+    window.dispatchEvent(new Event('settings-saved'));
   };
 
   const upsertRetroProfile = (profile?: { username?: string; displayName?: string; avatarUrl?: string | null } | null) => {
@@ -382,9 +445,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
           avatarInitials: 'RA',
           avatarUrl: retroProfile?.avatarUrl,
         });
-        if (retroProfile) {
-          setRetroStatus(`Connected as ${retroProfile.displayName || retroProfile.username}`);
-        }
+        if (retroProfile) setRetroStatus(null);
 
         cachedConnectionProfiles = nextProfiles;
         setProfiles(nextProfiles);
@@ -402,17 +463,16 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
         if (cancelled) return;
         setRetroUsername(settings?.retroAchievementsUsername || '');
         setRetroApiKey(settings?.retroAchievementsApiKey || '');
+        setRetroRuntimePassword(settings?.retroAchievementsPassword || '');
         setSavedRetroUsername(settings?.retroAchievementsUsername || '');
         setSavedRetroApiKey(settings?.retroAchievementsApiKey || '');
+        setSavedRetroPassword(settings?.retroAchievementsPassword || '');
         setHasRetroRuntimeToken(!!settings?.retroAchievementsRuntimeToken);
         setRetroWebCookie(settings?.retroAchievementsWebCookie || '');
-        setRetroXsrfToken(settings?.retroAchievementsXsrfToken || '');
-        if (settings?.retroAchievementsRuntimeToken) {
-          setRetroRuntimeStatus(t('settings.connections.retroRuntimeTokenSaved'));
-        }
-        if (settings?.retroAchievementsWebCookie) {
-          setRetroWebSessionStatus(t('settings.connections.retroWebSessionSaved'));
-        }
+        setRetroDisclaimerAccepted(!!settings?.retroAchievementsDisclaimerAccepted);
+        setSteamDisclaimerAccepted(!!settings?.steamDisclaimerAccepted);
+        if (settings?.retroAchievementsRuntimeToken) setRetroRuntimeStatus(null);
+        if (settings?.retroAchievementsWebCookie) setRetroWebSessionStatus(null);
       })
       .catch(() => undefined);
 
@@ -457,7 +517,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
         setSavedRetroApiKey(apiKey);
         window.dispatchEvent(new Event('settings-saved'));
         upsertRetroProfile(profile);
-        setRetroStatus(`Connected as ${profile.displayName || profile.username}`);
+        setRetroStatus(null);
       } catch (error) {
         if (retroValidationRunRef.current !== runId) return;
         console.warn('Automatic RetroAchievements validation failed:', error);
@@ -473,7 +533,12 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
 
   const isRetroSaved =
     retroUsername.trim() === savedRetroUsername &&
-    retroApiKey.trim() === savedRetroApiKey;
+    retroApiKey.trim() === savedRetroApiKey &&
+    retroRuntimePassword === savedRetroPassword;
+  const hasRetroUsername = !!retroUsername.trim();
+  const hasRetroPassword = !!retroRuntimePassword;
+  const hasRetroApiKey = !!retroApiKey.trim();
+  const hasRetroWebSession = !!retroWebCookie.trim();
 
   return (
     <div className="space-y-6 animate-modal-in">
@@ -514,52 +579,109 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
               {profile.kind === 'steam' ? (
                 <div className="space-y-2">
                   {subAccounts.length > 0 && (
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                        {t('settings.connections.connectedAccounts', { count: subAccounts.length })}
-                      </p>
-                      <div className="space-y-1">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-1">
+                        <SteamBrandIcon className="h-4 w-4 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-foreground">{t('settings.connections.steamAccounts')}</p>
+                            <StatusPill active activeLabel={t('settings.connections.connectedAccounts', { count: subAccounts.length })} inactiveLabel="" />
+                          </div>
+                          <p className="text-[10px] font-medium text-muted-foreground">{t('settings.connections.steamHint')}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
                         {subAccounts.map(sub => (
                           <a
                             key={sub.steamId64}
                             href={sub.profileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/30 p-2 transition-colors hover:bg-accent"
+                            className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/50 p-3 transition-colors hover:bg-accent"
                           >
-                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden text-[10px] font-bold text-muted-foreground ring-1 ring-border">
-                              {sub.avatarUrl ? (
-                                <img
-                                  src={sub.avatarUrl}
-                                  alt={sub.personaName}
-                                  className="h-full w-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                    (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden');
-                                  }}
-                                />
-                              ) : null}
-                              <span className={cn('text-[10px] font-bold', sub.avatarUrl && 'hidden')}>
-                                {(sub.personaName || sub.accountName || '?').slice(0, 2).toUpperCase()}
-                              </span>
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-background text-[10px] font-bold text-muted-foreground ring-1 ring-border">
+                                {sub.avatarUrl ? (
+                                  <img
+                                    src={sub.avatarUrl}
+                                    alt={sub.personaName}
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                      (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden');
+                                    }}
+                                  />
+                                ) : null}
+                                <span className={cn('text-[10px] font-bold', sub.avatarUrl && 'hidden')}>
+                                  {(sub.personaName || sub.accountName || '?').slice(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-semibold text-foreground">
+                                  {sub.personaName || sub.accountName || sub.steamId64}
+                                </p>
+                                {sub.accountName && sub.accountName !== sub.personaName && (
+                                  <p className="truncate text-[10px] font-medium text-muted-foreground">{sub.accountName}</p>
+                                )}
+                              </div>
                             </div>
-                            <span className="text-xs font-medium text-foreground truncate">
-                              {sub.personaName || sub.accountName || sub.steamId64}
-                            </span>
+                            <span className="text-[10px] font-semibold text-muted-foreground">Steam</span>
                           </a>
                         ))}
                       </div>
                     </div>
                   )}
+                  {!steamDisclaimerAccepted ? (
+                    <div className="space-y-3 rounded-md border border-border bg-muted/40 p-4">
+                      <div className="flex items-center gap-1.5">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <p className="text-xs font-semibold text-foreground">{t('settings.connections.steamDisclaimerTitle')}</p>
+                      </div>
+                      <p className="text-[11px] font-medium leading-relaxed text-muted-foreground">
+                        {t('settings.connections.steamDisclaimerBody')}
+                      </p>
+                      <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-background p-2 text-[10px] font-semibold text-foreground">
+                        <Checkbox
+                          checked={steamDisclaimerChecked}
+                          onCheckedChange={(event) => setSteamDisclaimerChecked(event)}
+                          className="mt-0.5"
+                        />
+                        <span>{t('settings.connections.steamDisclaimerAccept')}</span>
+                      </label>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={acceptSteamDisclaimer}
+                          disabled={!steamDisclaimerChecked}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          {t('settings.connections.retroDisclaimerContinue')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (<>
+                  <div className="flex items-center gap-2 px-1 pt-1">
+                    <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-foreground">{t('settings.connections.steamMainTitle')}</p>
+                        <StatusPill
+                          active={canEnableSteamIntegration}
+                          activeLabel={t('settings.connections.configured')}
+                          inactiveLabel={t('settings.connections.required')}
+                        />
+                      </div>
+                      <p className="text-[10px] font-medium text-muted-foreground">{t('settings.connections.steamMainDesc')}</p>
+                    </div>
+                  </div>
                   <SettingsRow
                     title={t('settings.api.steamIntegrationTitle')}
+                    badge={<StatusPill active={steamIntegrationEnabled && canEnableSteamIntegration} activeLabel={t('settings.api.steamIntegrationEnabled')} inactiveLabel={integrationStatus} />}
                     description={t('settings.api.steamIntegrationBetaNotice')}
                     disabled={!canEnableSteamIntegration}
                     trailing={
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-semibold text-muted-foreground">
-                          {integrationStatus}
-                        </span>
+                      <div className="flex items-center gap-2">
                         <Switch
                           size="sm"
                           checked={steamIntegrationEnabled}
@@ -572,6 +694,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
 
                   <SettingsRow
                     title={t('settings.connections.steamAchievementSource')}
+                    badge={<StatusPill active activeLabel={steamAchievementSource === 'steamworks' ? t('settings.connections.steamworksSource') : t('settings.connections.steamApiSource')} inactiveLabel="" />}
                     description={t('settings.connections.steamAchievementSourceDesc')}
                     trailing={
                       <div className="flex rounded-md border border-border bg-background p-0.5">
@@ -609,12 +732,10 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
 
                   <SettingsRow
                     title={t('settings.api.hideSteamGamesWithoutAchievements')}
+                    badge={<StatusPill active={hideSteamGamesWithoutAchievements} activeLabel={t('settings.api.hidden')} inactiveLabel={t('settings.api.visible')} />}
                     description={t('settings.api.hideSteamGamesWithoutAchievementsDesc')}
                     trailing={
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-semibold text-muted-foreground">
-                          {hideSteamGamesWithoutAchievements ? t('settings.api.hidden') : t('settings.api.visible')}
-                        </span>
+                      <div className="flex items-center gap-2">
                         <Switch
                           size="sm"
                           checked={hideSteamGamesWithoutAchievements}
@@ -624,16 +745,30 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                     }
                   />
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                  <div className="flex items-center gap-2 px-1 pt-1">
+                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-foreground">{t('settings.connections.steamPathsTitle')}</p>
+                        <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                          {t('settings.connections.optional')}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-medium text-muted-foreground">{t('settings.connections.steamPathsDesc')}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <SettingsRow
                       title={t('settings.api.steamLibraryPath')}
+                      badge={<StatusPill active={hasSteamLibraryPath} activeLabel={t('settings.connections.configured')} inactiveLabel={t('settings.connections.optional')} />}
                       description={steamLibPath || '--'}
                       trailing={
                         <button
                           onClick={handlePickVdf}
                           disabled={isSelectingVdf}
-                          className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-60 bg-accent text-foreground"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
                         >
+                          {isSelectingVdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FolderOpen className="h-3 w-3" />}
                           {isSelectingVdf ? t('settings.api.selecting') : t('settings.api.selectSteamVdf')}
                         </button>
                       }
@@ -641,13 +776,15 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
 
                     <SettingsRow
                       title={t('settings.api.steamDllPath')}
+                      badge={<StatusPill active={hasSteamDllPath} activeLabel={t('settings.connections.configured')} inactiveLabel={t('settings.connections.optional')} />}
                       description={steamDllPath || '--'}
                       trailing={
                         <button
                           onClick={handlePickDll}
                           disabled={isSelectingDll}
-                          className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-60 bg-accent text-foreground"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
                         >
+                          {isSelectingDll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Database className="h-3 w-3" />}
                           {isSelectingDll ? t('settings.api.selecting') : t('settings.api.selectSteamDll')}
                         </button>
                       }
@@ -655,10 +792,13 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                   </div>
 
                   {isSteamMissing && (
-                    <div className="rounded-xl border p-4" style={{ borderColor: 'rgba(239,68,68,0.35)', backgroundColor: 'rgba(239,68,68,0.08)' }}>
-                      <p className="text-xs font-semibold mb-1 text-foreground">
-                        {t('settings.api.steamIntegrationMissing')}
-                      </p>
+                    <div className="rounded-md border border-border bg-muted/40 p-4">
+                      <div className="mb-1 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-xs font-semibold text-foreground">
+                          {t('settings.api.steamIntegrationMissing')}
+                        </p>
+                      </div>
                       <p className="text-xs font-medium opacity-85 text-foreground">
                         {t('settings.api.steamIntegrationMissingWarning')}
                       </p>
@@ -667,7 +807,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                           {t('settings.api.steamIntegrationFailureReason')} {steamFailureReason}
                         </p>
                       )}
-                      <div className="mt-3 pt-3 border-t flex justify-end" style={{ borderColor: 'rgba(239,68,68,0.25)' }}>
+                      <div className="mt-3 flex justify-end border-t border-border pt-3">
                         <button
                           onClick={async () => {
                             setIsRetryingConnection(true);
@@ -675,8 +815,9 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                             setIsRetryingConnection(false);
                           }}
                           disabled={isRetryingConnection}
-                          className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-60 bg-accent text-foreground"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
                         >
+                          {isRetryingConnection ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                           {isRetryingConnection
                             ? t('settings.api.selecting')
                             : t('settings.api.retryConnectionButton')}
@@ -684,92 +825,179 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                       </div>
                     </div>
                   )}
+                  </>
+                )}
                 </div>
               ) : profile.kind === 'retroachievements' ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  {!retroDisclaimerAccepted && (
+                    <div className="space-y-3 rounded-md border border-border bg-muted/40 p-4">
+                      <div className="flex items-center gap-1.5">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <p className="text-xs font-semibold text-foreground">{t('settings.connections.retroDisclaimerTitle')}</p>
+                      </div>
+                      <p className="text-[11px] font-medium leading-relaxed text-muted-foreground">
+                        {t('settings.connections.retroDisclaimerBody')}
+                      </p>
+                      <p className="text-[10px] font-medium leading-relaxed text-muted-foreground">
+                        {t('settings.connections.retroDisclaimerMode')}
+                      </p>
+                      <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-background p-2 text-[10px] font-semibold text-foreground">
+                        <Checkbox
+                          checked={retroDisclaimerChecked}
+                          onCheckedChange={(event) => setRetroDisclaimerChecked(event)}
+                          className="mt-0.5"
+                        />
+                        <span>{t('settings.connections.retroDisclaimerAccept')}</span>
+                      </label>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={acceptRetroDisclaimer}
+                          disabled={!retroDisclaimerChecked}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          {t('settings.connections.retroDisclaimerContinue')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {retroDisclaimerAccepted && <>
+                  <div className="flex items-center gap-2 px-1">
+                    <KeyRound className="h-4 w-4 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-foreground">{t('settings.connections.retroRequiredTitle')}</p>
+                        <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                          {t('settings.connections.required')}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-medium text-muted-foreground">{t('settings.connections.retroRequiredDesc')}</p>
+                    </div>
+                  </div>
                   <SettingsRow
                     title={t('settings.connections.retroUsername')}
+                    badge={<><RequiredMark /><StatusPill active={hasRetroUsername} activeLabel={t('settings.connections.configured')} inactiveLabel={t('settings.connections.required')} /></>}
                     description={t('settings.connections.retroUsernameDesc')}
                     trailing={
-                      <input
-                        value={retroUsername}
-                        onChange={(event) => setRetroUsername(event.target.value)}
-                        className="h-8 w-48 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
-                        placeholder="username"
-                      />
-                    }
-                  />
-                  <SettingsRow
-                    title={t('settings.connections.retroApiKey')}
-                    description={t('settings.connections.retroApiKeyDesc')}
-                    trailing={
-                      <input
-                        value={retroApiKey}
-                        onChange={(event) => setRetroApiKey(event.target.value)}
-                        className="h-8 w-48 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
-                        placeholder="API key"
-                        type="password"
-                      />
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-48">
+                          <UserRound className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            value={retroUsername}
+                            onChange={(event) => setRetroUsername(event.target.value)}
+                            className="h-8 w-full rounded-md border border-border bg-background pl-7 pr-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                            placeholder="username"
+                          />
+                        </div>
+                      </div>
                     }
                   />
                   <SettingsRow
                     title={t('settings.connections.retroRuntimeLogin')}
+                    badge={<><RequiredMark /><StatusPill active={hasRetroRuntimeToken} activeLabel={t('settings.connections.loggedIn')} inactiveLabel={t('settings.connections.required')} /></>}
                     description={hasRetroRuntimeToken
                       ? t('settings.connections.retroRuntimeLoginSavedDesc')
                       : t('settings.connections.retroRuntimeLoginDesc')}
                     trailing={
                       <div className="flex items-center gap-2">
-                        <input
-                          value={retroRuntimePassword}
-                          onChange={(event) => setRetroRuntimePassword(event.target.value)}
-                          className="h-8 w-48 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
-                          placeholder="password"
-                          type="password"
-                          autoComplete="current-password"
-                        />
+                        <div className="relative w-48">
+                          <LockKeyhole className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            value={retroRuntimePassword}
+                            onChange={(event) => setRetroRuntimePassword(event.target.value)}
+                            className="h-8 w-full rounded-md border border-border bg-background pl-7 pr-9 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                            placeholder="password"
+                            type={showRetroPassword ? 'text' : 'password'}
+                            autoComplete="current-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRetroPassword(current => !current)}
+                            className="absolute right-1 top-1/2 grid h-6 w-7 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                            title={showRetroPassword ? t('settings.connections.hideSecret') : t('settings.connections.showSecret')}
+                          >
+                            {showRetroPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={handleRetroRuntimeLogin}
                           disabled={isRetroRuntimeLoggingIn || !retroUsername.trim() || !retroRuntimePassword}
-                          className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-70 bg-accent text-foreground"
+                          className={cn(
+                            'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[10px] font-semibold disabled:opacity-70',
+                            hasRetroRuntimeToken ? 'border-border bg-muted text-foreground' : 'border-border bg-accent text-foreground'
+                          )}
                         >
-                          {isRetroRuntimeLoggingIn ? t('settings.connections.retroRuntimeLoggingIn') : hasRetroRuntimeToken ? t('settings.connections.retroRuntimeRenewToken') : t('settings.connections.retroRuntimeLoginButton')}
+                          {isRetroRuntimeLoggingIn && <Loader2 className="h-3 w-3 animate-spin" />}
+                          {!isRetroRuntimeLoggingIn && hasRetroRuntimeToken && <CheckCircle2 className="h-3 w-3" />}
+                          {!isRetroRuntimeLoggingIn && !hasRetroRuntimeToken && <KeyRound className="h-3 w-3" />}
+                          {isRetroRuntimeLoggingIn ? t('settings.connections.retroRuntimeLoggingIn') : hasRetroRuntimeToken ? t('settings.connections.loggedIn') : t('settings.connections.retroRuntimeLoginButton')}
                         </button>
                       </div>
                     }
                   />
                   <SettingsRow
+                    title={t('settings.connections.retroApiKey')}
+                    badge={<><RequiredMark /><StatusPill active={hasRetroApiKey} activeLabel={t('settings.connections.configured')} inactiveLabel={t('settings.connections.required')} /></>}
+                    description={t('settings.connections.retroApiKeyDesc')}
+                    trailing={
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-48">
+                          <KeyRound className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            value={retroApiKey}
+                            onChange={(event) => setRetroApiKey(event.target.value)}
+                            className="h-8 w-full rounded-md border border-border bg-background pl-7 pr-9 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                            placeholder="API key"
+                            type={showRetroApiKey ? 'text' : 'password'}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRetroApiKey(current => !current)}
+                            className="absolute right-1 top-1/2 grid h-6 w-7 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                            title={showRetroApiKey ? t('settings.connections.hideSecret') : t('settings.connections.showSecret')}
+                          >
+                            {showRetroApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  />
+                  <div className="flex items-center gap-2 px-1 pt-1">
+                    <Globe2 className="h-4 w-4 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-foreground">{t('settings.connections.retroOptionalTitle')}</p>
+                        <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                          {t('settings.connections.optional')}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-medium text-muted-foreground">{t('settings.connections.retroOptionalDesc')}</p>
+                    </div>
+                  </div>
+                  <SettingsRow
                     title={t('settings.connections.retroWebSession')}
+                    badge={<StatusPill active={hasRetroWebSession} activeLabel={t('settings.connections.loggedIn')} inactiveLabel={t('settings.connections.optional')} />}
                     description={retroWebCookie.trim()
                       ? t('settings.connections.retroWebSessionDesc')
                       : t('settings.connections.retroWebSessionMissingDesc')}
                     trailing={
-                      <div className="flex flex-col gap-2 sm:w-[28rem]">
-                        <input
-                          value={retroWebCookie}
-                          onChange={(event) => setRetroWebCookie(event.target.value)}
-                          className="h-8 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
-                          placeholder={t('settings.connections.retroWebCookiePlaceholder')}
-                          type="password"
-                        />
-                        <div className="flex items-center gap-2">
-                          <input
-                            value={retroXsrfToken}
-                            onChange={(event) => setRetroXsrfToken(event.target.value)}
-                            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
-                            placeholder={t('settings.connections.retroXsrfPlaceholder')}
-                            type="password"
-                          />
-                          <button
-                            type="button"
-                            onClick={saveRetroWebSession}
-                            disabled={!retroWebCookie.trim()}
-                            className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-70 bg-accent text-foreground"
-                          >
-                            {t('settings.connections.retroWebSessionSave')}
-                          </button>
-                        </div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRetroWebSessionLogin}
+                        disabled={isRetroWebSessionLoggingIn}
+                        className={cn(
+                          'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[10px] font-semibold disabled:opacity-70',
+                          hasRetroWebSession ? 'border-border bg-muted text-foreground' : 'border-border bg-accent text-foreground'
+                        )}
+                      >
+                        {isRetroWebSessionLoggingIn && <Loader2 className="h-3 w-3 animate-spin" />}
+                        {!isRetroWebSessionLoggingIn && hasRetroWebSession && <CheckCircle2 className="h-3 w-3" />}
+                        {!isRetroWebSessionLoggingIn && !hasRetroWebSession && <Globe2 className="h-3 w-3" />}
+                        {isRetroWebSessionLoggingIn ? t('settings.connections.retroWebSessionLoggingIn') : hasRetroWebSession ? t('settings.connections.loggedIn') : t('settings.connections.retroWebSessionLogin')}
+                      </button>
                     }
                   />
                   {retroStatus && (
@@ -781,7 +1009,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                   {retroWebSessionStatus && (
                     <p className="text-[11px] font-semibold text-muted-foreground">{retroWebSessionStatus}</p>
                   )}
-                  {!retroWebCookie.trim() && (
+                  {!hasRetroWebSession && (
                     <p className="text-[11px] font-semibold text-amber-500">{t('settings.connections.retroResetDeleteDisabled')}</p>
                   )}
                   <div className="flex justify-end gap-2">
@@ -794,6 +1022,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                       {isRetroSaved ? 'Saved' : 'Save'}
                     </button>
                   </div>
+                  </>}
                 </div>
               ) : (
                 <p className="text-xs font-medium text-muted-foreground">

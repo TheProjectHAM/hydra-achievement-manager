@@ -248,6 +248,7 @@ pub fn run() {
             commands::retro_achievements::test_retro_achievements_connection,
             commands::retro_achievements::login_retro_achievements_runtime_with_password,
             commands::retro_achievements::login_retro_achievements_runtime_with_token,
+            commands::retro_achievements::login_retro_achievements_web_session,
             commands::retro_achievements::probe_retro_achievements_patch_data,
             commands::retro_achievements::award_retro_achievement,
             commands::retro_achievements::delete_retro_achievement_unlock,

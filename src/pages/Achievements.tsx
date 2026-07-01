@@ -46,6 +46,7 @@ const AchievementCard: React.FC<{
   onToggle: () => void;
   onTimestampChange: (field: keyof Timestamp, value: string) => void;
   onTimestampClear: () => void;
+  showUnlockRateBar?: boolean;
   readOnly?: boolean;
 }> = ({
   achievement,
@@ -53,11 +54,13 @@ const AchievementCard: React.FC<{
   onToggle,
   onTimestampChange,
   onTimestampClear,
+  showUnlockRateBar = false,
   readOnly,
 }) => {
   const isCompleted = readOnly || status.completed;
   const { dateFormat, timeFormat, hideHiddenAchievements } = useTheme();
   const { t } = useI18n();
+  const displayIcon = isCompleted ? achievement.icon : (achievement.iconLocked || achievement.icon);
 
   const handleSetCurrentTimestamp = () => {
     if (!isCompleted) return;
@@ -89,7 +92,7 @@ const AchievementCard: React.FC<{
         )}
 
         <img
-          src={achievement.icon}
+          src={displayIcon}
           alt={achievement.displayName}
           className="w-12 h-12 rounded-md object-cover ring-1 ring-white/10 shadow-lg flex-shrink-0"
         />
@@ -133,7 +136,7 @@ const AchievementCard: React.FC<{
         </div>
       )}
 
-      {achievement.percent !== undefined && achievement.percent > 0 && (
+      {achievement.percent !== undefined && achievement.percent > 0 && !showUnlockRateBar && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-black/20">
           <div
             className={`h-full ${rarityColor}`}
@@ -153,7 +156,7 @@ const AchievementCard: React.FC<{
       <div className="flex items-start gap-4 w-full flex-grow pr-6">
         <div className="relative flex-shrink-0">
           <img
-            src={achievement.icon}
+            src={displayIcon}
             alt={achievement.displayName}
             className={`w-14 h-14 rounded-md object-cover ring-1 ring-white/10 shadow-lg transition-all duration-500 ${!isCompleted ? "grayscale opacity-40 brightness-75" : ""}`}
           />
@@ -170,7 +173,7 @@ const AchievementCard: React.FC<{
             {achievement.description || t("achievementsPage.noDescription")}
           </p>
 
-          {achievement.percent !== undefined && achievement.percent > 0 && (
+          {achievement.percent !== undefined && achievement.percent > 0 && !showUnlockRateBar && (
             <div
               className={`mt-2 text-[9px] font-semibold flex items-center gap-1 ${isHidden ? "opacity-0 group-hover:opacity-60" : "opacity-40"}`}
             >
@@ -186,6 +189,16 @@ const AchievementCard: React.FC<{
       </div>
 
       <div className="mt-auto" onClick={(e) => e.stopPropagation()}>
+        {achievement.percent !== undefined && achievement.percent > 0 && showUnlockRateBar && (
+          <div className={`mb-2 overflow-hidden rounded-sm border border-border bg-background/80 transition-opacity ${isCompleted ? "opacity-100" : "opacity-45"}`}>
+            <div
+              className={`flex h-4 min-w-[2.9rem] items-center justify-center px-1.5 text-[9px] font-bold text-background transition-all ${isCompleted ? rarityColor : "bg-muted-foreground"}`}
+              style={{ width: `${Math.max(10, achievement.percent)}%` }}
+            >
+              {achievement.percent.toFixed(1)}%
+            </div>
+          </div>
+        )}
         <TimestampSelector
           timestamp={status.timestamp}
           onChange={onTimestampChange}
@@ -317,11 +330,25 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
       sourceStatusInitializedRef.current.clear();
       setSettingsRevision((revision) => revision + 1);
     };
+    const handleAchievementsSourceUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ gameId?: number | string }>).detail;
+      if (detail?.gameId && game?.id && Number(detail.gameId) !== Number(game.id)) {
+        return;
+      }
+
+      achievementsCacheRef.current = {};
+      sourceStatusInitializedRef.current.clear();
+      setSettingsRevision((revision) => revision + 1);
+    };
 
     window.addEventListener("settings-saved", handleSettingsSaved);
+    window.addEventListener("achievements-source-updated", handleAchievementsSourceUpdated);
     return () =>
-      window.removeEventListener("settings-saved", handleSettingsSaved);
-  }, []);
+      {
+        window.removeEventListener("settings-saved", handleSettingsSaved);
+        window.removeEventListener("achievements-source-updated", handleAchievementsSourceUpdated);
+      };
+  }, [game?.id]);
 
   useEffect(() => {
     const getSourceCacheKey = (gameId: number, sourcePath?: string | null) =>
@@ -366,7 +393,8 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
             internalName: ach.id,
             displayName: ach.title || ach.id,
             description: ach.description || "",
-            icon: ach.unlocked ? ach.icon : (ach.iconLocked || ach.icon || ""),
+            icon: ach.icon || "",
+            iconLocked: ach.iconLocked || ach.icon || "",
             percent: ach.trueRatio ? Math.min(100, ach.trueRatio / 100) : undefined,
             hidden: false,
             unlocked: !!ach.unlocked,
@@ -769,6 +797,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                     key={ach.internalName}
                     achievement={ach}
                     status={status}
+                    showUnlockRateBar={isRetroAchievementsSource}
                     readOnly={false}
                     onToggle={() =>
                       onAchievementToggle(

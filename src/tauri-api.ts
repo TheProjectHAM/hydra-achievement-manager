@@ -10,6 +10,7 @@ import {
   RetroAchievementsGame,
   RetroAchievementsProfile,
   RetroAchievementsRuntimeLogin,
+  RetroAchievementsWebSessionLogin,
   SteamAchievementData,
   SteamSearchResult,
 } from "./types";
@@ -559,6 +560,9 @@ export const loginRetroAchievementsRuntimeWithPassword = (username: string, pass
 
 export const loginRetroAchievementsRuntimeWithToken = (username: string, token: string) =>
   invoke<RetroAchievementsRuntimeLogin>("login_retro_achievements_runtime_with_token", { username, token });
+
+export const loginRetroAchievementsWebSession = () =>
+  invoke<RetroAchievementsWebSessionLogin>("login_retro_achievements_web_session");
 
 export const probeRetroAchievementsPatchData = (username: string, runtimeToken: string, gameId: number) =>
   invoke<RetroAchievementsPatchDataProbe>("probe_retro_achievements_patch_data", { username, runtimeToken, gameId });
