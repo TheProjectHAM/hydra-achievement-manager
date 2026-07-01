@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { getHydraConnectionProfile, getRetroAchievementsConnectionProfile, getSteamConnectionProfile, loadSettings, testRetroAchievementsConnection } from '../../tauri-api';
+import { getHydraConnectionProfile, getRetroAchievementsConnectionProfile, getSteamConnectionProfile, loadSettings, loginRetroAchievementsRuntimeWithPassword, testRetroAchievementsConnection } from '../../tauri-api';
 import { SteamAchievementSource } from '../../types';
 
 type ConnectionKind = 'steam' | 'hydra' | 'retroachievements';
@@ -146,6 +146,13 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   const [retroUsername, setRetroUsername] = useState('');
   const [retroApiKey, setRetroApiKey] = useState('');
   const [retroStatus, setRetroStatus] = useState<string | null>(null);
+  const [retroRuntimePassword, setRetroRuntimePassword] = useState('');
+  const [retroRuntimeStatus, setRetroRuntimeStatus] = useState<string | null>(null);
+  const [hasRetroRuntimeToken, setHasRetroRuntimeToken] = useState(false);
+  const [isRetroRuntimeLoggingIn, setIsRetroRuntimeLoggingIn] = useState(false);
+  const [retroWebCookie, setRetroWebCookie] = useState('');
+  const [retroXsrfToken, setRetroXsrfToken] = useState('');
+  const [retroWebSessionStatus, setRetroWebSessionStatus] = useState<string | null>(null);
   const [savedRetroUsername, setSavedRetroUsername] = useState('');
   const [savedRetroApiKey, setSavedRetroApiKey] = useState('');
   const lastSteamMissingReasonRef = useRef<string | null>(null);
@@ -222,6 +229,50 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
     setSavedRetroApiKey(apiKey);
     window.dispatchEvent(new Event('settings-saved'));
     setRetroStatus('RetroAchievements credentials saved.');
+  };
+
+  const handleRetroRuntimeLogin = async () => {
+    const username = retroUsername.trim();
+    const password = retroRuntimePassword;
+    if (!username || !password) {
+      setRetroRuntimeStatus('Enter your RetroAchievements username and password.');
+      return;
+    }
+
+    try {
+      setIsRetroRuntimeLoggingIn(true);
+      setRetroRuntimeStatus('Logging in to RetroAchievements...');
+      const result = await loginRetroAchievementsRuntimeWithPassword(username, password);
+      await invoke<void>('save_settings', {
+        settings: {
+          retroAchievementsUsername: result.username || username,
+          retroAchievementsRuntimeToken: result.token,
+        },
+      });
+      setRetroUsername(result.username || username);
+      setSavedRetroUsername(result.username || username);
+      setRetroRuntimePassword('');
+      setHasRetroRuntimeToken(true);
+      window.dispatchEvent(new Event('settings-saved'));
+      setRetroRuntimeStatus('Login successful. Token saved locally; password was not saved.');
+    } catch (error) {
+      console.error('RetroAchievements runtime login failed:', error);
+      setHasRetroRuntimeToken(false);
+      setRetroRuntimeStatus(`Login failed: ${String(error)}`);
+    } finally {
+      setIsRetroRuntimeLoggingIn(false);
+    }
+  };
+
+  const saveRetroWebSession = async () => {
+    await invoke<void>('save_settings', {
+      settings: {
+        retroAchievementsWebCookie: retroWebCookie.trim(),
+        retroAchievementsXsrfToken: retroXsrfToken.trim(),
+      },
+    });
+    window.dispatchEvent(new Event('settings-saved'));
+    setRetroWebSessionStatus(t('settings.connections.retroWebSessionSaved'));
   };
 
   const upsertRetroProfile = (profile?: { username?: string; displayName?: string; avatarUrl?: string | null } | null) => {
@@ -353,6 +404,15 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
         setRetroApiKey(settings?.retroAchievementsApiKey || '');
         setSavedRetroUsername(settings?.retroAchievementsUsername || '');
         setSavedRetroApiKey(settings?.retroAchievementsApiKey || '');
+        setHasRetroRuntimeToken(!!settings?.retroAchievementsRuntimeToken);
+        setRetroWebCookie(settings?.retroAchievementsWebCookie || '');
+        setRetroXsrfToken(settings?.retroAchievementsXsrfToken || '');
+        if (settings?.retroAchievementsRuntimeToken) {
+          setRetroRuntimeStatus(t('settings.connections.retroRuntimeTokenSaved'));
+        }
+        if (settings?.retroAchievementsWebCookie) {
+          setRetroWebSessionStatus(t('settings.connections.retroWebSessionSaved'));
+        }
       })
       .catch(() => undefined);
 
@@ -628,8 +688,8 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
               ) : profile.kind === 'retroachievements' ? (
                 <div className="space-y-2">
                   <SettingsRow
-                    title="RetroAchievements username"
-                    description="Nome de usuário usado na API do RetroAchievements."
+                    title={t('settings.connections.retroUsername')}
+                    description={t('settings.connections.retroUsernameDesc')}
                     trailing={
                       <input
                         value={retroUsername}
@@ -640,8 +700,8 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                     }
                   />
                   <SettingsRow
-                    title="RetroAchievements API key"
-                    description="Web API Key da sua conta RA. Ela fica salva apenas nas configurações locais."
+                    title={t('settings.connections.retroApiKey')}
+                    description={t('settings.connections.retroApiKeyDesc')}
                     trailing={
                       <input
                         value={retroApiKey}
@@ -652,8 +712,77 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                       />
                     }
                   />
+                  <SettingsRow
+                    title={t('settings.connections.retroRuntimeLogin')}
+                    description={hasRetroRuntimeToken
+                      ? t('settings.connections.retroRuntimeLoginSavedDesc')
+                      : t('settings.connections.retroRuntimeLoginDesc')}
+                    trailing={
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={retroRuntimePassword}
+                          onChange={(event) => setRetroRuntimePassword(event.target.value)}
+                          className="h-8 w-48 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                          placeholder="password"
+                          type="password"
+                          autoComplete="current-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRetroRuntimeLogin}
+                          disabled={isRetroRuntimeLoggingIn || !retroUsername.trim() || !retroRuntimePassword}
+                          className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-70 bg-accent text-foreground"
+                        >
+                          {isRetroRuntimeLoggingIn ? t('settings.connections.retroRuntimeLoggingIn') : hasRetroRuntimeToken ? t('settings.connections.retroRuntimeRenewToken') : t('settings.connections.retroRuntimeLoginButton')}
+                        </button>
+                      </div>
+                    }
+                  />
+                  <SettingsRow
+                    title={t('settings.connections.retroWebSession')}
+                    description={retroWebCookie.trim()
+                      ? t('settings.connections.retroWebSessionDesc')
+                      : t('settings.connections.retroWebSessionMissingDesc')}
+                    trailing={
+                      <div className="flex flex-col gap-2 sm:w-[28rem]">
+                        <input
+                          value={retroWebCookie}
+                          onChange={(event) => setRetroWebCookie(event.target.value)}
+                          className="h-8 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                          placeholder={t('settings.connections.retroWebCookiePlaceholder')}
+                          type="password"
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={retroXsrfToken}
+                            onChange={(event) => setRetroXsrfToken(event.target.value)}
+                            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                            placeholder={t('settings.connections.retroXsrfPlaceholder')}
+                            type="password"
+                          />
+                          <button
+                            type="button"
+                            onClick={saveRetroWebSession}
+                            disabled={!retroWebCookie.trim()}
+                            className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-70 bg-accent text-foreground"
+                          >
+                            {t('settings.connections.retroWebSessionSave')}
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  />
                   {retroStatus && (
                     <p className="text-[11px] font-semibold text-muted-foreground">{retroStatus}</p>
+                  )}
+                  {retroRuntimeStatus && (
+                    <p className="text-[11px] font-semibold text-muted-foreground">{retroRuntimeStatus}</p>
+                  )}
+                  {retroWebSessionStatus && (
+                    <p className="text-[11px] font-semibold text-muted-foreground">{retroWebSessionStatus}</p>
+                  )}
+                  {!retroWebCookie.trim() && (
+                    <p className="text-[11px] font-semibold text-amber-500">{t('settings.connections.retroResetDeleteDisabled')}</p>
                   )}
                   <div className="flex justify-end gap-2">
                     <button

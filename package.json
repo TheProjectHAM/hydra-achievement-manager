@@ -1,8 +1,8 @@
 {
   "name": "ProjectHAM",
   "private": true,
-  "version": "1.0.4",
-  "versionDateTag": "v20260628",
+  "version": "1.0.5",
+  "versionDateTag": "v20260630",
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {

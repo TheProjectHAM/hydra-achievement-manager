@@ -4,8 +4,12 @@ import { open as openExternalUrl } from "@tauri-apps/plugin-shell";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   RetroAchievementData,
+  RetroAchievementsAwardRequest,
+  RetroAchievementsAwardResponse,
+  RetroAchievementsPatchDataProbe,
   RetroAchievementsGame,
   RetroAchievementsProfile,
+  RetroAchievementsRuntimeLogin,
   SteamAchievementData,
   SteamSearchResult,
 } from "./types";
@@ -549,6 +553,24 @@ export const getRetroAchievementsConnectionProfile = () =>
 
 export const testRetroAchievementsConnection = (username: string, apiKey: string) =>
   invoke<RetroAchievementsProfile>("test_retro_achievements_connection", { username, apiKey });
+
+export const loginRetroAchievementsRuntimeWithPassword = (username: string, password: string) =>
+  invoke<RetroAchievementsRuntimeLogin>("login_retro_achievements_runtime_with_password", { username, password });
+
+export const loginRetroAchievementsRuntimeWithToken = (username: string, token: string) =>
+  invoke<RetroAchievementsRuntimeLogin>("login_retro_achievements_runtime_with_token", { username, token });
+
+export const probeRetroAchievementsPatchData = (username: string, runtimeToken: string, gameId: number) =>
+  invoke<RetroAchievementsPatchDataProbe>("probe_retro_achievements_patch_data", { username, runtimeToken, gameId });
+
+export const awardRetroAchievement = (options: RetroAchievementsAwardRequest) =>
+  invoke<RetroAchievementsAwardResponse>("award_retro_achievement", { options });
+
+export const deleteRetroAchievementUnlock = (achievementId: number) =>
+  invoke<any>("delete_retro_achievement_unlock", { achievementId });
+
+export const deleteRetroGameUnlocks = (gameId: number) =>
+  invoke<any>("delete_retro_game_unlocks", { gameId });
 
 export const getRetroAchievementsRecentGames = () =>
   invoke<RetroAchievementsGame[]>("get_retro_achievements_recent_games");

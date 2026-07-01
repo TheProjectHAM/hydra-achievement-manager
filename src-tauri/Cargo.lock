@@ -2662,6 +2662,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "md-5"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
+dependencies = [
+ "cfg-if",
+ "digest",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3648,7 +3658,7 @@ dependencies = [
 
 [[package]]
 name = "project-ham"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3657,6 +3667,7 @@ dependencies = [
  "dotenv",
  "image",
  "log",
+ "md-5",
  "notify",
  "rand 0.8.5",
  "reqwest 0.12.28",

@@ -369,6 +369,8 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
             icon: ach.unlocked ? ach.icon : (ach.iconLocked || ach.icon || ""),
             percent: ach.trueRatio ? Math.min(100, ach.trueRatio / 100) : undefined,
             hidden: false,
+            unlocked: !!ach.unlocked,
+            unlockTime: Number(ach.unlockTime ?? 0),
           }));
         } else if (
           result.achievements.length > 0 &&
@@ -756,13 +758,18 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
               {filteredAchievements.map((ach) => {
                 const status =
                   achievementStatus[game.id]?.[ach.internalName] ??
-                  defaultStatus;
+                  (ach.unlocked
+                    ? {
+                        completed: true,
+                        timestamp: unixSecondsToTimestamp(Number(ach.unlockTime ?? 0), timeFormat),
+                      }
+                    : defaultStatus);
                 return (
                   <AchievementCard
                     key={ach.internalName}
                     achievement={ach}
                     status={status}
-                    readOnly={isRetroAchievementsSource}
+                    readOnly={false}
                     onToggle={() =>
                       onAchievementToggle(
                         game.id,
@@ -802,7 +809,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
           )}
         </div>
 
-        {filteredAchievements.length > 0 && !isRetroAchievementsSource && (
+        {filteredAchievements.length > 0 && (
           <footer className="flex-shrink-0 flex flex-col md:flex-row justify-between items-center gap-4 mt-1.5 pt-3.5 border-t border-border">
             <div className="w-full md:w-auto">
               <GlobalTimestampManager

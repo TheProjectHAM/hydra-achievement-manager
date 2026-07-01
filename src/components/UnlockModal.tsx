@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import { getSteamLibraryInfo, getAchievementIniLastModified, getSteamGames, getGameWinePaths, getMonitoredDirectories } from '../tauri-api';
+import { getSteamLibraryInfo, getAchievementIniLastModified, getSteamGames, getGameWinePaths, getMonitoredDirectories, loadSettings } from '../tauri-api';
 import { SteamSearchResult } from '../types';
-import { FolderIcon, SteamBrandIcon, HydraIcon } from './Icons';
+import { FolderIcon, SteamBrandIcon, HydraIcon, RetroAchievementsIcon } from './Icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatDateObj } from '../formatters';
 import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsContext';
@@ -65,11 +65,13 @@ const getPrefixLabel = (path: string) => {
   if (normalized.includes('/.wine/drive_c/')) return 'Wine default prefix';
   if (isWinePath) return 'Wine/Proton prefix';
   if (path.startsWith('steam://')) return 'Steam library';
+  if (path.startsWith('retroachievements://')) return 'RetroAchievements';
   return 'Local folder';
 };
 
 const getPathPreview = (path: string, steamVdfPath?: string | null) => {
   if (path.startsWith('steam://')) return steamVdfPath || 'libraryfolders.vdf not found';
+  if (path.startsWith('retroachievements://')) return 'Unlock through RetroAchievements API';
   const normalized = normalizePath(path);
   const isWinePath = normalized.includes('/drive_c/');
   const displayPath = isWinePath ? (normalized.split('/drive_c/')[1] || path) : path;
@@ -100,9 +102,10 @@ const PathRow: React.FC<{
   const { t } = useI18n();
   const { dateFormat, timeFormat } = useTheme();
   const isSteam = path.startsWith('steam://');
-  const hasExistingFile = existingAchievementCount !== null && !isSteam;
+  const isRetroAchievements = path.startsWith('retroachievements://');
+  const hasExistingFile = existingAchievementCount !== null && !isSteam && !isRetroAchievements;
   const normalizedPath = normalizePath(path);
-  const isWinePath = !isSteam && normalizedPath.includes('/drive_c/');
+  const isWinePath = !isSteam && !isRetroAchievements && normalizedPath.includes('/drive_c/');
   const prefixGameId = normalizedPath.match(/\/wine-prefixes\/([^/]+)\/drive_c\//)?.[1] ?? null;
   const wineUser = normalizedPath.match(/\/drive_c\/users\/([^/]+)\//i)?.[1] ?? null;
   const crackerName = getCrackerName(path);
@@ -118,8 +121,8 @@ const PathRow: React.FC<{
     ? t('unlockModal.lastModified', { date: formattedSteamVdfLastModified || '--' })
     : t('unlockModal.lastModified', { date: formattedLastModified || '--' });
   const statusText = getMetricLabel(existingAchievementCount, newAchievementCount);
-  const badgeText = isSteam ? 'Steam' : hasExistingFile ? statusText : t('unlockModal.newPath');
-  const isFaded = !isSteam && !hasExistingFile && !isSelected;
+  const badgeText = isSteam ? 'Steam' : isRetroAchievements ? 'RA' : hasExistingFile ? statusText : t('unlockModal.newPath');
+  const isFaded = !isSteam && !isRetroAchievements && !hasExistingFile && !isSelected;
 
   return (
     <div
@@ -140,6 +143,8 @@ const PathRow: React.FC<{
         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center justify-self-center overflow-hidden text-foreground/85">
           {isSteam ? (
             <SteamBrandIcon className="h-8 w-8" />
+          ) : isRetroAchievements ? (
+            <RetroAchievementsIcon className="h-8 w-8 text-foreground/85" />
           ) : prefixLabel === 'Hydra Launcher prefix' ? (
             <HydraIcon className="h-8 w-8 text-foreground/85" />
           ) : (
@@ -150,7 +155,7 @@ const PathRow: React.FC<{
         <div className="min-w-0 self-center space-y-1">
           <div className="flex min-w-0 items-center gap-2">
             <p className="min-w-0 truncate text-sm font-semibold leading-5 text-foreground">
-              {isSteam ? 'Steam Library' : displayTitle}
+              {isSteam ? 'Steam Library' : isRetroAchievements ? 'RetroAchievements' : displayTitle}
             </p>
           </div>
 
@@ -177,7 +182,7 @@ const PathRow: React.FC<{
   );
 };
 
-type ProviderKey = 'steam' | 'hydra' | 'global';
+type ProviderKey = 'steam' | 'retroachievements' | 'hydra' | 'global';
 
 interface ProviderGroup {
   key: ProviderKey;
@@ -197,9 +202,11 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
   const [steamVdfLastModified, setSteamVdfLastModified] = useState<Date | null>(null);
   const [iniLastModifiedByPath, setIniLastModifiedByPath] = useState<Record<string, Date | null>>({});
   const [hasSteamPathForCurrentGame, setHasSteamPathForCurrentGame] = useState(false);
+  const [hasRetroAchievementsWebSession, setHasRetroAchievementsWebSession] = useState(false);
   const [activeProvider, setActiveProvider] = useState<ProviderKey>('steam');
   const [gameLogoFailed, setGameLogoFailed] = useState(false);
   const isLinux = getAppPlatform() === 'linux';
+  const isRetroAchievementsGame = (game as any)?.source === 'retroachievements' || (game as any)?.directory === 'retroachievements://';
 
   useEffect(() => {
     if (isOpen) {
@@ -248,6 +255,11 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
           setSteamVdfPath(null);
           setSteamVdfLastModified(null);
         });
+      loadSettings()
+        .then((settings) => {
+          setHasRetroAchievementsWebSession(!!String(settings?.retroAchievementsWebCookie || '').trim());
+        })
+        .catch(() => setHasRetroAchievementsWebSession(false));
     }
   }, [isOpen, game, isLinux]);
 
@@ -305,11 +317,16 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
   };
 
   const steamPaths = hasSteamPathForCurrentGame ? ['steam://'] : [];
+  const retroAchievementsPaths = isRetroAchievementsGame ? ['retroachievements://'] : [];
   const hydraPaths = gameWinePaths;
   const globalOnlyPaths = globalPaths.filter(p => !hydraPaths.includes(p));
 
-  const steamArtUrl = getSteamHeaderUrl(game.id);
-  const gameLogoUrl = getSteamLogoUrl(game.id);
+  const steamArtUrl = isRetroAchievementsGame
+    ? ((game as any).imageUrl || (game as any).logoUrl || getSteamHeaderUrl(game.id))
+    : getSteamHeaderUrl(game.id);
+  const gameLogoUrl = isRetroAchievementsGame
+    ? ((game as any).logoUrl || (game as any).imageUrl || getSteamLogoUrl(game.id))
+    : getSteamLogoUrl(game.id);
   const providerGroups = useMemo<ProviderGroup[]>(() => ([
     {
       key: 'steam',
@@ -317,6 +334,13 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
       subtitle: steamPaths.length > 0 ? 'Steamworks provider' : 'Unavailable for this game',
       paths: steamPaths,
       icon: <SteamBrandIcon className="h-5 w-5" />,
+    },
+    {
+      key: 'retroachievements',
+      title: 'RetroAchievements',
+      subtitle: retroAchievementsPaths.length > 0 ? 'RetroAchievements API' : 'Only available for RetroAchievements games',
+      paths: retroAchievementsPaths,
+      icon: <RetroAchievementsIcon className="h-5 w-5" />,
     },
     ...(isLinux ? [{
       key: 'hydra' as const,
@@ -332,7 +356,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
       paths: globalOnlyPaths,
       icon: <FolderIcon className="h-5 w-5" />,
     },
-  ]), [globalOnlyPaths, hydraPaths, isLinux, steamPaths, t]);
+  ]), [globalOnlyPaths, hydraPaths, isLinux, retroAchievementsPaths, steamPaths, t]);
   const availableProviderGroups = providerGroups.filter(group => group.paths.length > 0);
 
   useEffect(() => {
@@ -348,10 +372,16 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
   const showSteamCustomTimestampWarning =
     selectedPath.startsWith('steam://');
+  const showRetroAchievementsCustomTimestampWarning =
+    selectedPath.startsWith('retroachievements://');
   const steamWarningMessage =
     unlockMode === 'custom'
       ? t('unlockModal.steamCustomTimestampWarning')
       : t('unlockModal.steamCustomTimestampWarning');
+  const retroAchievementsWarningMessage =
+    t('unlockModal.retroAchievementsCustomTimestampWarning');
+  const retroAchievementsWebSessionWarningMessage =
+    t('unlockModal.retroAchievementsWebSessionRequiredWarning');
 
   const renderPathItem = (path: string) => {
     const existingInfo = getExistingFileInfo(path);
@@ -370,7 +400,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
     );
   };
 
-  const hasAnyPath = steamPaths.length > 0 || (isLinux && hydraPaths.length > 0) || globalOnlyPaths.length > 0;
+  const hasAnyPath = steamPaths.length > 0 || retroAchievementsPaths.length > 0 || (isLinux && hydraPaths.length > 0) || globalOnlyPaths.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -476,9 +506,12 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
           </div>
 
           <div className="flex flex-col gap-2 px-5 py-3">
-            {showSteamCustomTimestampWarning && (
+            {(showSteamCustomTimestampWarning || showRetroAchievementsCustomTimestampWarning) && (
               <div className="w-full rounded-md border px-3 py-2 text-[10px] font-semibold leading-relaxed bg-muted/50 text-muted-foreground">
-                {steamWarningMessage}
+                <p>{showRetroAchievementsCustomTimestampWarning ? retroAchievementsWarningMessage : steamWarningMessage}</p>
+                {showRetroAchievementsCustomTimestampWarning && !hasRetroAchievementsWebSession && (
+                  <p className="mt-1.5">{retroAchievementsWebSessionWarningMessage}</p>
+                )}
               </div>
             )}
             <div className="flex w-full gap-2">

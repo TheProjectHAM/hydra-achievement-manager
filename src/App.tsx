@@ -15,7 +15,7 @@ import GamesContent from './pages/Games';
 import AchievementsContent from './pages/Achievements';
 import ExportPage from './pages/Export';
 import InitialWizard from './pages/InitialWizard';
-import { unlockAchievements, reloadAchievements, getAchievementsForGameSource, getSteamLibraryInfo, getAchievementIniLastModified } from './tauri-api';
+import { awardRetroAchievement, deleteRetroAchievementUnlock, unlockAchievements, reloadAchievements, getAchievementsForGameSource, getSteamLibraryInfo, getAchievementIniLastModified, loadSettings } from './tauri-api';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
@@ -307,22 +307,45 @@ const App: React.FC = () => {
     return `${gameId}::${sourcePath || 'auto'}`;
   }, []);
 
-  const handleAchievementToggle = (gameId: number, achievementName: string, sourcePath?: string | null) => {
+  const handleAchievementToggle = async (gameId: number, achievementName: string, sourcePath?: string | null) => {
+    const resolvedSourcePath = sourcePath !== undefined
+      ? sourcePath
+      : (selectedGame?.id === gameId ? selectedGameSourcePath : null);
+    const sourceKey = getStatusSourceKey(gameId, resolvedSourcePath);
+    const currentStatus = achievementStatus[sourceKey]?.[achievementName];
+
+    if (resolvedSourcePath?.startsWith('retroachievements://') && currentStatus?.completed) {
+      try {
+        const achievementId = Number(achievementName);
+        if (!Number.isFinite(achievementId) || achievementId <= 0) {
+          throw new Error(`Invalid RetroAchievements achievement id: ${achievementName}`);
+        }
+        await deleteRetroAchievementUnlock(achievementId);
+        toast.success('RetroAchievements unlock removed', {
+          description: `Achievement ${achievementName} was reset on RetroAchievements.`,
+          duration: 4000,
+        });
+      } catch (error) {
+        console.error('Error deleting RetroAchievements unlock:', error);
+        toast.error('RetroAchievements reset failed', {
+          description: getErrorMessage(error),
+          duration: 8000,
+        });
+        return;
+      }
+    }
+
     setAchievementStatus(prev => {
-      const resolvedSourcePath = sourcePath !== undefined
-        ? sourcePath
-        : (selectedGame?.id === gameId ? selectedGameSourcePath : null);
-      const sourceKey = getStatusSourceKey(gameId, resolvedSourcePath);
       const gameStatuses = prev[sourceKey] || {};
-      const currentStatus = gameStatuses[achievementName];
-      const newCompletedState = !currentStatus?.completed;
+      const status = gameStatuses[achievementName];
+      const newCompletedState = !status?.completed;
 
       return {
         ...prev,
         [sourceKey]: {
           ...gameStatuses,
           [achievementName]: {
-            ...(currentStatus || { timestamp: emptyTimestamp() }),
+            ...(status || { timestamp: emptyTimestamp() }),
             completed: newCompletedState,
           },
         },
@@ -427,13 +450,6 @@ const App: React.FC = () => {
     const gameId = selectedGame.id.toString();
     const isSteam = path.startsWith('steam://');
     const isRetroAchievements = path.startsWith('retroachievements://');
-    if (isRetroAchievements) {
-      toast.error('RetroAchievements é somente leitura', {
-        description: 'Desbloqueios RetroAchievements precisam ser feitos pelo emulador conectado à conta RA.',
-        duration: 5000,
-      });
-      return;
-    }
     const unlockSourcePath = isSteam ? 'steam://' : path;
 
     const generateTimestamp = (): Timestamp => {
@@ -483,6 +499,77 @@ const App: React.FC = () => {
           };
         });
     const unlockedCount = achievements.filter((a) => a.completed).length;
+
+    if (isRetroAchievements) {
+      if (unlockedCount === 0) {
+        toast.error('No RetroAchievements selected', {
+          description: 'Select at least one locked achievement to unlock.',
+          duration: 4000,
+        });
+        return;
+      }
+
+      try {
+        const settings = await loadSettings();
+        const username = String(settings?.retroAchievementsUsername || '').trim();
+        const runtimeToken = String(settings?.retroAchievementsRuntimeToken || '').trim();
+
+        if (!username || !runtimeToken) {
+          toast.error(t('unlockToasts.retroRuntimeLoginRequiredTitle'), {
+            description: t('unlockToasts.retroRuntimeLoginRequiredMessage'),
+            duration: 6000,
+          });
+          return;
+        }
+
+        const unlocked: Array<{ name: string; completed: boolean }> = [];
+        for (const achievement of achievements.filter((achievement) => achievement.completed)) {
+          const achievementId = Number(achievement.name);
+          if (!Number.isFinite(achievementId) || achievementId <= 0) {
+            throw new Error(`Invalid RetroAchievements achievement id: ${achievement.name}`);
+          }
+
+          await awardRetroAchievement({
+            username,
+            runtimeToken,
+            achievementId,
+            hardcore: false,
+            gameHash: null,
+          });
+          unlocked.push({ name: achievement.name, completed: true });
+        }
+
+        manuallyUpdateGame(gameId, unlocked, false);
+        toast.success('RetroAchievements unlocked', {
+          description: `Unlocked ${unlocked.length} achievement${unlocked.length === 1 ? '' : 's'} in softcore mode.`,
+          duration: 4000,
+        });
+
+        const result = await getAchievementsForGameSource(gameId, false, true);
+        const newAchievementStatus: Record<string, AchievementStatus> = {};
+        result.achievements.forEach((ach: any) => {
+          if (ach.unlocked) {
+            const unlockTime = Number(ach.unlockTime ?? 0);
+            newAchievementStatus[ach.id] = {
+              completed: true,
+              timestamp: unixSecondsToTimestamp(unlockTime, timeFormat),
+            };
+          }
+        });
+
+        setAchievementStatus(prev => ({
+          ...prev,
+          [getStatusSourceKey(selectedGame.id, unlockSourcePath)]: newAchievementStatus,
+        }));
+      } catch (error) {
+        console.error('Error unlocking RetroAchievements:', error);
+        toast.error('RetroAchievements unlock failed', {
+          description: getErrorMessage(error),
+          duration: 8000,
+        });
+      }
+      return;
+    }
 
     try {
       // Optimistic update: instantly update local state

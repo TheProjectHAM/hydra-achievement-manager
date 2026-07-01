@@ -1,6 +1,8 @@
 use crate::integrations::retro_achievements::{
-    RetroAchievement, RetroAchievementsApi, RetroAchievementsCredentials, RetroAchievementsGame,
-    RetroAchievementsProfile, RetroAchievementsSearchResult,
+    RetroAchievement, RetroAchievementsApi, RetroAchievementsAwardRequest,
+    RetroAchievementsAwardResponseInner, RetroAchievementsCredentials, RetroAchievementsGame,
+    RetroAchievementsPatchDataProbe, RetroAchievementsProfile, RetroAchievementsRuntimeLogin,
+    RetroAchievementsSearchResult,
 };
 use crate::utils::settings::load_settings_value;
 use serde_json::Value;
@@ -61,6 +63,37 @@ pub async fn test_retro_achievements_connection(
 }
 
 #[tauri::command]
+pub async fn login_retro_achievements_runtime_with_password(
+    username: String,
+    password: String,
+) -> Result<RetroAchievementsRuntimeLogin, String> {
+    RetroAchievementsApi::runtime_login_with_password(&username, &password)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn login_retro_achievements_runtime_with_token(
+    username: String,
+    token: String,
+) -> Result<RetroAchievementsRuntimeLogin, String> {
+    RetroAchievementsApi::runtime_login_with_token(&username, &token)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn probe_retro_achievements_patch_data(
+    username: String,
+    runtime_token: String,
+    game_id: u32,
+) -> Result<RetroAchievementsPatchDataProbe, String> {
+    RetroAchievementsApi::probe_patch_data(&username, &runtime_token, game_id)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub async fn search_retro_achievements_games(
     query: String,
     app_handle: AppHandle,
@@ -91,6 +124,53 @@ pub async fn get_retro_achievements_game_achievements(
 ) -> Result<Vec<RetroAchievement>, String> {
     let credentials = load_credentials(&app_handle)?;
     RetroAchievementsApi::get_game_achievements(credentials.as_ref(), game_id)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn award_retro_achievement(
+    options: RetroAchievementsAwardRequest,
+) -> Result<RetroAchievementsAwardResponseInner, String> {
+    RetroAchievementsApi::award_achievement(&options)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_retro_achievement_unlock(
+    achievement_id: u32,
+    app_handle: AppHandle,
+) -> Result<Value, String> {
+    let settings = load_settings_value(&app_handle)?;
+    let cookie = settings
+        .get("retroAchievementsWebCookie")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let xsrf_token = settings
+        .get("retroAchievementsXsrfToken")
+        .and_then(Value::as_str);
+
+    RetroAchievementsApi::delete_achievement_unlock(achievement_id, cookie, xsrf_token)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_retro_game_unlocks(
+    game_id: u32,
+    app_handle: AppHandle,
+) -> Result<Value, String> {
+    let settings = load_settings_value(&app_handle)?;
+    let cookie = settings
+        .get("retroAchievementsWebCookie")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let xsrf_token = settings
+        .get("retroAchievementsXsrfToken")
+        .and_then(Value::as_str);
+
+    RetroAchievementsApi::delete_game_unlocks(game_id, cookie, xsrf_token)
         .await
         .map_err(|error| error.to_string())
 }

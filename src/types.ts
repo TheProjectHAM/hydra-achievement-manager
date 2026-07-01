@@ -69,6 +69,8 @@ export interface Achievement {
   icon: string;
   percent?: number;
   hidden?: boolean;
+  unlocked?: boolean;
+  unlockTime?: number;
 }
 
 export interface Timestamp {
@@ -145,6 +147,46 @@ export interface RetroAchievementData {
   displayOrder: number;
   unlocked: boolean;
   unlockTime: number;
+}
+
+export interface RetroAchievementsRuntimeLogin {
+  username: string;
+  token: string;
+  score: number;
+  softcoreScore: number;
+  messages: number;
+  avatarUrl?: string | null;
+}
+
+export interface RetroAchievementsPatchDataProbe {
+  gameId: number;
+  achievementCount: number;
+  memAddrCount: number;
+  triggerLikeCount: number;
+  md5LikeCount: number;
+  samples: Array<{
+    achievementId: string;
+    length: number;
+    valueClass: string;
+    preview: string;
+  }>;
+}
+
+export interface RetroAchievementsAwardRequest {
+  username: string;
+  runtimeToken: string;
+  achievementId: number;
+  hardcore: boolean;
+  gameHash?: string | null;
+}
+
+export interface RetroAchievementsAwardResponse {
+  success: boolean;
+  error?: string | null;
+  score?: number | null;
+  softcoreScore?: number | null;
+  achievementId?: number | null;
+  achievementsRemaining?: number | null;
 }
 
 // Steam Integration Types
