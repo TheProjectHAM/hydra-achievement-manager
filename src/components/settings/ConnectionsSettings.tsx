@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { SteamBrandIcon, HydraIcon } from '../Icons';
+import { SteamBrandIcon, HydraIcon, RetroAchievementsIcon } from '../Icons';
 import { useI18n } from '../../contexts/I18nContext';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { getHydraConnectionProfile, getSteamConnectionProfile } from '../../tauri-api';
+import { getHydraConnectionProfile, getRetroAchievementsConnectionProfile, getSteamConnectionProfile, loadSettings, testRetroAchievementsConnection } from '../../tauri-api';
 import { SteamAchievementSource } from '../../types';
 
-type ConnectionKind = 'steam' | 'hydra';
+type ConnectionKind = 'steam' | 'hydra' | 'retroachievements';
 
 interface ConnectionProfile {
   id: string;
@@ -32,6 +32,7 @@ let cachedConnectionProfiles: ConnectionProfile[] | null = null;
 
 const getServiceIcon = (kind: ConnectionKind) => {
   if (kind === 'steam') return <SteamBrandIcon className="h-3.5 w-3.5" />;
+  if (kind === 'retroachievements') return <RetroAchievementsIcon className="h-3.5 w-3.5" />;
   return <HydraIcon className="h-3.5 w-3.5" />;
 };
 
@@ -142,7 +143,14 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   const [isSelectingVdf, setIsSelectingVdf] = useState(false);
   const [isSelectingDll, setIsSelectingDll] = useState(false);
   const [isRetryingConnection, setIsRetryingConnection] = useState(false);
+  const [retroUsername, setRetroUsername] = useState('');
+  const [retroApiKey, setRetroApiKey] = useState('');
+  const [retroStatus, setRetroStatus] = useState<string | null>(null);
+  const [savedRetroUsername, setSavedRetroUsername] = useState('');
+  const [savedRetroApiKey, setSavedRetroApiKey] = useState('');
   const lastSteamMissingReasonRef = useRef<string | null>(null);
+  const lastRetroValidationKeyRef = useRef<string | null>(null);
+  const retroValidationRunRef = useRef(0);
 
   const canEnableSteamIntegration = !isSteamMissing;
   const connectedCount = profiles.length;
@@ -201,6 +209,40 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
     window.dispatchEvent(new Event('settings-saved'));
   };
 
+  const saveRetroCredentials = async () => {
+    const username = retroUsername.trim();
+    const apiKey = retroApiKey.trim();
+    await invoke<void>('save_settings', {
+      settings: {
+        retroAchievementsUsername: username,
+        retroAchievementsApiKey: apiKey,
+      },
+    });
+    setSavedRetroUsername(username);
+    setSavedRetroApiKey(apiKey);
+    window.dispatchEvent(new Event('settings-saved'));
+    setRetroStatus('RetroAchievements credentials saved.');
+  };
+
+  const upsertRetroProfile = (profile?: { username?: string; displayName?: string; avatarUrl?: string | null } | null) => {
+    const displayName = profile?.displayName || profile?.username || 'RetroAchievements';
+    setProfiles(current => {
+      const withoutRetro = current.filter(item => item.kind !== 'retroachievements');
+      const next = [
+        ...withoutRetro,
+        {
+          id: 'retroachievements-default',
+          kind: 'retroachievements' as const,
+          displayName,
+          avatarInitials: 'RA',
+          avatarUrl: profile?.avatarUrl,
+        },
+      ];
+      cachedConnectionProfiles = next;
+      return next;
+    });
+  };
+
   const handlePickVdf = async () => {
     try {
       setIsSelectingVdf(true);
@@ -243,11 +285,16 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
 
     const loadConnectionProfiles = async () => {
       try {
-        const [hydraProfile, steamProfile] = await Promise.all([
+        const [hydraResult, retroResult, steamResult] = await Promise.allSettled([
           getHydraConnectionProfile(),
+          getRetroAchievementsConnectionProfile(),
           getSteamConnectionProfile(),
         ]);
         if (cancelled) return;
+
+        const hydraProfile = hydraResult.status === 'fulfilled' ? hydraResult.value : null;
+        const retroProfile = retroResult.status === 'fulfilled' ? retroResult.value : null;
+        const steamProfile = steamResult.status === 'fulfilled' ? steamResult.value : null;
 
         const nextProfiles: ConnectionProfile[] = [];
 
@@ -276,6 +323,18 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
           });
         }
 
+        const retroDisplayName = retroProfile?.displayName || retroProfile?.username || 'RetroAchievements';
+        nextProfiles.push({
+          id: 'retroachievements-default',
+          kind: 'retroachievements',
+          displayName: retroDisplayName,
+          avatarInitials: 'RA',
+          avatarUrl: retroProfile?.avatarUrl,
+        });
+        if (retroProfile) {
+          setRetroStatus(`Connected as ${retroProfile.displayName || retroProfile.username}`);
+        }
+
         cachedConnectionProfiles = nextProfiles;
         setProfiles(nextProfiles);
         setExpandedCard(current => current ?? nextProfiles[0]?.id ?? null);
@@ -287,10 +346,74 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
     loadConnectionProfiles();
     refreshAvailability();
 
+    loadSettings()
+      .then((settings) => {
+        if (cancelled) return;
+        setRetroUsername(settings?.retroAchievementsUsername || '');
+        setRetroApiKey(settings?.retroAchievementsApiKey || '');
+        setSavedRetroUsername(settings?.retroAchievementsUsername || '');
+        setSavedRetroApiKey(settings?.retroAchievementsApiKey || '');
+      })
+      .catch(() => undefined);
+
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const username = retroUsername.trim();
+    const apiKey = retroApiKey.trim();
+
+    if (!username || !apiKey) {
+      lastRetroValidationKeyRef.current = null;
+      setRetroStatus(username || apiKey ? 'Enter username and API key to validate automatically.' : null);
+      upsertRetroProfile(null);
+      return;
+    }
+
+    const validationKey = `${username}:${apiKey}`;
+    if (lastRetroValidationKeyRef.current === validationKey) {
+      return;
+    }
+
+    const runId = retroValidationRunRef.current + 1;
+    retroValidationRunRef.current = runId;
+    setRetroStatus('Validating RetroAchievements credentials...');
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        const profile = await testRetroAchievementsConnection(username, apiKey);
+        if (retroValidationRunRef.current !== runId) return;
+
+        lastRetroValidationKeyRef.current = validationKey;
+        await invoke<void>('save_settings', {
+          settings: {
+            retroAchievementsUsername: username,
+            retroAchievementsApiKey: apiKey,
+          },
+        });
+        setSavedRetroUsername(username);
+        setSavedRetroApiKey(apiKey);
+        window.dispatchEvent(new Event('settings-saved'));
+        upsertRetroProfile(profile);
+        setRetroStatus(`Connected as ${profile.displayName || profile.username}`);
+      } catch (error) {
+        if (retroValidationRunRef.current !== runId) return;
+        console.warn('Automatic RetroAchievements validation failed:', error);
+        setRetroStatus('Invalid RetroAchievements credentials.');
+        upsertRetroProfile(null);
+      }
+    }, 850);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [retroUsername, retroApiKey]);
+
+  const isRetroSaved =
+    retroUsername.trim() === savedRetroUsername &&
+    retroApiKey.trim() === savedRetroApiKey;
 
   return (
     <div className="space-y-6 animate-modal-in">
@@ -501,6 +624,47 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                       </div>
                     </div>
                   )}
+                </div>
+              ) : profile.kind === 'retroachievements' ? (
+                <div className="space-y-2">
+                  <SettingsRow
+                    title="RetroAchievements username"
+                    description="Nome de usuário usado na API do RetroAchievements."
+                    trailing={
+                      <input
+                        value={retroUsername}
+                        onChange={(event) => setRetroUsername(event.target.value)}
+                        className="h-8 w-48 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                        placeholder="username"
+                      />
+                    }
+                  />
+                  <SettingsRow
+                    title="RetroAchievements API key"
+                    description="Web API Key da sua conta RA. Ela fica salva apenas nas configurações locais."
+                    trailing={
+                      <input
+                        value={retroApiKey}
+                        onChange={(event) => setRetroApiKey(event.target.value)}
+                        className="h-8 w-48 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                        placeholder="API key"
+                        type="password"
+                      />
+                    }
+                  />
+                  {retroStatus && (
+                    <p className="text-[11px] font-semibold text-muted-foreground">{retroStatus}</p>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={saveRetroCredentials}
+                      disabled={isRetroSaved}
+                      className="h-8 px-3 rounded-md border border-border text-[10px] font-semibold disabled:opacity-70 bg-accent text-foreground"
+                    >
+                      {isRetroSaved ? 'Saved' : 'Save'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs font-medium text-muted-foreground">
