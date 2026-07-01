@@ -87,14 +87,6 @@ const MonitoredGameCard: React.FC<{
   const { t } = useI18n();
   const { gameId, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult, isReady } = useGameProgress(game);
 
-  if (!isReady) {
-    return (
-      <div className="aspect-[16/9] rounded-md overflow-hidden">
-        <Skeleton className="w-full h-full" />
-      </div>
-    );
-  }
-
   const fallbackImages = isRetroAchievements
     ? [getRetroAchievementsGameImage(game as any)]
     : getSteamBackgroundFallbackUrls(gameId);
@@ -112,6 +104,14 @@ const MonitoredGameCard: React.FC<{
     setBackgroundFailed(false);
     setHoverLogoFailed(false);
   }, [gameId]);
+
+  if (!isReady) {
+    return (
+      <div className="aspect-[16/9] rounded-md overflow-hidden">
+        <Skeleton className="w-full h-full" />
+      </div>
+    );
+  }
 
   const handleImageError = () => {
     if (imageIndex < fallbackImages.length - 1) {
