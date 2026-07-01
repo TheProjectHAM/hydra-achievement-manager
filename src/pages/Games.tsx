@@ -28,15 +28,15 @@ const useGameProgress = (game: GameAchievements) => {
   const isRetroAchievements = source === 'retroachievements';
   const achievementsCurrent = isSteam || isRetroAchievements ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const gameName = gameNames[gameId] || (game as any).name || gameId;
-  const [totalAchievements, setTotalAchievements] = useState<number | null>((isSteam || isRetroAchievements) ? (game as any).achievementsTotal : null);
+  const initialTotal = (isSteam || isRetroAchievements) ? (game as any).achievementsTotal : null;
+  const [totalAchievements, setTotalAchievements] = useState<number | null>(initialTotal);
+  const [totalFetched, setTotalFetched] = useState(initialTotal !== null && initialTotal !== 0);
 
   const isNameReady = !!gameNames[gameId] || !!(game as any).name;
-  const isTotalReady = totalAchievements !== null && totalAchievements !== 0;
-  const isReady = isNameReady && (isTotalReady || (isSteam && (game as any).achievementsTotal));
+  const isReady = isNameReady && totalFetched;
 
   useEffect(() => {
-    if (totalAchievements !== null && totalAchievements !== 0) return;
-    if (isSteam && (game as any).achievementsTotal) return;
+    if (totalFetched) return;
 
     const fetchTotalAchievements = async () => {
       try {
@@ -47,10 +47,12 @@ const useGameProgress = (game: GameAchievements) => {
       } catch (error) {
         console.error('Error fetching total achievements:', error);
         setTotalAchievements(game.achievements.length);
+      } finally {
+        setTotalFetched(true);
       }
     };
     fetchTotalAchievements();
-  }, [game, gameId, isSteam, totalAchievements]);
+  }, [gameId, totalFetched]);
 
   const finalTotal = totalAchievements ?? game.achievements.length;
   const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
