@@ -129,6 +129,11 @@
     "select": "Selecionar Diretório"
   },
   "settings": {
+    "categories": {
+      "general": "Geral",
+      "integrations": "Integrações",
+      "system": "Sistema"
+    },
     "saveChanges": "Salvar",
     "saved": "Salvo!",
     "changesSaved": "Alterações Salvas",

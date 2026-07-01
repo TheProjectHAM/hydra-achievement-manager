@@ -129,6 +129,11 @@
     "select": "Select directory"
   },
   "settings": {
+    "categories": {
+      "general": "General",
+      "integrations": "Integrations",
+      "system": "System"
+    },
     "saveChanges": "Save changes",
     "saved": "Saved!",
     "changesSaved": "Changes saved",

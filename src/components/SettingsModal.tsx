@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   LanguageIcon,
   PaletteIcon,
@@ -6,8 +6,6 @@ import {
   GameIcon,
   UpdateIcon,
   InfoIcon,
-  SaveIcon,
-  CheckIcon,
   CloseIcon,
   FolderIcon,
   BugIcon,
@@ -127,10 +125,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     forceFrontendFetch: false,
   });
   const [isDirty, setIsDirty] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const didLoadSettingsRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    didLoadSettingsRef.current = false;
 
     const loadSettings = async () => {
       try {
@@ -197,10 +197,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
         }
       } catch (error) {
         console.error("Error loading settings:", error);
+      } finally {
+        didLoadSettingsRef.current = true;
       }
     };
 
     loadSettings();
+    return () => {
+      didLoadSettingsRef.current = false;
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
   }, [isOpen]);
 
   useEffect(() => setSelectedLanguage(language), [language]);
@@ -239,7 +248,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     };
     if (JSON.stringify(currentSettings) !== JSON.stringify(savedSettings)) {
       setIsDirty(true);
-      setIsSaved(false);
     } else {
       setIsDirty(false);
     }
@@ -358,8 +366,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
           finalHideSteamGamesWithoutAchievements,
         forceFrontendFetch: finalForceFrontendFetch,
       });
-      setIsSaved(true);
-
       window.dispatchEvent(new Event("settings-saved"));
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -367,11 +373,55 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
   };
 
   useEffect(() => {
-    if (isSaved) {
-      const timer = setTimeout(() => setIsSaved(false), 2500);
-      return () => clearTimeout(timer);
+    if (!isOpen || !didLoadSettingsRef.current || !isDirty) return;
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
     }
-  }, [isSaved]);
+
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      handleSaveChanges();
+    }, 650);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    isOpen,
+    isDirty,
+    selectedLanguage,
+    selectedTheme,
+    selectedDateFormat,
+    selectedTimeFormat,
+    selectedSidebarGameScale,
+    selectedSidebarMarquee,
+    selectedGamesViewMode,
+    selectedTitleBarMode,
+    selectedHideHiddenAchievements,
+    selectedApi,
+    steamApiKey,
+    steamIntegrationEnabled,
+    steamAchievementSource,
+    hideSteamGamesWithoutAchievements,
+    forceFrontendFetch,
+  ]);
+
+  const handleClose = async () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    if (isDirty && didLoadSettingsRef.current) {
+      await handleSaveChanges();
+    }
+
+    onClose();
+  };
 
   const [debugClickCount, setDebugClickCount] = useState(0);
   const [showDebugTab, setShowDebugTab] = useState(
@@ -427,6 +477,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
   if (showDebugTab) {
     tabs.push({ id: "debug", icon: <BugIcon />, label: "Debug" });
   }
+
+  const tabGroups = [
+    {
+      label: t("settings.categories.general"),
+      items: tabs.filter((tab) => ["language", "appearance"].includes(tab.id)),
+    },
+    {
+      label: t("settings.categories.integrations"),
+      items: tabs.filter((tab) => ["api", "connections", "monitored", "backup"].includes(tab.id)),
+    },
+    {
+      label: t("settings.categories.system"),
+      items: tabs.filter((tab) => ["updates", "about", "debug"].includes(tab.id)),
+    },
+  ].filter((group) => group.items.length > 0);
 
   const renderContent = () => {
     switch (activeSubTab) {
@@ -514,70 +579,58 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) void handleClose(); }}>
       <DialogContent
         showCloseButton={false}
-        className="w-[min(86vw,1280px)] h-[min(84vh,900px)] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] overflow-hidden p-0 gap-0 sm:max-w-none"
+        className="w-[min(86vw,1280px)] h-[min(84vh,900px)] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] overflow-visible p-0 gap-0 sm:max-w-none"
       >
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => void handleClose()}
+          className="absolute right-3 top-3 z-50 h-9 w-9 rounded-md bg-transparent text-muted-foreground shadow-none transition-colors hover:bg-transparent hover:text-foreground"
+          title={t("common.close")}
+        >
+          <CloseIcon className="text-xl" />
+        </Button>
+
         <DialogHeader className="sr-only">
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Application preferences</DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full overflow-hidden bg-background text-muted-foreground">
+        <div className="flex h-full w-full overflow-hidden rounded-lg bg-background text-muted-foreground">
           {/* Sidebar Navigation */}
-          <aside className="w-72 border-r border-sidebar-border flex flex-col p-4 bg-sidebar-background text-sidebar-foreground">
-            <nav className="flex-1 space-y-1">
-              {tabs.map((tab) => {
-                const isActive = activeSubTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveSubTab(tab.id as SubTabId)}
-                    className={`w-full h-11 px-4 gap-4 rounded-md flex items-center text-left transition-all duration-300 group ${
-                      isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-lg"
-                        : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-                    }`}
-                  >
-                    <span className={`text-2xl transition-colors ${isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground group-hover:text-sidebar-accent-foreground"}`}>
-                      {tab.icon}
-                    </span>
-                    <span className="text-[0.95rem] font-semibold truncate">
-                      {tab.label}
-                    </span>
-                  </button>
-                );
-              })}
+          <aside className="flex w-72 flex-col bg-sidebar-background p-3 text-sidebar-foreground">
+            <nav className="flex-1 space-y-4">
+              {tabGroups.map((group) => (
+                <div key={group.label} className="space-y-1">
+                  <p className="px-2 pb-1 text-[10px] font-semibold tracking-wide text-sidebar-foreground/45">
+                    {group.label}
+                  </p>
+                  {group.items.map((tab) => {
+                    const isActive = activeSubTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveSubTab(tab.id as SubTabId)}
+                        className={`group relative flex h-10 w-full items-center gap-3 rounded-md px-3 text-left transition-colors duration-200 ${isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                          }`}
+                      >
+                        <span className={`grid h-6 w-6 place-items-center text-lg transition-colors ${isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/55 group-hover:text-sidebar-accent-foreground"}`}>
+                          {tab.icon}
+                        </span>
+                        <span className="truncate text-[11px] font-semibold">
+                          {tab.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </nav>
-
-            <div className="mt-auto pt-4 border-t border-sidebar-border flex items-center gap-2">
-              <Button
-                onClick={handleSaveChanges}
-                disabled={!isDirty}
-                variant={isSaved ? "default" : isDirty ? "default" : "outline"}
-                className={`flex-1 h-11 text-[11px] font-semibold ${isSaved ? "bg-emerald-500 hover:bg-emerald-600 text-white" : ""}`}
-              >
-                {isSaved ? (
-                  <CheckIcon className="text-sm" />
-                ) : (
-                  <SaveIcon className="text-sm" />
-                )}
-                <span>
-                  {isSaved ? t("settings.saved") : t("settings.saveChanges")}
-                </span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="w-11 h-11 flex-shrink-0"
-                title={t("common.close")}
-              >
-                <CloseIcon className="text-2xl" />
-              </Button>
-            </div>
           </aside>
 
           {/* Content Area */}
