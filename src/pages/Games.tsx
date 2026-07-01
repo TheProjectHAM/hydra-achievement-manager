@@ -4,7 +4,7 @@ import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsConte
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { GameAchievements } from '../types';
-import { PlatinumIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon, WarningIcon, RetroAchievementsIcon } from '../components/Icons';
+import { PlatinumIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, HydraIcon, SearchIcon, WarningIcon, RetroAchievementsIcon } from '../components/Icons';
 import { getGameAchievements, getRetroAchievementsRecentGames } from '../tauri-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,13 @@ import {
 } from '@/lib/steam-assets';
 import { getRetroAchievementsGameImage } from '@/lib/retro-achievements-assets';
 
-const useGameProgress = (game: GameAchievements) => {
+const useGameProgress = (game: GameAchievements, isContextLoading: boolean) => {
   const { gameNames } = useMonitoredAchievements();
   const gameId = game.gameId;
   const source = (game as any).source;
   const isSteam = source === 'steam' || source === 'both';
   const isRetroAchievements = source === 'retroachievements';
+  const isHydra = !isSteam && !isRetroAchievements;
   const achievementsCurrent = isSteam || isRetroAchievements ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const gameName = gameNames[gameId] || (game as any).name || gameId;
   const hasInitialTotal = isSteam || isRetroAchievements;
@@ -68,13 +69,14 @@ const useGameProgress = (game: GameAchievements) => {
     source,
     isSteam,
     isRetroAchievements,
+    isHydra,
     achievementsCurrent,
     gameName,
     finalTotal,
     isCompleted,
     progressPercent,
     toSteamSearchResult,
-    isReady: true,
+    isReady: !isContextLoading && totalFetched,
   };
 };
 
@@ -83,7 +85,8 @@ const MonitoredGameCard: React.FC<{
   onGameSelect: (game: SteamSearchResult) => void;
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
-  const { gameId, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult, isReady } = useGameProgress(game);
+  const { isLoading } = useMonitoredAchievements();
+  const { gameId, isSteam, isRetroAchievements, isHydra, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult, isReady } = useGameProgress(game, isLoading);
 
   const fallbackImages = isRetroAchievements
     ? [getRetroAchievementsGameImage(game as any)]
@@ -148,7 +151,7 @@ const MonitoredGameCard: React.FC<{
         </div>
       )}
 
-      <div className="absolute inset-0 overflow-hidden rounded-md bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+      <div className="absolute inset-0 overflow-hidden rounded-md bg-gradient-to-b from-black/60 via-transparent via-50% to-black/90"></div>
 
       {isCompleted && (
         <div className="absolute top-2.5 right-2.5 z-10 animate-fade-in">
@@ -187,6 +190,7 @@ const MonitoredGameCard: React.FC<{
           <h3 className="font-semibold text-sm truncate min-w-0 leading-tight drop-shadow-md flex items-center gap-2">
             {isSteam && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-70" />}
             {isRetroAchievements && <RetroAchievementsIcon className="w-4 h-4 shrink-0 opacity-70" />}
+            {isHydra && <HydraIcon className="w-4 h-4 shrink-0 opacity-70" />}
             <span className="truncate">{gameName}</span>
           </h3>
           <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-[0_1px_2px_rgba(0,0,0,0.85)] backdrop-blur-[2px] flex-shrink-0">
@@ -217,8 +221,8 @@ const MonitoredGameRow: React.FC<{
   onGameSelect: (game: SteamSearchResult) => void;
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
-  const { duplicateGames } = useMonitoredAchievements();
-  const { gameId, source, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, progressPercent, toSteamSearchResult, isReady } = useGameProgress(game);
+  const { duplicateGames, isLoading } = useMonitoredAchievements();
+  const { gameId, source, isSteam, isRetroAchievements, isHydra, achievementsCurrent, gameName, finalTotal, isCompleted, progressPercent, toSteamSearchResult, isReady } = useGameProgress(game, isLoading);
   const duplicates = duplicateGames.find(d => d.gameId === gameId);
   const otherDirsCount = (duplicates?.directories.length || 1) - 1;
   const allPaths = duplicates?.directories.map(d => d.path).join('\n') || game.directory;
@@ -289,6 +293,7 @@ const MonitoredGameRow: React.FC<{
           <h3 className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
             {isSteam && <SteamBrandIcon className="h-4 w-4 shrink-0 opacity-60" />}
             {isRetroAchievements && <RetroAchievementsIcon className="h-4 w-4 shrink-0 opacity-60" />}
+            {isHydra && <HydraIcon className="h-4 w-4 shrink-0 opacity-60" />}
             <span className="truncate">{gameName}</span>
           </h3>
           <p className="text-[11px] font-medium text-muted-foreground">AppID: {gameId}</p>
@@ -363,12 +368,13 @@ const MonitoredGameRow: React.FC<{
 type SortKey = 'name' | 'path' | 'progress';
 
 const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }> = ({ onGameSelect }) => {
-  const { games, gameNames } = useMonitoredAchievements();
+  const { games, gameNames, isLoading: isContextLoading } = useMonitoredAchievements();
   const { gamesViewMode, setGamesViewMode } = useTheme();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [platformFilter, setPlatformFilter] = useState<'all' | 'steam' | 'retroachievements' | 'local'>('all');
   const [retroGames, setRetroGames] = useState<GameAchievements[]>([]);
+  const [isRetroGamesLoading, setIsRetroGamesLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
   const filteredAndSortedGames = React.useMemo(() => {
@@ -426,6 +432,7 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
 
   useEffect(() => {
     let cancelled = false;
+    setIsRetroGamesLoading(true);
     getRetroAchievementsRecentGames()
       .then((items) => {
         if (cancelled) return;
@@ -443,7 +450,10 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
           logoUrl: game.imageIcon,
         })));
       })
-      .catch(() => setRetroGames([]));
+      .catch(() => setRetroGames([]))
+      .finally(() => {
+        if (!cancelled) setIsRetroGamesLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -505,63 +515,108 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
       </header>
 
       <div className="flex-grow overflow-y-auto no-scrollbar pb-10 custom-scrollbar">
-        {gamesViewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-2 pb-5 overflow-visible">
-            {filteredAndSortedGames.map(game => (
-              <MonitoredGameCard
-                key={game.gameId}
-                game={game}
-                onGameSelect={onGameSelect}
-              />
-            ))}
-          </div>
+        {(isContextLoading || isRetroGamesLoading) ? (
+          gamesViewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-2 pb-5 overflow-visible">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="aspect-[16/9] rounded-md overflow-hidden">
+                  <Skeleton className="w-full h-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border bg-card/50">
+              <Table className="w-full table-fixed">
+                <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[6%]" />
+                    <TableHead className="w-[30%]">
+                      <div className="h-4 w-20" />
+                    </TableHead>
+                    <TableHead className="hidden w-[12%] text-center sm:table-cell">
+                      <div className="h-4 w-12 mx-auto" />
+                    </TableHead>
+                    <TableHead className="hidden min-w-0 md:table-cell">
+                      <div className="h-4 w-24" />
+                    </TableHead>
+                    <TableHead className="w-[22%] text-right">
+                      <div className="h-4 w-20 ml-auto" />
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="w-10 h-10 rounded" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )
         ) : (
-          <div className="overflow-hidden rounded-xl border bg-card/50">
-            <Table className="w-full table-fixed">
-              <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[6%]" />
-                  <TableHead className="w-[30%]">
-                    <Button variant="ghost" onClick={() => handleSort('name')} className="group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
-                      Game <SortIndicator column="name" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="hidden w-[12%] text-center sm:table-cell">
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        const filters: ('all' | 'steam' | 'retroachievements' | 'local')[] = ['all', 'steam', 'retroachievements', 'local'];
-                        const next = filters[(filters.indexOf(platformFilter) + 1) % filters.length];
-                        setPlatformFilter(next);
-                      }}
-                      className={`group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground ${platformFilter !== 'all' ? 'text-foreground' : ''}`}
-                    >
-                      {platformFilter === 'all' ? 'All' : platformFilter === 'retroachievements' ? 'RA' : platformFilter}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="hidden min-w-0 md:table-cell">
-                    <Button variant="ghost" onClick={() => handleSort('path')} className="group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
-                      Path <SortIndicator column="path" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="w-[22%] text-right">
-                    <Button variant="ghost" onClick={() => handleSort('progress')} className="group ml-auto h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
-                      Progress <SortIndicator column="progress" />
-                    </Button>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedGames.map(game => (
-                  <MonitoredGameRow
-                    key={game.gameId}
-                    game={game}
-                    onGameSelect={onGameSelect}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          gamesViewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-2 pb-5 overflow-visible">
+              {filteredAndSortedGames.map(game => (
+                <MonitoredGameCard
+                  key={game.gameId}
+                  game={game}
+                  onGameSelect={onGameSelect}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border bg-card/50">
+              <Table className="w-full table-fixed">
+                <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[6%]" />
+                    <TableHead className="w-[30%]">
+                      <Button variant="ghost" onClick={() => handleSort('name')} className="group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
+                        Game <SortIndicator column="name" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="hidden w-[12%] text-center sm:table-cell">
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          const filters: ('all' | 'steam' | 'retroachievements' | 'local')[] = ['all', 'steam', 'retroachievements', 'local'];
+                          const next = filters[(filters.indexOf(platformFilter) + 1) % filters.length];
+                          setPlatformFilter(next);
+                        }}
+                        className={`group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground ${platformFilter !== 'all' ? 'text-foreground' : ''}`}
+                      >
+                        {platformFilter === 'all' ? 'All' : platformFilter === 'retroachievements' ? 'RA' : platformFilter}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="hidden min-w-0 md:table-cell">
+                      <Button variant="ghost" onClick={() => handleSort('path')} className="group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
+                        Path <SortIndicator column="path" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="w-[22%] text-right">
+                      <Button variant="ghost" onClick={() => handleSort('progress')} className="group ml-auto h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground">
+                        Progress <SortIndicator column="progress" />
+                      </Button>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedGames.map(game => (
+                    <MonitoredGameRow
+                      key={game.gameId}
+                      game={game}
+                      onGameSelect={onGameSelect}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )
         )}
       </div>
     </div>

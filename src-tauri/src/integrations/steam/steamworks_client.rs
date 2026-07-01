@@ -184,6 +184,10 @@ impl SteamworksClient {
             user_stats.request_current_stats();
             Self::pump_callbacks(&self.single_client, 10);
 
+            if user_stats.get_num_achievements().is_err() {
+                return Ok(Vec::new());
+            }
+
             let Some(achievement_names) = user_stats.get_achievement_names() else {
                 return Ok(Vec::new());
             };

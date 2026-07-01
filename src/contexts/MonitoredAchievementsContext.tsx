@@ -35,6 +35,7 @@ interface MonitoredAchievementsContextType {
   recentGames: RecentGame[];
   duplicateGames: DuplicateGameInfo[];
   gameNames: Record<string, string>;
+  isLoading: boolean;
   isDirectorySelectionOpen: boolean;
   selectedDuplicateGame: DuplicateGameInfo | null;
   openDirectorySelection: (gameId: string) => void;
@@ -53,6 +54,7 @@ const MonitoredAchievementsContext = createContext<MonitoredAchievementsContextT
   recentGames: [],
   duplicateGames: [],
   gameNames: {},
+  isLoading: true,
   isDirectorySelectionOpen: false,
   selectedDuplicateGame: null,
   openDirectorySelection: () => { },
@@ -76,6 +78,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const [steamGames, setSteamGames] = useState<any[]>([]);
   const [steamGameAchievements, setSteamGameAchievements] = useState<Record<string, { current: number, total: number }>>({});
   const [isSteamLoaded, setIsSteamLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [steamIntegrationEnabled, setSteamIntegrationEnabled] = useState(false);
   const [steamAchievementSource, setSteamAchievementSource] = useState<'steamworks' | 'steamapi'>('steamworks');
   const steamUnlistenRef = useRef<(() => void) | null>(null);
@@ -206,9 +209,12 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
 
   useEffect(() => {
     console.log('Setting up achievements listener');
+    setIsLoading(true);
     const unlistenPromise = setupListener();
-    fetchInitial();
-    setupSteam();
+    
+    Promise.all([fetchInitial(), setupSteam()]).then(() => {
+      setIsLoading(false);
+    });
 
     // Listen for manual achievement updates (from unlock command)
     const achievementsUnlistenPromise = onAchievementsUpdated(() => {
@@ -575,6 +581,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
       recentGames,
       duplicateGames,
       gameNames,
+      isLoading,
       isDirectorySelectionOpen,
       selectedDuplicateGame,
       openDirectorySelection,
