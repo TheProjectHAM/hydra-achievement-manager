@@ -2,12 +2,19 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { open as openExternalUrl } from "@tauri-apps/plugin-shell";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { SteamAchievementData } from "./types";
+import {
+  RetroAchievementData,
+  RetroAchievementsGame,
+  RetroAchievementsProfile,
+  SteamAchievementData,
+  SteamSearchResult,
+} from "./types";
 
 console.log("🚀 [TAURI-API] Module loaded with fallback support (Tauri v2)");
 
 const inFlightAchievementRequests = new Map<string, Promise<any>>();
 const inFlightSteamGameRequests = new Map<number, Promise<SteamAchievementData[]>>();
+const inFlightRetroAchievementRequests = new Map<number, Promise<RetroAchievementData[]>>();
 
 const mapUiLanguageToSteamStoreLanguage = (language?: string): string => {
   switch (language) {
@@ -214,6 +221,21 @@ export const searchSteamGamesFallback = async (
 
 export const searchSteamGames = searchSteamGamesFallback;
 
+export const searchRetroAchievementsGames = async (
+  query: string,
+): Promise<SteamSearchResult[]> => {
+  const results = await invoke<any[]>("search_retro_achievements_games", { query });
+  return results.map((game) => ({
+    id: game.id,
+    name: game.title,
+    achievementsTotal: game.achievementsTotal || 0,
+    source: "retroachievements",
+    consoleName: game.consoleName,
+    imageUrl: game.imageBoxArt || game.imageIcon || null,
+    logoUrl: game.imageIcon || null,
+  }));
+};
+
 export const getGameAchievementsBackend = async (
   gameId: string,
   options: { forceSteamApi?: boolean } = {},
@@ -311,7 +333,12 @@ export const getSteamAchievementSource = async (): Promise<"steamworks" | "steam
 export const getAchievementsForGameSource = async (
   gameId: string | number,
   isSteamGame: boolean,
+  isRetroAchievementsGame: boolean = false,
 ) => {
+  if (isRetroAchievementsGame) {
+    return { achievements: await getRetroAchievementsGameAchievements(Number(gameId)) };
+  }
+
   if (isSteamGame && (await shouldUseSteamworksAchievements())) {
     return { achievements: await getSteamGameAchievements(Number(gameId)) };
   }
@@ -346,7 +373,7 @@ export const createAchievementsBackup = (
     "create_achievements_backup",
     {
       outputPath,
-      selectedGameIds: selectedGameIds && selectedGameIds.length > 0 ? selectedGameIds : null,
+      selectedGameIds: selectedGameIds ?? null,
       includeSettings,
       steamEntries:
         steamEntries && steamEntries.length > 0
@@ -516,6 +543,28 @@ export interface SteamSubAccount {
 
 export const getSteamConnectionProfile = () =>
   invoke<SteamConnectionProfile | null>("get_steam_connection_profile");
+
+export const getRetroAchievementsConnectionProfile = () =>
+  invoke<RetroAchievementsProfile | null>("get_retro_achievements_connection_profile");
+
+export const testRetroAchievementsConnection = (username: string, apiKey: string) =>
+  invoke<RetroAchievementsProfile>("test_retro_achievements_connection", { username, apiKey });
+
+export const getRetroAchievementsRecentGames = () =>
+  invoke<RetroAchievementsGame[]>("get_retro_achievements_recent_games");
+
+export const getRetroAchievementsGameAchievements = (gameId: number) => {
+  const inFlightRequest = inFlightRetroAchievementRequests.get(gameId);
+  if (inFlightRequest) return inFlightRequest;
+
+  const request = invoke<RetroAchievementData[]>("get_retro_achievements_game_achievements", { gameId });
+  inFlightRetroAchievementRequests.set(gameId, request);
+  request.then(
+    () => inFlightRetroAchievementRequests.delete(gameId),
+    () => inFlightRetroAchievementRequests.delete(gameId),
+  );
+  return request;
+};
 
 // Steam Integration
 export const isSteamAvailable = () => invoke<boolean>("is_steam_available");
