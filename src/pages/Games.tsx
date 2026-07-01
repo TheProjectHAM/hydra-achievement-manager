@@ -4,8 +4,8 @@ import { useMonitoredAchievements } from '../contexts/MonitoredAchievementsConte
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { GameAchievements } from '../types';
-import { PlatinumIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon, WarningIcon } from '../components/Icons';
-import { getGameAchievements } from '../tauri-api';
+import { PlatinumIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon, WarningIcon, RetroAchievementsIcon } from '../components/Icons';
+import { getGameAchievements, getRetroAchievementsRecentGames } from '../tauri-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,15 +17,17 @@ import {
   getSteamLogoUrl,
   isSteamLogoFallbackUrl,
 } from '@/lib/steam-assets';
+import { getRetroAchievementsGameImage } from '@/lib/retro-achievements-assets';
 
 const useGameProgress = (game: GameAchievements) => {
   const { gameNames } = useMonitoredAchievements();
   const gameId = game.gameId;
   const source = (game as any).source;
   const isSteam = source === 'steam' || source === 'both';
-  const achievementsCurrent = isSteam ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
+  const isRetroAchievements = source === 'retroachievements';
+  const achievementsCurrent = isSteam || isRetroAchievements ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const gameName = gameNames[gameId] || (game as any).name || gameId;
-  const [totalAchievements, setTotalAchievements] = useState<number | null>(isSteam ? (game as any).achievementsTotal : null);
+  const [totalAchievements, setTotalAchievements] = useState<number | null>((isSteam || isRetroAchievements) ? (game as any).achievementsTotal : null);
 
   useEffect(() => {
     if (totalAchievements !== null && totalAchievements !== 0) return;
@@ -52,12 +54,17 @@ const useGameProgress = (game: GameAchievements) => {
     id: parseInt(gameId),
     name: gameName,
     achievementsTotal: finalTotal,
+    source: isRetroAchievements ? 'retroachievements' : undefined,
+    consoleName: (game as any).consoleName,
+    imageUrl: (game as any).imageUrl,
+    logoUrl: (game as any).logoUrl,
   });
 
   return {
     gameId,
     source,
     isSteam,
+    isRetroAchievements,
     achievementsCurrent,
     gameName,
     finalTotal,
@@ -72,9 +79,11 @@ const MonitoredGameCard: React.FC<{
   onGameSelect: (game: SteamSearchResult) => void;
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
-  const { gameId, isSteam, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult } = useGameProgress(game);
+  const { gameId, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult } = useGameProgress(game);
 
-  const fallbackImages = getSteamBackgroundFallbackUrls(gameId);
+  const fallbackImages = isRetroAchievements
+    ? [getRetroAchievementsGameImage(game as any)]
+    : getSteamBackgroundFallbackUrls(gameId);
 
   const [imageIndex, setImageIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState(fallbackImages[0]);
@@ -141,7 +150,7 @@ const MonitoredGameCard: React.FC<{
         </div>
       )}
 
-      {hoverLogoFailed ? (
+      {isRetroAchievements ? null : hoverLogoFailed ? (
         <div className="absolute -top-2 -left-1 z-10 h-16 w-16 flex items-center justify-center opacity-0 drop-shadow-xl transition-opacity duration-300 group-hover:opacity-100">
           <WarningIcon className="text-yellow-500 text-5xl" />
         </div>
@@ -165,6 +174,7 @@ const MonitoredGameCard: React.FC<{
         <div className="flex items-center justify-between mb-2 gap-3 min-w-0">
           <h3 className="font-semibold text-sm truncate min-w-0 leading-tight drop-shadow-md flex items-center gap-2">
             {isSteam && <SteamBrandIcon className="w-4 h-4 shrink-0 opacity-70" />}
+            {isRetroAchievements && <RetroAchievementsIcon className="w-4 h-4 shrink-0 opacity-70" />}
             <span className="truncate">{gameName}</span>
           </h3>
           <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-[0_1px_2px_rgba(0,0,0,0.85)] backdrop-blur-[2px] flex-shrink-0">
@@ -196,7 +206,7 @@ const MonitoredGameRow: React.FC<{
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
   const { duplicateGames } = useMonitoredAchievements();
-  const { gameId, source, isSteam, achievementsCurrent, gameName, finalTotal, isCompleted, progressPercent, toSteamSearchResult } = useGameProgress(game);
+  const { gameId, source, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, progressPercent, toSteamSearchResult } = useGameProgress(game);
   const duplicates = duplicateGames.find(d => d.gameId === gameId);
   const otherDirsCount = (duplicates?.directories.length || 1) - 1;
   const allPaths = duplicates?.directories.map(d => d.path).join('\n') || game.directory;
@@ -223,7 +233,13 @@ const MonitoredGameRow: React.FC<{
       className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
     >
       <TableCell className="w-[6%] p-2 sm:p-3">
-        {logoFailed ? (
+        {isRetroAchievements ? (
+          <img
+            src={(game as any).logoUrl || (game as any).imageUrl || getRetroAchievementsGameImage(game as any)}
+            alt=""
+            className="h-12 w-12 object-cover rounded-md drop-shadow-md sm:h-14 sm:w-14"
+          />
+        ) : logoFailed ? (
           <div className="h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center">
             <WarningIcon className="text-yellow-500 text-4xl sm:text-5xl" />
           </div>
@@ -248,6 +264,7 @@ const MonitoredGameRow: React.FC<{
         <div className="min-w-0 space-y-1">
           <h3 className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
             {isSteam && <SteamBrandIcon className="h-4 w-4 shrink-0 opacity-60" />}
+            {isRetroAchievements && <RetroAchievementsIcon className="h-4 w-4 shrink-0 opacity-60" />}
             <span className="truncate">{gameName}</span>
           </h3>
           <p className="text-[11px] font-medium text-muted-foreground">AppID: {gameId}</p>
@@ -259,6 +276,11 @@ const MonitoredGameRow: React.FC<{
           <Badge variant="secondary" className="h-6 px-2.5">
             <SteamBrandIcon className="h-3.5 w-3.5 opacity-60" />
             Both
+          </Badge>
+        ) : isRetroAchievements ? (
+          <Badge variant="secondary" className="h-6 px-2.5">
+            <RetroAchievementsIcon className="h-3.5 w-3.5 opacity-60" />
+            RA
           </Badge>
         ) : isSteam ? (
           <Badge variant="secondary" className="h-6 px-2.5">
@@ -321,22 +343,26 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
   const { gamesViewMode, setGamesViewMode } = useTheme();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
-  const [platformFilter, setPlatformFilter] = useState<'all' | 'steam' | 'local'>('all');
+  const [platformFilter, setPlatformFilter] = useState<'all' | 'steam' | 'retroachievements' | 'local'>('all');
+  const [retroGames, setRetroGames] = useState<GameAchievements[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
   const filteredAndSortedGames = React.useMemo(() => {
-    let result = games.filter(game => {
+    const allGames = [...games, ...retroGames];
+    let result = allGames.filter(game => {
       const name = (gameNames[game.gameId] || (game as any).name || '').toLowerCase();
       const query = searchQuery.toLowerCase();
       const matchesSearch = name.includes(query) || game.gameId.includes(query);
 
       const source = (game as any).source;
       const isSteam = source === 'steam' || source === 'both';
+      const isRetroAchievements = source === 'retroachievements';
       const isLocal = source !== 'steam';
       const matchesPlatform =
         platformFilter === 'all' ||
         (platformFilter === 'steam' && isSteam) ||
-        (platformFilter === 'local' && isLocal);
+        (platformFilter === 'retroachievements' && isRetroAchievements) ||
+        (platformFilter === 'local' && isLocal && !isRetroAchievements);
 
       return matchesSearch && matchesPlatform;
     });
@@ -355,8 +381,12 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
           valB = b.directory.toLowerCase();
           break;
         case 'progress':
-          valA = a.achievements.filter(acc => acc.achieved).length / (a.achievements.length || 1);
-          valB = b.achievements.filter(acc => acc.achieved).length / (b.achievements.length || 1);
+          const currentA = Number((a as any).achievementsCurrent ?? a.achievements.filter(acc => acc.achieved).length);
+          const totalA = Number((a as any).achievementsTotal ?? a.achievements.length) || 1;
+          const currentB = Number((b as any).achievementsCurrent ?? b.achievements.filter(acc => acc.achieved).length);
+          const totalB = Number((b as any).achievementsTotal ?? b.achievements.length) || 1;
+          valA = currentA / totalA;
+          valB = currentB / totalB;
           break;
         default:
           return 0;
@@ -368,7 +398,32 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
     });
 
     return result;
-  }, [games, gameNames, searchQuery, sortConfig, platformFilter]);
+  }, [games, retroGames, gameNames, searchQuery, sortConfig, platformFilter]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getRetroAchievementsRecentGames()
+      .then((items) => {
+        if (cancelled) return;
+        setRetroGames(items.map((game) => ({
+          gameId: String(game.id),
+          name: game.title,
+          achievements: [],
+          lastModified: Date.now(),
+          directory: 'retroachievements://',
+          source: 'retroachievements',
+          achievementsCurrent: game.achievementsCurrent,
+          achievementsTotal: game.achievementsTotal,
+          consoleName: game.consoleName,
+          imageUrl: game.imageBoxArt,
+          logoUrl: game.imageIcon,
+        })));
+      })
+      .catch(() => setRetroGames([]));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => ({
@@ -395,7 +450,7 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 w-full mb-4 animate-fade-in">
+      <header className="flex-shrink-0 w-full mb-4">
         <div className="relative group flex-1">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <SearchIcon className={`text-lg transition-colors duration-300 ${searchQuery ? 'text-foreground' : 'text-muted-foreground group-focus-within:text-foreground'}`} />
@@ -451,13 +506,13 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
                     <Button
                       variant="ghost"
                       onClick={() => {
-                        const filters: ('all' | 'steam' | 'local')[] = ['all', 'steam', 'local'];
+                        const filters: ('all' | 'steam' | 'retroachievements' | 'local')[] = ['all', 'steam', 'retroachievements', 'local'];
                         const next = filters[(filters.indexOf(platformFilter) + 1) % filters.length];
                         setPlatformFilter(next);
                       }}
                       className={`group h-auto p-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground ${platformFilter !== 'all' ? 'text-foreground' : ''}`}
                     >
-                      {platformFilter === 'all' ? 'All' : platformFilter}
+                      {platformFilter === 'all' ? 'All' : platformFilter === 'retroachievements' ? 'RA' : platformFilter}
                     </Button>
                   </TableHead>
                   <TableHead className="hidden min-w-0 md:table-cell">
