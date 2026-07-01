@@ -105,6 +105,13 @@ const MonitoredGameCard: React.FC<{
     setHoverLogoFailed(false);
   }, [gameId]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isImageLoaded) setIsImageLoaded(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [isImageLoaded]);
+
   if (!isReady) {
     return (
       <div className="aspect-[16/9] rounded-md overflow-hidden">
@@ -123,13 +130,6 @@ const MonitoredGameCard: React.FC<{
       setBackgroundFailed(true);
     }
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isImageLoaded) setIsImageLoaded(true);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, [isImageLoaded]);
 
   return (
     <div
