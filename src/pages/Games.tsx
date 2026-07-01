@@ -28,15 +28,12 @@ const useGameProgress = (game: GameAchievements) => {
   const isRetroAchievements = source === 'retroachievements';
   const achievementsCurrent = isSteam || isRetroAchievements ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const gameName = gameNames[gameId] || (game as any).name || gameId;
-  const initialTotal = (isSteam || isRetroAchievements) ? (game as any).achievementsTotal : null;
-  const [totalAchievements, setTotalAchievements] = useState<number | null>(initialTotal);
-  const [totalFetched, setTotalFetched] = useState(initialTotal !== null && initialTotal !== 0);
-
-  const isNameReady = !!gameNames[gameId] || !!(game as any).name;
-  const isReady = isNameReady && totalFetched;
+  const hasInitialTotal = isSteam || isRetroAchievements;
+  const [totalAchievements, setTotalAchievements] = useState<number | null>(hasInitialTotal ? (game as any).achievementsTotal : null);
+  const [totalFetched, setTotalFetched] = useState(hasInitialTotal);
 
   useEffect(() => {
-    if (totalFetched) return;
+    if (hasInitialTotal || totalFetched) return;
 
     const fetchTotalAchievements = async () => {
       try {
@@ -45,14 +42,13 @@ const useGameProgress = (game: GameAchievements) => {
           setTotalAchievements(gameAchievements.achievements.length);
         }
       } catch (error) {
-        console.error('Error fetching total achievements:', error);
         setTotalAchievements(game.achievements.length);
       } finally {
         setTotalFetched(true);
       }
     };
     fetchTotalAchievements();
-  }, [gameId, totalFetched]);
+  }, [gameId, hasInitialTotal, totalFetched]);
 
   const finalTotal = totalAchievements ?? game.achievements.length;
   const isCompleted = finalTotal > 0 && achievementsCurrent >= finalTotal;
@@ -78,7 +74,7 @@ const useGameProgress = (game: GameAchievements) => {
     isCompleted,
     progressPercent,
     toSteamSearchResult,
-    isReady,
+    isReady: true,
   };
 };
 
