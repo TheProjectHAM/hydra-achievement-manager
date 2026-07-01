@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   getSteamBackgroundFallbackUrls,
@@ -28,6 +29,10 @@ const useGameProgress = (game: GameAchievements) => {
   const achievementsCurrent = isSteam || isRetroAchievements ? (game as any).achievementsCurrent : game.achievements.filter(a => a.achieved).length;
   const gameName = gameNames[gameId] || (game as any).name || gameId;
   const [totalAchievements, setTotalAchievements] = useState<number | null>((isSteam || isRetroAchievements) ? (game as any).achievementsTotal : null);
+
+  const isNameReady = !!gameNames[gameId] || !!(game as any).name;
+  const isTotalReady = totalAchievements !== null && totalAchievements !== 0;
+  const isReady = isNameReady && (isTotalReady || (isSteam && (game as any).achievementsTotal));
 
   useEffect(() => {
     if (totalAchievements !== null && totalAchievements !== 0) return;
@@ -71,6 +76,7 @@ const useGameProgress = (game: GameAchievements) => {
     isCompleted,
     progressPercent,
     toSteamSearchResult,
+    isReady,
   };
 };
 
@@ -79,7 +85,15 @@ const MonitoredGameCard: React.FC<{
   onGameSelect: (game: SteamSearchResult) => void;
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
-  const { gameId, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult } = useGameProgress(game);
+  const { gameId, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, toSteamSearchResult, isReady } = useGameProgress(game);
+
+  if (!isReady) {
+    return (
+      <div className="aspect-[16/9] rounded-md overflow-hidden">
+        <Skeleton className="w-full h-full" />
+      </div>
+    );
+  }
 
   const fallbackImages = isRetroAchievements
     ? [getRetroAchievementsGameImage(game as any)]
@@ -206,7 +220,7 @@ const MonitoredGameRow: React.FC<{
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
   const { duplicateGames } = useMonitoredAchievements();
-  const { gameId, source, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, progressPercent, toSteamSearchResult } = useGameProgress(game);
+  const { gameId, source, isSteam, isRetroAchievements, achievementsCurrent, gameName, finalTotal, isCompleted, progressPercent, toSteamSearchResult, isReady } = useGameProgress(game);
   const duplicates = duplicateGames.find(d => d.gameId === gameId);
   const otherDirsCount = (duplicates?.directories.length || 1) - 1;
   const allPaths = duplicates?.directories.map(d => d.path).join('\n') || game.directory;
@@ -216,6 +230,18 @@ const MonitoredGameRow: React.FC<{
   useEffect(() => {
     setLogoFailed(false);
   }, [gameId]);
+
+  if (!isReady) {
+    return (
+      <TableRow>
+        <TableCell><Skeleton className="w-10 h-10 rounded" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+      </TableRow>
+    );
+  }
 
   const handleSelect = () => onGameSelect(toSteamSearchResult());
 
