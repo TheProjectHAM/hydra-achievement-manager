@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-export type ApiSource = 'steam' | 'hydra';
+export type ApiSource = 'steam' | 'hydra' | 'retroachievements';
 export type SteamAchievementSource = 'steamworks' | 'steamapi';
 export type TitleBarMode = 'hidden' | 'custom' | 'native';
 
@@ -20,6 +20,10 @@ export interface SteamSearchResult {
   id: number;
   name: string;
   achievementsTotal: number;
+  source?: ApiSource;
+  consoleName?: string | null;
+  imageUrl?: string | null;
+  logoUrl?: string | null;
 }
 
 declare global {
@@ -92,6 +96,13 @@ export interface GameAchievements {
   achievements: AchievementEntry[];
   lastModified: Date | number;
   directory: string;
+  source?: 'hydra' | 'steam' | 'both' | 'retroachievements';
+  name?: string;
+  imageUrl?: string | null;
+  logoUrl?: string | null;
+  achievementsCurrent?: number;
+  achievementsTotal?: number;
+  consoleName?: string | null;
 }
 
 export interface Game {
@@ -99,7 +110,41 @@ export interface Game {
   name: string;
   achievementsCurrent: number;
   achievementsTotal: number;
-  source?: 'hydra' | 'steam'; // Source of the game data
+  source?: 'hydra' | 'steam' | 'retroachievements'; // Source of the game data
+}
+
+export interface RetroAchievementsProfile {
+  username: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  motto?: string | null;
+  points: number;
+  softcorePoints: number;
+}
+
+export interface RetroAchievementsGame {
+  id: number;
+  title: string;
+  consoleId?: number | null;
+  consoleName?: string | null;
+  imageIcon?: string | null;
+  imageBoxArt?: string | null;
+  achievementsTotal: number;
+  achievementsCurrent: number;
+}
+
+export interface RetroAchievementData {
+  id: string;
+  title: string;
+  description: string;
+  badgeName?: string | null;
+  icon: string;
+  iconLocked: string;
+  points: number;
+  trueRatio: number;
+  displayOrder: number;
+  unlocked: boolean;
+  unlockTime: number;
 }
 
 // Steam Integration Types
