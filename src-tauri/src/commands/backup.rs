@@ -1,5 +1,5 @@
 use crate::models::AchievementEntry;
-use crate::parser::{expand_path, AchievementParser};
+use crate::parser::expand_path;
 use crate::unlocker::AchievementWriter;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine;
@@ -132,24 +132,26 @@ pub async fn create_achievements_backup(
     state: State<'_, crate::AppState>,
     app_handle: AppHandle,
 ) -> Result<BackupResult, String> {
-    let selected_set = selected_game_ids
-        .unwrap_or_default()
-        .into_iter()
-        .collect::<HashSet<_>>();
-
     let monitor_lock = state.monitor.lock().map_err(|e| e.to_string())?;
     let monitor = monitor_lock
         .as_ref()
         .ok_or_else(|| "Monitor not initialized".to_string())?;
 
     let games = monitor.get_current_achievements();
-    let filtered_games: Vec<_> = if selected_set.is_empty() {
-        games
-    } else {
-        games
-            .into_iter()
-            .filter(|g| selected_set.contains(&g.game_id))
-            .collect()
+    let selected_set: HashSet<String> = selected_game_ids
+        .clone()
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+    let filtered_games: Vec<_> = match selected_game_ids {
+        None => games,
+        Some(ids) if ids.is_empty() => Vec::new(),
+        Some(_) => {
+            games
+                .into_iter()
+                .filter(|g| selected_set.contains(&g.game_id))
+                .collect()
+        }
     };
 
     let should_include_settings = include_settings.unwrap_or(true);
@@ -384,10 +386,40 @@ fn decode_backup_content(raw: &str) -> Result<String, String> {
 
 fn detect_game_file_format(directory: &str, game_id: &str) -> String {
     let game_dir = expand_path(directory).join(game_id);
-    let json_path = game_dir.join("achievements.json");
-    if json_path.exists() {
+
+    let json_candidates = ["achievements.json"];
+    for name in &json_candidates {
+        if game_dir.join(name).exists() {
+            return "json".to_string();
+        }
+    }
+
+    let ini_candidates = [
+        "achievements.ini",
+        "Achievements.ini",
+        "Stats/Achievements.ini",
+        "stats/achievements.ini",
+        "SteamEmu/UserStats/achiev.ini",
+        "stats/CreamAPI.Achievements.cfg",
+        "User/Achievements.ini",
+    ];
+    for name in &ini_candidates {
+        if game_dir.join(name).exists() {
+            return "ini".to_string();
+        }
+    }
+
+    let plain_candidates = ["achievement"];
+    for name in &plain_candidates {
+        if game_dir.join(name).exists() {
+            return "ini".to_string();
+        }
+    }
+
+    if game_dir.join("remote").join(game_id).join("achievements.json").exists() {
         return "json".to_string();
     }
+
     "ini".to_string()
 }
 
@@ -400,22 +432,15 @@ fn read_existing_achievements(
     }
 
     let game_dir = expand_path(directory).join(game_id);
-    let ini_path = game_dir.join("achievements.ini");
-    let json_path = game_dir.join("achievements.json");
 
-    let target = if ini_path.exists() {
-        Some(ini_path)
-    } else if json_path.exists() {
-        Some(json_path)
-    } else {
-        None
-    };
-
-    if let Some(path) = target {
-        AchievementParser::parse_achievement_file_auto(path).map_err(|e| e.to_string())
-    } else {
-        Ok(Vec::new())
+    if let Some((file_path, cracker)) =
+        crate::parser::AchievementParser::find_achievement_file_in_game_dir(&game_dir, game_id)
+    {
+        return crate::parser::AchievementParser::parse_achievement_file(&file_path, cracker)
+            .map_err(|e| e.to_string());
     }
+
+    Ok(Vec::new())
 }
 
 fn build_preview_item(
@@ -641,8 +666,20 @@ fn should_write_json(
         return true;
     }
 
-    if ini_path.exists() {
-        return false;
+    let ini_candidates = [
+        "achievements.ini",
+        "Achievements.ini",
+        "Stats/Achievements.ini",
+        "stats/achievements.ini",
+        "SteamEmu/UserStats/achiev.ini",
+        "stats/CreamAPI.Achievements.cfg",
+        "User/Achievements.ini",
+        "achievement",
+    ];
+    for name in &ini_candidates {
+        if ini_path.parent().map_or(false, |p| p.join(name).exists()) {
+            return false;
+        }
     }
 
     if base_path

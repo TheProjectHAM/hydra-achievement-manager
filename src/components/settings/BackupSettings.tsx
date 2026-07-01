@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   applyAchievementsRestore,
@@ -20,6 +20,7 @@ interface BackupGame {
   gameId: string;
   directory: string;
   achievementsCount: number;
+  unlockedCount: number;
   source: "local" | "steam";
 }
 
@@ -28,6 +29,7 @@ interface BackupGameGroup {
   name: string;
   entries: BackupGame[];
   totalAchievements: number;
+  unlockedAchievements: number;
 }
 
 interface RestorePreviewItem {
@@ -156,10 +158,27 @@ const CompactDropdown = <T extends string>({
   fullWidth?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.id === value) || options[0];
 
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape" && open) {
+        setOpen(false);
+      }
+    },
+    [open],
+  );
+
+  useEffect(() => {
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [open, handleKeyDown]);
+
   return (
-    <div className={`relative ${fullWidth ? "w-full" : "w-44"}`}>
+    <div ref={containerRef} className={`relative ${fullWidth ? "w-full" : "w-44"}`}>
       <button
         onClick={() => setOpen(!open)}
         className="w-full h-9 border border-border rounded-md px-3 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-md bg-muted"
@@ -224,15 +243,14 @@ const BackupSettings: React.FC = () => {
   const [settingsStrategy, setSettingsStrategy] = useState<SettingsStrategy>("backup");
 
   const [restoring, setRestoring] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const hasAnyGame = groups.length > 0;
   const allSelected = hasAnyGame && selectedGameIds.size === groups.length;
   const selectedBackupCount = selectedGameIds.size;
 
   const isRestoreItemBlocked = (item: RestorePreviewItem) =>
-    item.steamUnavailable ||
-    item.steamGameNotDetected ||
-    (item.missingBasePath && !restoreSettingsEnabled);
+    item.restoreBlocked || (item.missingBasePath && !restoreSettingsEnabled);
 
   const selectableRestoreIndices = useMemo(
     () =>
@@ -252,7 +270,7 @@ const BackupSettings: React.FC = () => {
     [selectedRestoreIndices, selectableRestoreIndices],
   );
 
-  const restoreConflicts = useMemo(
+  const willReplaceCount = useMemo(
     () =>
       previewItems.filter((item) => {
         if (!selectedRestoreIndices.has(item.index) || !item.willReplace) return false;
@@ -301,10 +319,12 @@ const BackupSettings: React.FC = () => {
       const groupedMap = new Map<string, BackupGameGroup>();
       for (const g of games || []) {
         const current = groupedMap.get(g.gameId);
+        const achievements = Array.isArray(g.achievements) ? g.achievements : [];
         const entry: BackupGame = {
           gameId: g.gameId,
           directory: g.directory,
-          achievementsCount: Array.isArray(g.achievements) ? g.achievements.length : 0,
+          achievementsCount: achievements.length,
+          unlockedCount: achievements.filter((a: any) => a.achieved).length,
           source: "local",
         };
 
@@ -314,10 +334,12 @@ const BackupSettings: React.FC = () => {
             name: names[g.gameId] || steamNameById[g.gameId] || g.gameId,
             entries: [entry],
             totalAchievements: entry.achievementsCount,
+            unlockedAchievements: entry.unlockedCount,
           });
         } else {
           current.entries.push(entry);
           current.totalAchievements += entry.achievementsCount;
+          current.unlockedAchievements += entry.unlockedCount;
         }
       }
 
@@ -327,6 +349,7 @@ const BackupSettings: React.FC = () => {
           gameId: sg.gameId,
           directory: "steam://",
           achievementsCount: Number(sg.achievementsTotal || 0),
+          unlockedCount: Number(sg.achievementsCurrent || 0),
           source: "steam",
         };
 
@@ -336,6 +359,7 @@ const BackupSettings: React.FC = () => {
             name: names[sg.gameId] || sg.name || sg.gameId,
             entries: [entry],
             totalAchievements: entry.achievementsCount,
+            unlockedAchievements: entry.unlockedCount,
           });
         } else if (!current.entries.some((e) => e.source === "steam")) {
           if (!names[sg.gameId] && sg.name && current.name === current.gameId) {
@@ -343,6 +367,7 @@ const BackupSettings: React.FC = () => {
           }
           current.entries.push(entry);
           current.totalAchievements += entry.achievementsCount;
+          current.unlockedAchievements += entry.unlockedCount;
         }
       }
 
@@ -444,6 +469,8 @@ const BackupSettings: React.FC = () => {
         steamEntries,
       );
       setLastBackupPath(result.outputPath);
+      setSuccessMessage(t("settings.backup.backupCreated"));
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error) {
       console.error("Failed to create backup:", error);
       setLastBackupPath("");
@@ -580,6 +607,14 @@ const BackupSettings: React.FC = () => {
         settingsStrategy,
       );
 
+      setSuccessMessage(
+        t("settings.backup.restoreSuccess", {
+          restored: selectedIndices.length,
+          skipped: 0,
+        }),
+      );
+      setTimeout(() => setSuccessMessage(null), 5000);
+
       await loadBackupCandidates();
       await loadRestorePreview(backupPath);
     } catch (error) {
@@ -591,6 +626,11 @@ const BackupSettings: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-modal-in">
+      {successMessage && (
+        <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-[11px] font-semibold text-green-600 dark:text-green-400">
+          {successMessage}
+        </div>
+      )}
       <div className="border border-border rounded-xl p-6 shadow-sm space-y-4 bg-muted">
         <div className="flex items-center justify-between gap-3">
           <h5 className="text-xs font-semibold text-foreground">
@@ -641,7 +681,7 @@ const BackupSettings: React.FC = () => {
                   <div className="min-w-0">
                     <p className="text-xs font-bold truncate">{group.name}</p>
                     <p className="text-[10px] opacity-60 truncate">
-                      {group.gameId} • {group.entries.length} {t("settings.backup.entries")} • {group.totalAchievements} {t("common.achievements").toLowerCase()}
+                      {group.gameId} • {group.entries.length} {t("settings.backup.entries")} • {group.unlockedAchievements}/{group.totalAchievements} {t("common.achievements").toLowerCase()}
                     </p>
                   </div>
                 </div>
@@ -833,7 +873,7 @@ const BackupSettings: React.FC = () => {
 
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] font-semibold opacity-80 text-foreground">
-                {t("settings.backup.conflictsSelected", { count: restoreConflicts })}
+                {t("settings.backup.conflictsSelected", { count: willReplaceCount })}
               </p>
 
               <button

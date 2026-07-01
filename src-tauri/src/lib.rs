@@ -244,6 +244,11 @@ pub fn run() {
             commands::cache_system::clear_cache,
             commands::cache_system::get_system_info,
             commands::connections::get_hydra_connection_profile,
+            commands::retro_achievements::get_retro_achievements_connection_profile,
+            commands::retro_achievements::test_retro_achievements_connection,
+            commands::retro_achievements::search_retro_achievements_games,
+            commands::retro_achievements::get_retro_achievements_recent_games,
+            commands::retro_achievements::get_retro_achievements_game_achievements,
             commands::connections::get_steam_connection_profile,
         ])
         .run(tauri::generate_context!())

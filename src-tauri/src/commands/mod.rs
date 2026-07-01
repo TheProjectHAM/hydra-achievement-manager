@@ -6,6 +6,7 @@ pub mod directories;
 pub mod game_lookup;
 pub mod language;
 pub mod monitoring;
+pub mod retro_achievements;
 pub mod settings;
 pub mod steam;
 pub mod ui;
