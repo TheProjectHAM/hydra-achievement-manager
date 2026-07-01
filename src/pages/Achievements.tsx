@@ -46,14 +46,16 @@ const AchievementCard: React.FC<{
   onToggle: () => void;
   onTimestampChange: (field: keyof Timestamp, value: string) => void;
   onTimestampClear: () => void;
+  readOnly?: boolean;
 }> = ({
   achievement,
   status,
   onToggle,
   onTimestampChange,
   onTimestampClear,
+  readOnly,
 }) => {
-  const isCompleted = status.completed;
+  const isCompleted = readOnly || status.completed;
   const { dateFormat, timeFormat, hideHiddenAchievements } = useTheme();
   const { t } = useI18n();
 
@@ -65,7 +67,7 @@ const AchievementCard: React.FC<{
     });
   };
 
-  const isHidden = hideHiddenAchievements && achievement.hidden && !isCompleted;
+  const isHidden = !readOnly && hideHiddenAchievements && achievement.hidden && !isCompleted;
   const rarityColor = !achievement.percent
     ? "bg-gray-500"
     : achievement.percent < 10
@@ -73,6 +75,46 @@ const AchievementCard: React.FC<{
       : achievement.percent < 30
         ? "bg-purple-400"
         : "bg-blue-400";
+
+  if (readOnly) {
+    return (
+      <div className="group relative flex items-start gap-3.5 p-3.5 rounded-md transition-all duration-300 bg-card overflow-hidden">
+        {achievement.percent !== undefined && achievement.percent > 0 && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-black/20">
+            <div
+              className={`h-full ${rarityColor}`}
+              style={{ width: `${Math.max(5, achievement.percent)}%` }}
+            />
+          </div>
+        )}
+
+        <img
+          src={achievement.icon}
+          alt={achievement.displayName}
+          className="w-12 h-12 rounded-md object-cover ring-1 ring-white/10 shadow-lg flex-shrink-0"
+        />
+
+        <div className="flex-grow min-w-0 flex flex-col gap-0.5">
+          <h3 className="font-semibold text-xs text-foreground truncate">
+            {achievement.displayName}
+          </h3>
+          <p className="text-[10px] font-medium leading-relaxed text-foreground opacity-70 line-clamp-2">
+            {achievement.description || t("achievementsPage.noDescription")}
+          </p>
+        </div>
+
+        {achievement.percent !== undefined && achievement.percent > 0 && (
+          <div className="flex-shrink-0 self-center">
+            <span
+              className={`text-[10px] font-bold tabular-nums ${achievement.percent < 10 ? "text-amber-400" : "text-muted-foreground opacity-60"}`}
+            >
+              {achievement.percent.toFixed(1)}%
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -293,6 +335,8 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
 
       const isSteamSourceSelected =
         !!preferredSourcePath && preferredSourcePath.startsWith("steam://");
+      const isRetroAchievementsSourceSelected =
+        !!preferredSourcePath && preferredSourcePath.startsWith("retroachievements://");
       const steamAchievementSource = isSteamSourceSelected
         ? await getSteamAchievementSource()
         : null;
@@ -314,9 +358,19 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
         const result = await getAchievementsForGameSource(
           game.id,
           isSteamSourceSelected,
+          isRetroAchievementsSourceSelected,
         );
         let achievements: Achievement[] = [];
-        if (
+        if (isRetroAchievementsSourceSelected) {
+          achievements = result.achievements.map((ach: any) => ({
+            internalName: ach.id,
+            displayName: ach.title || ach.id,
+            description: ach.description || "",
+            icon: ach.unlocked ? ach.icon : (ach.iconLocked || ach.icon || ""),
+            percent: ach.trueRatio ? Math.min(100, ach.trueRatio / 100) : undefined,
+            hidden: false,
+          }));
+        } else if (
           result.achievements.length > 0 &&
           result.achievements[0].apiname !== undefined
         ) {
@@ -342,7 +396,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
         setGameAchievements(achievements);
         achievementsCacheRef.current[sourceCacheKey] = achievements;
 
-        const shouldUseSteamStatus = isSteamSourceSelected;
+        const shouldUseSteamStatus = isSteamSourceSelected || isRetroAchievementsSourceSelected;
         const normalizePath = (p: string) =>
           p.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
         const normalizedPreferredPath = preferredSourcePath
@@ -361,8 +415,8 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
           shouldUseSteamStatus
         ) {
           result.achievements.forEach((ach: any) => {
-            const isUnlocked = ach.achieved === true || ach.achieved === 1;
-            const internalName = ach.apiname || ach.name;
+            const isUnlocked = ach.achieved === true || ach.achieved === 1 || ach.unlocked === true;
+            const internalName = ach.apiname || ach.name || ach.id;
 
             if (isUnlocked && internalName) {
               const currentStatus = achievementStatus[game.id]?.[internalName];
@@ -567,6 +621,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
     completed: false,
     timestamp: emptyTimestamp(),
   };
+  const isRetroAchievementsSource = !!preferredSourcePath?.startsWith("retroachievements://");
 
   return (
     <>
@@ -697,7 +752,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
               </p>
             </div>
           ) : filteredAchievements.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 p-1">
+            <div className={`grid gap-3 p-1 ${isRetroAchievementsSource ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"}`}>
               {filteredAchievements.map((ach) => {
                 const status =
                   achievementStatus[game.id]?.[ach.internalName] ??
@@ -707,6 +762,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
                     key={ach.internalName}
                     achievement={ach}
                     status={status}
+                    readOnly={isRetroAchievementsSource}
                     onToggle={() =>
                       onAchievementToggle(
                         game.id,
@@ -746,7 +802,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
           )}
         </div>
 
-        {filteredAchievements.length > 0 && (
+        {filteredAchievements.length > 0 && !isRetroAchievementsSource && (
           <footer className="flex-shrink-0 flex flex-col md:flex-row justify-between items-center gap-4 mt-1.5 pt-3.5 border-t border-border">
             <div className="w-full md:w-auto">
               <GlobalTimestampManager
