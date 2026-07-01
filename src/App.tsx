@@ -426,6 +426,14 @@ const App: React.FC = () => {
     if (!selectedGame) return;
     const gameId = selectedGame.id.toString();
     const isSteam = path.startsWith('steam://');
+    const isRetroAchievements = path.startsWith('retroachievements://');
+    if (isRetroAchievements) {
+      toast.error('RetroAchievements é somente leitura', {
+        description: 'Desbloqueios RetroAchievements precisam ser feitos pelo emulador conectado à conta RA.',
+        duration: 5000,
+      });
+      return;
+    }
     const unlockSourcePath = isSteam ? 'steam://' : path;
 
     const generateTimestamp = (): Timestamp => {
@@ -553,6 +561,14 @@ const App: React.FC = () => {
 
 
   const handleGameSelect = (game: SteamSearchResult) => {
+    if ((game as any).source === 'retroachievements') {
+      setSelectedGameSourcePath('retroachievements://');
+      setSelectedGame(game);
+      setActiveTabId('conquistas');
+      setCurrentView('main');
+      return;
+    }
+
     const duplicate = duplicateGames.find(d => d.gameId === game.id.toString());
     const mergedGame = games.find(g => g.gameId === game.id.toString());
     const hasBothSources = (mergedGame as any)?.source === 'both';
