@@ -160,6 +160,11 @@ const AchievementCard: React.FC<{
             alt={achievement.displayName}
             className={`w-14 h-14 rounded-md object-cover ring-1 ring-white/10 shadow-lg transition-all duration-500 ${!isCompleted ? "grayscale opacity-40 brightness-75" : ""}`}
           />
+          {showUnlockRateBar && achievement.percent !== undefined && achievement.percent > 0 && (
+            <span className={`absolute -bottom-1 -right-1 text-[8px] font-bold tabular-nums px-1 rounded-sm bg-background/90 border border-border/50 ${achievement.percent < 10 ? "text-amber-400" : "text-muted-foreground"}`}>
+              {achievement.percent.toFixed(1)}%
+            </span>
+          )}
         </div>
         <div className="flex-grow min-w-0">
           <h3
@@ -189,16 +194,6 @@ const AchievementCard: React.FC<{
       </div>
 
       <div className="mt-auto" onClick={(e) => e.stopPropagation()}>
-        {achievement.percent !== undefined && achievement.percent > 0 && showUnlockRateBar && (
-          <div className={`mb-2 overflow-hidden rounded-sm border border-border bg-background/80 transition-opacity ${isCompleted ? "opacity-100" : "opacity-45"}`}>
-            <div
-              className={`flex h-4 min-w-[2.9rem] items-center justify-center px-1.5 text-[9px] font-bold text-background transition-all ${isCompleted ? rarityColor : "bg-muted-foreground"}`}
-              style={{ width: `${Math.max(10, achievement.percent)}%` }}
-            >
-              {achievement.percent.toFixed(1)}%
-            </div>
-          </div>
-        )}
         <TimestampSelector
           timestamp={status.timestamp}
           onChange={onTimestampChange}
