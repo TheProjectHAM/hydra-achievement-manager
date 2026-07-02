@@ -260,7 +260,7 @@ export const SearchContent: React.FC<SearchContentProps> = ({ onGameSelect }) =>
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={provider === 'all' ? 'Search games across all sources...' : provider === 'retroachievements' ? 'Search games on RetroAchievements...' : t('searchPage.inputPlaceholder')}
+            placeholder={`${t('sidebar.search')}...`}
             className="w-full h-12 pl-12 pr-14 text-[0.95rem] font-semibold"
             aria-label={t('searchPage.searchButton')}
           />
