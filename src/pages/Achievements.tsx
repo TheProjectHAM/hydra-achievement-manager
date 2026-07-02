@@ -634,12 +634,7 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
   };
 
   if (!game) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center text-center select-none pointer-events-none">
-        <TrophyIcon className="text-5xl text-muted-foreground/20 mb-4" />
-        <h2 className="text-sm font-semibold text-foreground/50">{t("achievementsPage.title")}</h2>
-      </div>
-    );
+    return <></>;
   }
 
   const defaultStatus: AchievementStatus = {
