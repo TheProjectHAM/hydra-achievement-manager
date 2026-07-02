@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { SteamBrandIcon, HydraIcon, RetroAchievementsIcon } from '../Icons';
 import { useI18n } from '../../contexts/I18nContext';
@@ -11,7 +11,6 @@ import {
   AccordionCard,
   InlineFieldRow,
   SettingsPage,
-  SettingsPanel,
   SettingsSection,
   Switch,
 } from './shared';
@@ -26,6 +25,7 @@ interface ConnectionProfile {
   displayName: string;
   avatarInitials: string;
   avatarUrl?: string | null;
+  available: boolean;
 }
 
 interface ConnectionsSettingsProps {
@@ -38,6 +38,33 @@ interface ConnectionsSettingsProps {
 }
 
 let cachedConnectionProfiles: ConnectionProfile[] | null = null;
+
+const createDefaultConnectionProfiles = (): ConnectionProfile[] => [
+  {
+    id: 'steam-main',
+    kind: 'steam',
+    displayName: 'Steam',
+    avatarInitials: 'ST',
+    avatarUrl: null,
+    available: false,
+  },
+  {
+    id: 'hydra-default',
+    kind: 'hydra',
+    displayName: 'Hydra',
+    avatarInitials: 'HY',
+    avatarUrl: null,
+    available: false,
+  },
+  {
+    id: 'retroachievements-default',
+    kind: 'retroachievements',
+    displayName: 'RetroAchievements',
+    avatarInitials: 'RA',
+    avatarUrl: null,
+    available: true,
+  },
+];
 
 const getServiceIcon = (kind: ConnectionKind) => {
   if (kind === 'steam') return <SteamBrandIcon className="h-3.5 w-3.5" />;
@@ -54,9 +81,9 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   setHideSteamGamesWithoutAchievements,
 }) => {
   const { t } = useI18n();
-  const [profiles, setProfiles] = useState<ConnectionProfile[]>(cachedConnectionProfiles ?? []);
-  const [expandedCard, setExpandedCard] = useState<string | null>(cachedConnectionProfiles?.[0]?.id ?? null);
-  const [isSteamMissing, setIsSteamMissing] = useState(false);
+  const [profiles, setProfiles] = useState<ConnectionProfile[]>(() => cachedConnectionProfiles ?? createDefaultConnectionProfiles());
+  const [expandedCard, setExpandedCard] = useState<string | null>(() => cachedConnectionProfiles?.[0]?.id ?? 'steam-main');
+  const [isSteamMissing, setIsSteamMissing] = useState(true);
   const [steamLibPath, setSteamLibPath] = useState<string | null>(null);
   const [steamDllPath, setSteamDllPath] = useState<string | null>(null);
   const [steamFailureReason, setSteamFailureReason] = useState<string | null>(null);
@@ -88,9 +115,6 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   const retroValidationRunRef = useRef(0);
 
   const canEnableSteamIntegration = !isSteamMissing;
-  const connectedCount = profiles.length;
-  const hasSteamLibraryPath = !!steamLibPath;
-  const hasSteamDllPath = !!steamDllPath;
 
   const isSteamClientNotRunningReason = (reason: string | null) => {
     if (!reason) return false;
@@ -253,6 +277,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
           displayName,
           avatarInitials: 'RA',
           avatarUrl: profile?.avatarUrl,
+          available: true,
         },
       ];
       cachedConnectionProfiles = next;
@@ -290,13 +315,6 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
     }
   };
 
-  const integrationStatus = useMemo(() => {
-    if (isSteamMissing) return t('settings.api.steamIntegrationMissing');
-    return steamIntegrationEnabled
-      ? t('settings.api.steamIntegrationEnabled')
-      : t('settings.api.steamIntegrationDisabled');
-  }, [isSteamMissing, steamIntegrationEnabled, t]);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -315,30 +333,30 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
 
         const nextProfiles: ConnectionProfile[] = [];
 
+        const steamDisplayName = steamProfile?.personaName || steamProfile?.accountName || 'Steam';
         if (steamProfile) {
-          const displayName = steamProfile.personaName || steamProfile.accountName || 'Steam';
-          nextProfiles.push({
-            id: 'steam-main',
-            kind: 'steam',
-            displayName,
-            avatarInitials: displayName.slice(0, 2).toUpperCase(),
-            avatarUrl: steamProfile.avatarUrl,
-          });
           setSubAccounts(steamProfile.subAccounts ?? []);
         } else {
           setSubAccounts([]);
         }
+        nextProfiles.push({
+          id: 'steam-main',
+          kind: 'steam',
+          displayName: steamDisplayName,
+          avatarInitials: steamProfile ? steamDisplayName.slice(0, 2).toUpperCase() : 'ST',
+          avatarUrl: steamProfile?.avatarUrl,
+          available: !!steamProfile,
+        });
 
-        if (hydraProfile) {
-          const displayName = hydraProfile.displayName || 'Hydra';
-          nextProfiles.push({
-            id: 'hydra-default',
-            kind: 'hydra',
-            displayName,
-            avatarInitials: displayName.slice(0, 2).toUpperCase(),
-            avatarUrl: hydraProfile.profileImageUrl,
-          });
-        }
+        const hydraDisplayName = hydraProfile?.displayName || 'Hydra';
+        nextProfiles.push({
+          id: 'hydra-default',
+          kind: 'hydra',
+          displayName: hydraDisplayName,
+          avatarInitials: hydraProfile ? hydraDisplayName.slice(0, 2).toUpperCase() : 'HY',
+          avatarUrl: hydraProfile?.profileImageUrl,
+          available: !!hydraProfile,
+        });
 
         const retroDisplayName = retroProfile?.displayName || retroProfile?.username || 'RetroAchievements';
         nextProfiles.push({
@@ -347,6 +365,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
           displayName: retroDisplayName,
           avatarInitials: 'RA',
           avatarUrl: retroProfile?.avatarUrl,
+          available: true,
         });
         if (retroProfile) setRetroStatus(null);
 
@@ -454,22 +473,18 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
         </div>
 
         <div className="space-y-2">
-          {profiles.length === 0 && (
-            <SettingsPanel>
-              <p className="px-4 py-4 text-sm text-muted-foreground">
-                Nenhuma conexão local encontrada.
-              </p>
-            </SettingsPanel>
-          )}
-
           {profiles.map(profile => (
             <AccordionCard
               key={profile.id}
               expanded={expandedCard === profile.id}
               onToggle={() => setExpandedCard(expandedCard === profile.id ? null : profile.id)}
+              className={!profile.available ? 'opacity-70' : undefined}
               header={
                 <>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-bold text-muted-foreground ring-1 ring-border">
+                  <div className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-bold text-muted-foreground ring-1 ring-border',
+                    !profile.available && 'grayscale'
+                  )}>
                     {profile.avatarUrl ? (
                       <img
                         key={profile.avatarUrl}
@@ -487,6 +502,11 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <span className="shrink-0 text-muted-foreground">{getServiceIcon(profile.kind)}</span>
                     <span className="truncate text-sm font-medium">{profile.displayName}</span>
+                    {!profile.available && (
+                      <Badge variant="secondary" className="shrink-0 text-xs">
+                        {t('settings.connections.unavailable')}
+                      </Badge>
+                    )}
                     {profile.kind === 'steam' && subAccounts.length > 0 && (
                       <Badge variant="secondary" className="shrink-0 text-xs">
                         +{subAccounts.length}
@@ -496,6 +516,21 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                 </>
               }
             >
+              {!profile.available && (
+                <div className="rounded-md border border-border bg-muted/40 p-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs font-semibold text-foreground">
+                      {t('settings.connections.unavailable')}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-[11px] font-medium leading-relaxed text-muted-foreground">
+                    {profile.kind === 'steam'
+                      ? t('settings.connections.steamUnavailableHint')
+                      : t('settings.connections.hydraUnavailableHint')}
+                  </p>
+                </div>
+              )}
               {profile.kind === 'steam' ? (
                 <div className="space-y-2">
                   {subAccounts.length > 0 && (
