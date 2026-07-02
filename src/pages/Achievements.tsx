@@ -636,13 +636,8 @@ const AchievementsContent: React.FC<AchievementsContentProps> = ({
   if (!game) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center select-none pointer-events-none">
-        <TrophyIcon className="text-6xl mb-6 text-foreground opacity-15" />
-        <h1 className="text-xl font-semibold text-foreground opacity-35">
-          {t("achievementsPage.title")}
-        </h1>
-        <p className="text-[11px] font-bold tracking-wide mt-2 text-muted-foreground opacity-70">
-          {t("achievementsPage.selectGamePrompt")}
-        </p>
+        <TrophyIcon className="text-5xl text-muted-foreground/20 mb-4" />
+        <h2 className="text-sm font-semibold text-foreground/50">{t("achievementsPage.title")}</h2>
       </div>
     );
   }

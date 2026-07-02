@@ -394,13 +394,8 @@ export const SearchContent: React.FC<SearchContentProps> = ({ onGameSelect }) =>
 
         {!isLoading && !error && !hasSearched && (
           <div className="h-full flex flex-col items-center justify-center text-center select-none pointer-events-none">
-            <SearchIcon className="text-8xl mb-6 text-foreground opacity-15" />
-            <h2 className="text-xl font-black tracking-wide text-foreground opacity-35">
-              {t('searchPage.initialStateTitle')}
-            </h2>
-            <p className="text-[11px] font-bold tracking-wide mt-2 text-muted-foreground opacity-70">
-              Search across Steam, Hydra, and RetroAchievements
-            </p>
+            <SearchIcon className="text-5xl text-muted-foreground/20 mb-4" />
+            <h2 className="text-sm font-semibold text-foreground/50">{t('searchPage.initialStateTitle')}</h2>
           </div>
         )}
       </div>
