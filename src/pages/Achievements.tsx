@@ -32,6 +32,7 @@ import {
 } from "../tauri-api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Search as SearchIconLucide } from "lucide-react";
 import {
   dateToTimestamp,
@@ -161,9 +162,9 @@ const AchievementCard: React.FC<{
             className={`w-14 h-14 rounded-md object-cover ring-1 ring-white/10 shadow-lg transition-all duration-500 ${!isCompleted ? "grayscale opacity-40 brightness-75" : ""}`}
           />
           {showUnlockRateBar && achievement.percent !== undefined && achievement.percent > 0 && (
-            <span className={`absolute -bottom-1 -right-1 text-[8px] font-bold tabular-nums px-1 rounded-sm bg-background/90 border border-border/50 ${achievement.percent < 10 ? "text-amber-400" : "text-muted-foreground"}`}>
+            <Badge variant="outline" className={`absolute -bottom-1 -right-1 h-4 px-1 text-[8px] font-bold tabular-nums rounded-sm border-border/50 bg-background/90 ${achievement.percent < 10 ? "text-amber-400" : "text-muted-foreground"}`}>
               {achievement.percent.toFixed(1)}%
-            </span>
+            </Badge>
           )}
         </div>
         <div className="flex-grow min-w-0">
