@@ -404,7 +404,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent showCloseButton={false} className="w-[min(94vw,960px)] max-w-none aspect-[16/9] max-h-[82vh] min-h-[500px] overflow-hidden p-0 bg-background">
+      <DialogContent showCloseButton={false} className="w-[94vw] max-w-[960px] sm:max-w-[960px] aspect-[16/9] max-h-[82vh] min-h-[500px] overflow-hidden p-0 bg-background">
         <DialogTitle className="sr-only">{t('unlockModal.title')}</DialogTitle>
         <DialogClose
           render={
