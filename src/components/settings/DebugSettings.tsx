@@ -4,6 +4,13 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useI18n } from "../../contexts/I18nContext";
 import TestResultsModal from "../TestResultsModal";
 import { saveSettings } from "../../tauri-api";
+import {
+  SettingsPage,
+  SettingsPanel,
+  SettingsToggleRow,
+  SettingsActionRow,
+} from "./shared";
+import { Loader2 } from "lucide-react";
 
 interface DebugSettingsProps {
   forceFrontendFetch: boolean;
@@ -17,12 +24,14 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
   const { t } = useI18n();
   const [isTestRunning, setIsTestRunning] = useState(false);
   const [isRestartingWizard, setIsRestartingWizard] = useState(false);
-  const [testResults, setTestResults] = useState<any>(null);
+  const [testResults, setTestResults] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openDevTools = async () => {
     try {
-      if ((window as any).electronAPI) {
+      if ((window as Window & { electronAPI?: unknown }).electronAPI) {
         await invoke("open_devtools");
       }
     } catch (error) {
@@ -57,12 +66,10 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
       },
     };
 
-    const testGameId = "413150"; // Stardew Valley
+    const testGameId = "413150";
 
     try {
-      // BACKEND TESTS
-      if ((window as any).electronAPI) {
-        // Test Steam Backend
+      if ((window as Window & { electronAPI?: unknown }).electronAPI) {
         const startSteam = performance.now();
         try {
           await invoke("get_game_name", { gameId: testGameId });
@@ -71,15 +78,14 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
             message: "Successfully fetched game details",
             time: Math.round(performance.now() - startSteam),
           };
-        } catch (e: any) {
+        } catch (e: unknown) {
           results.steam.backend = {
             success: false,
-            message: e.toString(),
+            message: String(e),
             time: Math.round(performance.now() - startSteam),
           };
         }
 
-        // Test Hydra Backend
         const startHydra = performance.now();
         try {
           await invoke("get_game_achievements", { gameId: testGameId });
@@ -88,33 +94,22 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
             message: "Successfully fetched achievements",
             time: Math.round(performance.now() - startHydra),
           };
-        } catch (e: any) {
+        } catch (e: unknown) {
           results.hydra.backend = {
             success: false,
-            message: e.toString(),
+            message: String(e),
             time: Math.round(performance.now() - startHydra),
           };
         }
       } else {
-        results.steam.backend = {
-          success: false,
-          message: "Backend not available in browser mode",
-          time: 0,
-        };
-        results.hydra.backend = {
-          success: false,
-          message: "Backend not available in browser mode",
-          time: 0,
-        };
+        results.steam.backend.message = "Backend not available in browser mode";
+        results.hydra.backend.message = "Backend not available in browser mode";
       }
 
-      // FRONTEND TESTS (Using Tauri HTTP plugin to bypass CORS)
-      // Test Steam Frontend
       const startSteamFront = performance.now();
       try {
         const url = `${import.meta.env.VITE_STEAM_STORE_API_URL || "https://store.steampowered.com/api"}/appdetails?appids=${testGameId}`;
         const response = await tauriFetch(url, { method: "GET" });
-
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         if (data[testGameId]?.success) {
@@ -126,20 +121,18 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
         } else {
           throw new Error("Invalid response structure");
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         results.steam.frontend = {
           success: false,
-          message: e.toString(),
+          message: String(e),
           time: Math.round(performance.now() - startSteamFront),
         };
       }
 
-      // Test Hydra Frontend
       const startHydraFront = performance.now();
       try {
         const hydraUrl = `${import.meta.env.VITE_HYDRA_API_URL || "https://hydra-api-us-east-1.losbroxas.org"}/games/achievements?shop=steam&objectId=${testGameId}`;
         const response = await tauriFetch(hydraUrl, { method: "GET" });
-
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         await response.json();
         results.hydra.frontend = {
@@ -147,10 +140,10 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
           message: "Successfully fetched via Tauri HTTP",
           time: Math.round(performance.now() - startHydraFront),
         };
-      } catch (e: any) {
+      } catch (e: unknown) {
         results.hydra.frontend = {
           success: false,
-          message: e.toString(),
+          message: String(e),
           time: Math.round(performance.now() - startHydraFront),
         };
       }
@@ -165,112 +158,53 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
   };
 
   return (
-    <div className="space-y-1">
+    <SettingsPage
+      title="Debug"
+      description="Developer tools and debug configurations."
+    >
       <TestResultsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         results={testResults}
       />
 
-      <div className="pt-2 pb-8 border-b border-border">
-        <div className="flex-1 mb-6">
-          <h4 className="text-sm font-semibold mb-1.5 text-foreground">
-            Debug Settings
-          </h4>
-          <p className="text-xs font-medium leading-relaxed w-full opacity-70 text-muted-foreground">
-            Developer tools and debug configurations.
-          </p>
-        </div>
+      <SettingsPanel>
+        <SettingsActionRow
+          label="Connection Tests"
+          description="Run connectivity tests against Steam and Hydra APIs (frontend vs backend)."
+          actionLabel={isTestRunning ? "Testing…" : "Run Tests"}
+          onAction={runConnectionTests}
+          disabled={isTestRunning}
+          icon={
+            isTestRunning ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : undefined
+          }
+        />
 
-        <div className="flex flex-col gap-6">
-          {/* Connection Tests */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
-                Connection Tests
-              </h4>
-              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
-                Run connectivity tests against Steam and Hydra APIs (Frontend vs
-                Backend).
-              </p>
-            </div>
+        <SettingsToggleRow
+          label={t("settings.api.forceFrontendFetch")}
+          description={t("settings.api.forceFrontendFetchDescription")}
+          checked={forceFrontendFetch}
+          onCheckedChange={setForceFrontendFetch}
+        />
 
-            <button
-              onClick={runConnectionTests}
-              disabled={isTestRunning}
-              className={`h-9 px-4 rounded-md text-[10px] font-semibold transition-all duration-300 border border-border flex items-center gap-2 text-foreground ${isTestRunning ? "opacity-50 cursor-wait" : "hover:bg-accent"}`}
-            >
-              {isTestRunning ? (
-                <>
-                  <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin border-muted-foreground border-t-foreground" />
-                  <span>Testing...</span>
-                </>
-              ) : (
-                <span>Run Tests</span>
-              )}
-            </button>
-          </div>
+        <SettingsActionRow
+          label="DevTools"
+          description="Open the application developer tools."
+          actionLabel="Open"
+          onAction={openDevTools}
+        />
 
-          {/* Force Frontend Fetch */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
-                {t("settings.api.forceFrontendFetch")}
-              </h4>
-              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
-                {t("settings.api.forceFrontendFetchDescription")}
-              </p>
-            </div>
-
-            <button
-              onClick={() => setForceFrontendFetch(!forceFrontendFetch)}
-              className={`relative w-14 h-7 rounded-full transition-all duration-300 mt-1 shrink-0 cursor-pointer ${forceFrontendFetch ? "bg-foreground" : "bg-border"}`}
-            >
-              <div className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-background transition-all duration-300 ${forceFrontendFetch ? "translate-x-7" : "translate-x-0"}`} />
-            </button>
-          </div>
-
-          {/* Open DevTools */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
-                DevTools
-              </h4>
-              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
-                Open the application developer tools.
-              </p>
-            </div>
-
-            <button
-              onClick={openDevTools}
-              className="h-9 px-4 rounded-md text-[10px] font-semibold transition-all duration-300 border border-border text-foreground hover:bg-accent"
-            >
-              Open
-            </button>
-          </div>
-
-          {/* Restart Wizard */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1.5 text-foreground">
-                Onboarding Wizard
-              </h4>
-              <p className="text-xs font-medium leading-relaxed w-full text-muted-foreground">
-                Reopen the initial setup wizard on next launch.
-              </p>
-            </div>
-
-            <button
-              onClick={restartOnboardingWizard}
-              disabled={isRestartingWizard}
-              className="h-9 px-4 rounded-md text-[10px] font-semibold transition-all duration-300 border border-border text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-wait"
-            >
-              {isRestartingWizard ? "Restarting..." : "Run Wizard"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <SettingsActionRow
+          label="Onboarding Wizard"
+          description="Reopen the initial setup wizard on next launch."
+          actionLabel={isRestartingWizard ? "Restarting…" : "Run Wizard"}
+          onAction={restartOnboardingWizard}
+          disabled={isRestartingWizard}
+        />
+      </SettingsPanel>
+    </SettingsPage>
   );
 };
 

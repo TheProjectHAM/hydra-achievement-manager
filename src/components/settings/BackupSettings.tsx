@@ -14,6 +14,13 @@ import { useI18n } from "../../contexts/I18nContext";
 import { getSteamLogoFallbackUrls, getSteamLogoUrl } from "@/lib/steam-assets";
 import { Archive, CheckCircle2, FileUp, RefreshCw, RotateCcw, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  SettingsPage,
+  SettingsPanel,
+  SettingsSection,
+  SettingsToggleRow,
+} from "./shared";
 
 type ConflictStrategy = "backup" | "current" | "cancel";
 type SettingsStrategy = "backup" | "current" | "merge";
@@ -60,34 +67,6 @@ interface RestoreSettingsPreview {
   conflictingKeys: number;
   missingKeys: number;
 }
-
-const ToggleRow: React.FC<{
-  label: string;
-  description?: string;
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-}> = ({ label, description, enabled, onChange }) => (
-  <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 p-3">
-    <div className="min-w-0">
-      <p className="text-xs font-semibold text-foreground">
-        {label}
-      </p>
-      {description && (
-        <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      )}
-    </div>
-    <button
-      onClick={() => onChange(!enabled)}
-      className={`relative h-6 w-11 rounded-full p-1 transition-all duration-300 ${enabled ? "bg-foreground" : "bg-accent"}`}
-      aria-label={label}
-      aria-pressed={enabled}
-    >
-      <div className={`w-4 h-4 rounded-full bg-background transition-all duration-300 shadow-sm ${enabled ? "translate-x-5" : "translate-x-0"}`} />
-    </button>
-  </div>
-);
 
 const ThemedCheckbox: React.FC<{
   checked: boolean;
@@ -657,10 +636,13 @@ const BackupSettings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3 animate-modal-in">
+    <SettingsPage
+      title={t("settings.backup.tab")}
+      description={t("settings.backup.createSection")}
+    >
       {successMessage && (
-        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-3 text-[11px] font-semibold text-foreground">
-          <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
+        <div className="flex items-center gap-2 rounded-xl bg-card px-4 py-3 text-sm font-medium text-foreground ring-1 ring-foreground/10">
+          <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           {successMessage}
         </div>
       )}
@@ -691,11 +673,11 @@ const BackupSettings: React.FC = () => {
       >
         <div className="space-y-3">
 
-        <ToggleRow
+        <SettingsToggleRow
           label={t("settings.backup.includeSettings")}
           description={t("settings.backup.includeSettingsDesc")}
-          enabled={includeSettingsInBackup}
-          onChange={setIncludeSettingsInBackup}
+          checked={includeSettingsInBackup}
+          onCheckedChange={setIncludeSettingsInBackup}
         />
 
         <div className="flex items-center justify-between gap-3">
@@ -921,7 +903,7 @@ const BackupSettings: React.FC = () => {
         )}
         </div>
       </SectionCard>
-    </div>
+    </SettingsPage>
   );
 };
 

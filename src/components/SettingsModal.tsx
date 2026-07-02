@@ -478,20 +478,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
     tabs.push({ id: "debug", icon: <BugIcon />, label: "Debug" });
   }
 
-  const tabGroups = [
-    {
-      label: t("settings.categories.general"),
-      items: tabs.filter((tab) => ["language", "appearance"].includes(tab.id)),
-    },
-    {
-      label: t("settings.categories.integrations"),
-      items: tabs.filter((tab) => ["api", "connections", "monitored", "backup"].includes(tab.id)),
-    },
-    {
-      label: t("settings.categories.system"),
-      items: tabs.filter((tab) => ["updates", "about", "debug"].includes(tab.id)),
-    },
-  ].filter((group) => group.items.length > 0);
 
   const renderContent = () => {
     switch (activeSubTab) {
@@ -599,52 +585,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onNotify
           <DialogDescription>Application preferences</DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-full w-full overflow-hidden rounded-lg bg-background text-muted-foreground">
-          {/* Sidebar Navigation */}
-          <aside className="flex w-72 flex-col bg-sidebar-background p-3 text-sidebar-foreground">
-            <nav className="flex-1 space-y-4">
-              {tabGroups.map((group) => (
-                <div key={group.label} className="space-y-1">
-                  <p className="px-2 pb-1 text-[10px] font-semibold tracking-wide text-sidebar-foreground/45">
-                    {group.label}
-                  </p>
-                  {group.items.map((tab) => {
-                    const isActive = activeSubTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveSubTab(tab.id as SubTabId)}
-                        className={`group relative flex h-10 w-full items-center gap-3 rounded-md px-3 text-left transition-colors duration-200 ${isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                          }`}
-                      >
-                        <span className={`grid h-6 w-6 place-items-center text-lg transition-colors ${isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/55 group-hover:text-sidebar-accent-foreground"}`}>
-                          {tab.icon}
-                        </span>
-                        <span className="truncate text-[11px] font-semibold">
-                          {tab.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
+        <div className="flex h-full w-full overflow-hidden rounded-lg bg-background">
+          <aside className="flex w-72 shrink-0 flex-col bg-sidebar-background">
+            <nav className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+              <div className="space-y-1">
+                {tabs.map((tab) => {
+                  const isActive = activeSubTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveSubTab(tab.id as SubTabId)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[0.95rem] transition-colors ${
+                        isActive
+                          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                      }` }
+                    >
+                      <span className="grid h-6 w-6 shrink-0 place-items-center text-lg opacity-80">
+                        {tab.icon}
+                      </span>
+                      <span className="truncate">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </nav>
           </aside>
 
-          {/* Content Area */}
-          <main className="flex-1 flex flex-col overflow-hidden relative">
-            <div className="flex-1 overflow-y-auto px-12 pt-10 custom-scrollbar">
-              <div className="w-full space-y-2 pb-20">{renderContent()}</div>
+          <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+            <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar">
+              {renderContent()}
             </div>
-
-            <div
-              className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-              style={{
-                background: `linear-gradient(to top, var(--background), transparent)`,
-              }}
-            />
           </main>
         </div>
       </DialogContent>

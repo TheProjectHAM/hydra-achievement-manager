@@ -6,8 +6,17 @@ import { ApiSource } from '../../types';
 import { getGameNames } from '../../tauri-api';
 import { getAppPlatform } from '@/lib/platform';
 import { getSteamLogoFallbackUrl } from '@/lib/steam-assets';
-import { AlertCircle, CheckCircle2, ChevronDown, Database, FolderOpen, Plus, RefreshCw, Settings2 } from 'lucide-react';
+import { ChevronDown, FolderOpen, Plus, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Button,
+  SettingsActionRow,
+  SettingsPage,
+  SettingsPanel,
+  SettingsSection,
+  StatusBadge,
+  Switch,
+} from './shared';
 
 interface DirectoryConfig {
     path: string;
@@ -46,80 +55,6 @@ interface DirectoryGroup {
     imageUrl?: string;
     custom: boolean;
 }
-
-const StatusPill: React.FC<{ active: boolean; activeLabel: string; inactiveLabel: string }> = ({ active, activeLabel, inactiveLabel }) => (
-    <span className={cn(
-        'inline-flex h-5 items-center gap-1 rounded-md border px-1.5 text-[9px] font-semibold',
-        active ? 'border-border bg-accent text-foreground' : 'border-border bg-background text-muted-foreground',
-    )}>
-        {active ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
-        {active ? activeLabel : inactiveLabel}
-    </span>
-);
-
-const SectionCard: React.FC<{
-    icon: React.ReactNode;
-    title: string;
-    description?: string;
-    badge?: React.ReactNode;
-    action?: React.ReactNode;
-    children: React.ReactNode;
-}> = ({ icon, title, description, badge, action, children }) => (
-    <section className="overflow-hidden rounded-xl border border-border bg-card/60">
-        <div className="flex items-center justify-between gap-3 p-3">
-            <div className="flex min-w-0 items-center gap-3">
-                <div className="flex flex-shrink-0 items-center justify-center text-muted-foreground">
-                    {icon}
-                </div>
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium text-foreground">{title}</p>
-                        {badge}
-                    </div>
-                    {description && <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{description}</p>}
-                </div>
-            </div>
-            {action && <div className="flex-shrink-0">{action}</div>}
-        </div>
-        <div className="border-t border-border p-3">
-            {children}
-        </div>
-    </section>
-);
-
-const InlineSettingsRow: React.FC<{
-    icon: React.ReactNode;
-    title: string;
-    description?: string;
-    detail?: React.ReactNode;
-    action: React.ReactNode;
-}> = ({ icon, title, description, detail, action }) => (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 p-3">
-        <div className="flex min-w-0 items-center gap-3">
-            <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
-            <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-foreground">{title}</p>
-                {description && <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{description}</p>}
-                {detail}
-            </div>
-        </div>
-        <div className="flex-shrink-0">{action}</div>
-    </div>
-);
-
-const ToggleSwitch: React.FC<{ checked: boolean; disabled?: boolean; onClick: () => void; title?: string }> = ({ checked, disabled = false, onClick, title }) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        className={cn(
-            'relative h-5 w-9 rounded-full transition-all duration-300',
-            disabled ? 'cursor-not-allowed bg-muted opacity-50' : checked ? 'bg-foreground' : 'bg-accent',
-        )}
-        title={title}
-    >
-        <div className={cn('absolute top-1 h-3 w-3 rounded-full bg-background shadow-sm transition-all duration-300', checked ? 'left-[22px]' : 'left-1')} />
-    </button>
-);
 
 const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     selectedApi,
@@ -371,58 +306,42 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
     };
 
     return (
-        <div className="space-y-3 animate-modal-in">
-            <div className="flex flex-col gap-2">
-                <h4 className="text-sm font-semibold text-foreground">
-                    {t('settings.monitored.title')}
-                </h4>
-                <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                    {t('settings.monitored.description')}
-                </p>
-            </div>
-
-            <InlineSettingsRow
-                icon={<Database className="h-4 w-4" />}
-                title={t('settings.monitored.appCacheTitle')}
-                description={t('settings.monitored.appCacheDescription')}
-                detail={<p className="mt-1 text-[10px] font-semibold text-muted-foreground">{t('settings.monitored.currentSize')}: {cacheSize}</p>}
-                action={
-                    <button
-                        onClick={handleClearCache}
-                        disabled={clearingCache}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-accent px-3 text-[10px] font-semibold text-foreground disabled:opacity-60"
-                    >
-                        <RefreshCw className={cn('h-3 w-3', clearingCache && 'animate-spin')} />
-                        {clearingCache ? t('settings.monitored.clearingCache') : t('settings.monitored.clearCache')}
-                    </button>
-                }
-            />
+        <SettingsPage
+            title={t('settings.monitored.title')}
+            description={t('settings.monitored.description')}
+        >
+            <SettingsPanel>
+                <SettingsActionRow
+                    label={t('settings.monitored.appCacheTitle')}
+                    description={`${t('settings.monitored.appCacheDescription')} · ${t('settings.monitored.currentSize')}: ${cacheSize}`}
+                    actionLabel={clearingCache ? t('settings.monitored.clearingCache') : t('settings.monitored.clearCache')}
+                    onAction={handleClearCache}
+                    disabled={clearingCache}
+                    loading={clearingCache}
+                    icon={<RefreshCw className={cn('h-3.5 w-3.5', clearingCache && 'animate-spin')} />}
+                />
+            </SettingsPanel>
 
             {isLinux && (
-                <div className="rounded-md border border-border bg-muted/50 p-3">
-                    <div className="mb-3 flex min-w-0 items-center gap-3">
-                        <Settings2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold text-foreground">{t('settings.monitored.winePrefixTitle')}</p>
-                            <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground">{t('settings.monitored.winePrefixDescription')}</p>
+                <SettingsSection title={t('settings.monitored.winePrefixTitle')}>
+                    <SettingsPanel>
+                        <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row">
+                            <input
+                                value={winePrefixPath}
+                                onChange={(e) => setWinePrefixPath(e.target.value)}
+                                placeholder={t('settings.monitored.winePrefixPlaceholder')}
+                                className="h-9 flex-1 rounded-lg border border-input bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground"
+                            />
+                            <Button
+                                onClick={handleSaveWinePrefix}
+                                disabled={isSavingWinePrefix || !winePrefixPath.trim()}
+                                size="sm"
+                            >
+                                {isSavingWinePrefix ? t('settings.monitored.savingPrefix') : t('settings.monitored.savePrefix')}
+                            </Button>
                         </div>
-                    </div>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                        <input
-                            value={winePrefixPath}
-                            onChange={(e) => setWinePrefixPath(e.target.value)}
-                            placeholder={t('settings.monitored.winePrefixPlaceholder')}
-                            className="h-10 flex-1 rounded-md border border-border bg-background px-3 text-xs font-semibold text-foreground placeholder:text-muted-foreground"
-                        />
-                        <button
-                            onClick={handleSaveWinePrefix}
-                            disabled={isSavingWinePrefix || !winePrefixPath.trim()}
-                            className="h-10 rounded-md border border-border bg-accent px-4 text-[10px] font-semibold text-foreground transition-all disabled:opacity-50"
-                        >
-                            {isSavingWinePrefix ? t('settings.monitored.savingPrefix') : t('settings.monitored.savePrefix')}
-                        </button>
-                    </div>
-                </div>
+                    </SettingsPanel>
+                </SettingsSection>
             )}
 
             <section className="overflow-hidden rounded-xl border border-border bg-card/60">
@@ -491,7 +410,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                     <p className="text-xs font-semibold truncate text-foreground">{t('settings.monitored.steamLabel')}</p>
-                                    <StatusPill active activeLabel={t('settings.monitored.defaultBadge')} inactiveLabel="" />
+                                    <StatusBadge>{t('settings.monitored.defaultBadge')}</StatusBadge>
                                 </div>
                                 <p className="truncate text-[10px] font-medium text-muted-foreground">{formatUsersForDisplay(steamDirectory.path)}</p>
                             </div>
@@ -500,11 +419,11 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                             <p className="text-[10px] font-semibold text-muted-foreground">
                                  {steamGamesFound} {t('settings.monitored.gamesLabel')}
                             </p>
-                            <ToggleSwitch
+                            <Switch
+                                size="sm"
                                 checked={steamIntegrationEnabled}
-                                onClick={() => setSteamIntegrationEnabled(!steamIntegrationEnabled)}
                                 disabled={selectedApi !== 'steam' || isSteamMissing}
-                                title={steamIntegrationEnabled ? t('settings.api.steamIntegrationDisable') : t('settings.api.steamIntegrationEnable')}
+                                onCheckedChange={setSteamIntegrationEnabled}
                             />
                         </div>
                     </div>
@@ -562,10 +481,10 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <p className="text-xs font-semibold truncate text-foreground">{group.title}</p>
                                                 {group.gameId && (
-                                                     <StatusPill active activeLabel={t('settings.monitored.gameBadge')} inactiveLabel="" />
+                                                     <StatusBadge>{t('settings.monitored.gameBadge')}</StatusBadge>
                                                 )}
                                                 {!group.custom && (
-                                                     <StatusPill active activeLabel={t('settings.monitored.defaultBadge')} inactiveLabel="" />
+                                                     <StatusBadge>{t('settings.monitored.defaultBadge')}</StatusBadge>
                                                 )}
                                             </div>
                                              <p className="truncate text-[10px] font-medium text-muted-foreground">{group.subtitle}</p>
@@ -601,10 +520,10 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                                                 </div>
 
                                                 <div className="flex items-center gap-3 flex-shrink-0">
-                                                    <ToggleSwitch
+                                                    <Switch
+                                                        size="sm"
                                                         checked={dir.enabled}
-                                                        onClick={() => handleToggleDirectory(dir.path)}
-                                                        title={dir.enabled ? t('settings.monitored.disableMonitoring') : t('settings.monitored.enableMonitoring')}
+                                                        onCheckedChange={() => handleToggleDirectory(dir.path)}
                                                     />
 
                                                     {!dir.is_default && (
@@ -705,7 +624,7 @@ const MonitoredSettings: React.FC<MonitoredSettingsProps> = ({
                 )}
             </div>
             </section>
-        </div >
+        </SettingsPage>
     );
 };
 
