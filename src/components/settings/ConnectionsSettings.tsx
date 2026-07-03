@@ -427,6 +427,12 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
       return;
     }
 
+    // Skip validation if credentials are already saved and unchanged
+    if (username === savedRetroUsername && apiKey === savedRetroApiKey) {
+      lastRetroValidationKeyRef.current = validationKey;
+      return;
+    }
+
     const runId = retroValidationRunRef.current + 1;
     retroValidationRunRef.current = runId;
     setRetroStatus('Validating RetroAchievements credentials...');

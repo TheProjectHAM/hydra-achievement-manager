@@ -264,8 +264,14 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
             setSteamIntegrationEnabled(loadedSettings.steamIntegrationEnabled);
           }
           if (loadedSettings?.steamAchievementSource) {
-            setSteamAchievementSource(loadedSettings.steamAchievementSource === 'api' ? 'steamapi' : loadedSettings.steamAchievementSource);
-            setSteamGameAchievements({});
+            const newSource = loadedSettings.steamAchievementSource === 'api' ? 'steamapi' : loadedSettings.steamAchievementSource;
+            setSteamAchievementSource(prev => {
+              if (prev !== newSource) {
+                setSteamGameAchievements({});
+                return newSource;
+              }
+              return prev;
+            });
           }
         }
       } catch (error) {
