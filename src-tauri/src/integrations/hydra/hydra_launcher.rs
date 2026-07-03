@@ -3,9 +3,9 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub fn get_hydra_profile() -> Result<Option<HydraConnectionProfile>, String> {
+pub fn get_hydra_profile(custom_path: Option<&str>) -> Result<Option<HydraConnectionProfile>, String> {
     let db_path =
-        hydra_db_path().ok_or_else(|| "Could not resolve Hydra database path".to_string())?;
+        hydra_db_path(custom_path).ok_or_else(|| "Could not resolve Hydra database path".to_string())?;
 
     if !db_path.exists() {
         return Ok(None);
@@ -33,7 +33,13 @@ pub fn get_hydra_profile() -> Result<Option<HydraConnectionProfile>, String> {
     Ok(None)
 }
 
-fn hydra_db_path() -> Option<PathBuf> {
+fn hydra_db_path(custom_path: Option<&str>) -> Option<PathBuf> {
+    if let Some(path) = custom_path {
+        let trimmed = path.trim();
+        if !trimmed.is_empty() {
+            return Some(crate::parser::expand_path(trimmed));
+        }
+    }
     dirs::config_dir().map(|dir| dir.join("hydralauncher").join("hydra-db"))
 }
 

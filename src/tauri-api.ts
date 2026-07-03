@@ -523,6 +523,9 @@ export interface HydraConnectionProfile {
 export const getHydraConnectionProfile = () =>
   invoke<HydraConnectionProfile | null>("get_hydra_connection_profile");
 
+export const getHydraDbPath = () =>
+  invoke<string>("get_hydra_db_path");
+
 export interface SteamConnectionProfile {
   steamId64: string;
   accountId: number;

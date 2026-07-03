@@ -14,7 +14,7 @@ import {
   SettingsSection,
   Switch,
 } from './shared';
-import { getHydraConnectionProfile, getRetroAchievementsConnectionProfile, getSteamConnectionProfile, loadSettings, loginRetroAchievementsRuntimeWithPassword, loginRetroAchievementsWebSession, testRetroAchievementsConnection } from '../../tauri-api';
+import { getHydraConnectionProfile, getHydraDbPath, getRetroAchievementsConnectionProfile, getSteamConnectionProfile, loadSettings, loginRetroAchievementsRuntimeWithPassword, loginRetroAchievementsWebSession, saveSettings, testRetroAchievementsConnection } from '../../tauri-api';
 import { SteamAchievementSource } from '../../types';
 
 type ConnectionKind = 'steam' | 'hydra' | 'retroachievements';
@@ -110,6 +110,9 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
   const [savedRetroUsername, setSavedRetroUsername] = useState('');
   const [savedRetroApiKey, setSavedRetroApiKey] = useState('');
   const [savedRetroPassword, setSavedRetroPassword] = useState('');
+  const [hydraDbPath, setHydraDbPath] = useState('');
+  const [hydraDefaultPath, setHydraDefaultPath] = useState('');
+  const [isHydraSelecting, setIsHydraSelecting] = useState(false);
   const lastSteamMissingReasonRef = useRef<string | null>(null);
   const lastRetroValidationKeyRef = useRef<string | null>(null);
   const retroValidationRunRef = useRef(0);
@@ -331,6 +334,10 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
         const retroProfile = retroResult.status === 'fulfilled' ? retroResult.value : null;
         const steamProfile = steamResult.status === 'fulfilled' ? steamResult.value : null;
 
+        getHydraDbPath()
+          .then(path => { if (!cancelled) setHydraDefaultPath(path); })
+          .catch(() => {});
+
         const nextProfiles: ConnectionProfile[] = [];
 
         const steamDisplayName = steamProfile?.personaName || steamProfile?.accountName || 'Steam';
@@ -389,6 +396,7 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
         setSavedRetroUsername(settings?.retroAchievementsUsername || '');
         setSavedRetroApiKey(settings?.retroAchievementsApiKey || '');
         setSavedRetroPassword(settings?.retroAchievementsPassword || '');
+        setHydraDbPath(settings?.hydraDbPath || '');
         setHasRetroRuntimeToken(!!settings?.retroAchievementsRuntimeToken);
         setRetroWebCookie(settings?.retroAchievementsWebCookie || '');
         setRetroDisclaimerAccepted(!!settings?.retroAchievementsDisclaimerAccepted);
@@ -946,9 +954,62 @@ const ConnectionsSettings: React.FC<ConnectionsSettingsProps> = ({
                   </>}
                 </div>
               ) : (
-                <p className="text-xs font-medium text-muted-foreground">
-                  Nenhuma configuração disponível para o Hydra por enquanto.
-                </p>
+                <div className="space-y-2">
+                  <InlineFieldRow
+                    label={t('settings.connections.hydraDbPathTitle')}
+                    description={hydraDefaultPath || '--'}
+                    trailing={
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          value={hydraDbPath}
+                          onChange={async (event) => {
+                            const value = event.target.value;
+                            setHydraDbPath(value);
+                            await saveSettings({ hydraDbPath: value });
+                            window.dispatchEvent(new Event('settings-saved'));
+                          }}
+                          className="h-8 w-52 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                          placeholder={hydraDefaultPath || '~/.config/hydralauncher/hydra-db'}
+                        />
+                        <button
+                          onClick={async () => {
+                            setIsHydraSelecting(true);
+                            try {
+                              const selected = await invoke<string | null>('pick_folder');
+                              if (selected) {
+                                setHydraDbPath(selected);
+                                await saveSettings({ hydraDbPath: selected });
+                                window.dispatchEvent(new Event('settings-saved'));
+                              }
+                            } catch (error) {
+                              console.error('Failed to pick folder:', error);
+                            } finally {
+                              setIsHydraSelecting(false);
+                            }
+                          }}
+                          disabled={isHydraSelecting}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-accent text-foreground disabled:opacity-60"
+                          title={t('settings.connections.hydraSelectFolder')}
+                        >
+                          {isHydraSelecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
+                        </button>
+                        {hydraDbPath && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setHydraDbPath('');
+                              await saveSettings({ hydraDbPath: '' });
+                              window.dispatchEvent(new Event('settings-saved'));
+                            }}
+                            className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-accent px-2.5 text-[10px] font-semibold text-foreground"
+                          >
+                            {t('settings.connections.hydraResetDefault')}
+                          </button>
+                        )}
+                      </div>
+                    }
+                  />
+                </div>
               )}
             </AccordionCard>
           ))}
