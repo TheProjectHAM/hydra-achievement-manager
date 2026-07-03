@@ -19,7 +19,7 @@ import { awardRetroAchievement, deleteRetroAchievementUnlock, unlockAchievements
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import packageJson from '../package.json';
+import { version as appVersion, versionDateTag as appVersionDateTag } from '../src-tauri/version.json';
 import {
   convertTimestampTimeFormat,
   dateToTimestamp,
@@ -118,8 +118,8 @@ const App: React.FC = () => {
         if (!latest) return;
 
         const current: UpdateEntry = {
-          version: packageJson.version,
-          subVersion: (packageJson as any).versionDateTag || '',
+          version: appVersion,
+          subVersion: appVersionDateTag || '',
         };
 
         if (compareUpdates(latest, current) > 0) {

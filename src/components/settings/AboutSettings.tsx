@@ -1,7 +1,7 @@
 import React from "react";
 import { GithubIcon, TwitterIcon } from "../Icons";
 import { useI18n } from "../../contexts/I18nContext";
-import packageJson from "../../../package.json";
+import { version as appVersion, versionDateTag as appVersionDateTag } from "../../../src-tauri/version.json";
 import { Button } from "@/components/ui/button";
 import {
   SettingsPage,
@@ -63,7 +63,7 @@ const CreatorCard: React.FC<{
 
 const AboutSettings: React.FC = () => {
   const { t } = useI18n();
-  const currentVersionLabel = `v${packageJson.version}${packageJson.versionDateTag ? ` ${packageJson.versionDateTag}` : ""}`;
+  const currentVersionLabel = `v${appVersion}${appVersionDateTag ? ` ${appVersionDateTag}` : ""}`;
 
   const TRANSLATORS = [
     {

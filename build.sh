@@ -9,7 +9,7 @@ ARTIFACTS_DIR="$ROOT_DIR/installer/builds"
 
 get_app_version() {
   local version
-  version="$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' src-tauri/tauri.conf.json | head -n1 | sed -E 's/.*"([^"]+)"$/\1/')"
+  version="$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' src-tauri/version.json | head -n1 | sed -E 's/.*"([^"]+)"$/\1/')"
   if [ -z "$version" ]; then
     version="0.0.0"
   fi

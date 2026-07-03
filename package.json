@@ -11,10 +11,11 @@
     "preview": "vite preview",
     "initial": "VITE_INITIAL_DEBUG=true vite",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:dev:windows": "cross-env VITE_FORCE_PLATFORM=windows tauri dev",
-    "tauri:dev:linux": "cross-env VITE_FORCE_PLATFORM=linux tauri dev",
-    "tauri:build": "tauri build"
+    "sync-version": "node scripts/sync-version.js",
+    "tauri:dev": "npm run sync-version && tauri dev",
+    "tauri:dev:windows": "npm run sync-version && cross-env VITE_FORCE_PLATFORM=windows tauri dev",
+    "tauri:dev:linux": "npm run sync-version && cross-env VITE_FORCE_PLATFORM=linux tauri dev",
+    "tauri:build": "npm run sync-version && tauri build"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

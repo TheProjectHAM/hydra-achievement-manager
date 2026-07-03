@@ -3,7 +3,7 @@ import { UpdateIcon } from "../Icons";
 import { useTheme } from "../../contexts/ThemeContext";
 import { formatDateObj } from "../../formatters";
 import { useI18n } from "../../contexts/I18nContext";
-import packageJson from "../../../package.json";
+import { version as appVersion, versionDateTag as appVersionDateTag } from "../../../src-tauri/version.json";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,8 +30,8 @@ const UpdateSettings: React.FC = () => {
   >([]);
   const [isChecking, setIsChecking] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
-  const currentSubVersion = packageJson.versionDateTag || "";
-  const currentVersionLabel = `v${packageJson.version}${currentSubVersion ? ` ${currentSubVersion}` : ""}`;
+  const currentSubVersion = appVersionDateTag || "";
+  const currentVersionLabel = `v${appVersion}${currentSubVersion ? ` ${currentSubVersion}` : ""}`;
 
   useEffect(() => {
     tauriFetch(UPDATES_URL, { method: "GET" })
@@ -55,7 +55,7 @@ const UpdateSettings: React.FC = () => {
   const latest = updates[updates.length - 1];
   const latestSubVersion = latest?.subVersion || "";
   const isUpToDate =
-    latest?.version === packageJson.version &&
+    latest?.version === appVersion &&
     latestSubVersion === currentSubVersion;
 
   const recentUpdates = [...updates].reverse().slice(0, 5);
@@ -103,7 +103,7 @@ const UpdateSettings: React.FC = () => {
         <div className="space-y-3">
           {recentUpdates.map((log, index) => {
             const isCurrent =
-              log.version === packageJson.version &&
+              log.version === appVersion &&
               (log.subVersion || "") === currentSubVersion;
             const versionLabel = `v${log.version}${log.subVersion ? ` ${log.subVersion}` : ""}`;
 
