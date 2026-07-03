@@ -516,7 +516,7 @@ const GamesContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }
         </div>
       </header>
 
-      <div className="flex-grow overflow-y-auto no-scrollbar pb-10 custom-scrollbar">
+      <div className="flex-grow overflow-y-auto no-scrollbar pb-10">
         {(isContextLoading || isRetroGamesLoading) ? (
           gamesViewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-2 pb-5 overflow-visible">
