@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { exit } from "@tauri-apps/plugin-process";
 import { useI18n } from "../../contexts/I18nContext";
 import TestResultsModal from "../TestResultsModal";
 import { saveSettings } from "../../tauri-api";
@@ -46,7 +47,7 @@ const DebugSettings: React.FC<DebugSettingsProps> = ({
       await saveSettings({ wizardCompleted: false });
       localStorage.removeItem("wizardCompleted");
       window.dispatchEvent(new Event("settings-saved"));
-      window.location.reload();
+      await exit(0);
     } catch (error) {
       console.error("Failed to restart onboarding wizard:", error);
       setIsRestartingWizard(false);

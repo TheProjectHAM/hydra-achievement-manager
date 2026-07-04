@@ -83,6 +83,8 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
   const [steamAchievementSource, setSteamAchievementSource] = useState<'steamworks' | 'steamapi'>('steamworks');
   const steamUnlistenRef = useRef<(() => void) | null>(null);
   const isRefreshingLocalGamesRef = useRef(false);
+  const steamSetupInProgressRef = useRef(false);
+  const fetchedGameAchievementsRef = useRef<Set<string>>(new Set());
 
   const getLocalAchievementCounts = (game: GameAchievements) => ({
     current: game.achievements.filter((a: any) => a.achieved).length,
@@ -127,9 +129,10 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
           gameName,
           directories: dirInfo,
         });
-        // For now, add the most recent one to unique games
+        const toTimestamp = (val: Date | number) =>
+          typeof val === 'number' ? val : val.getTime();
         const mostRecent = gameEntries.reduce((prev, current) =>
-          prev.lastModified > current.lastModified ? prev : current
+          toTimestamp(prev.lastModified) > toTimestamp(current.lastModified) ? prev : current
         );
         uniqueGames.push(mostRecent);
       }
@@ -148,12 +151,21 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
           return prev;
         }
 
-        const currJson = JSON.stringify(prev);
-        const nextJson = JSON.stringify(updatedGames);
-        if (currJson === nextJson) return prev;
+        if (prev.length !== updatedGames.length) {
+          console.log('[JS] Received achievements update from Rust (count changed):', updatedGames.length, 'games');
+          return updatedGames;
+        }
 
-        console.log('[JS] Received achievements update from Rust (content changed):', updatedGames.length, 'games');
-        return updatedGames;
+        for (let i = 0; i < prev.length; i++) {
+          if (prev[i].gameId !== updatedGames[i].gameId ||
+              prev[i].directory !== updatedGames[i].directory ||
+              prev[i].achievements.length !== updatedGames[i].achievements.length) {
+            console.log('[JS] Received achievements update from Rust (content changed):', updatedGames.length, 'games');
+            return updatedGames;
+          }
+        }
+
+        return prev;
       });
     });
     return unlisten;
@@ -214,6 +226,8 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     
     Promise.all([fetchInitial(), setupSteam()]).then(() => {
       setIsLoading(false);
+    }).catch(() => {
+      setIsLoading(false);
     });
 
     // Listen for manual achievement updates (from unlock command)
@@ -242,12 +256,16 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     if (!steamIntegrationEnabled || isSteamLoaded) return;
 
     const timer = setInterval(async () => {
+      if (steamSetupInProgressRef.current) return;
       try {
+        steamSetupInProgressRef.current = true;
         const available = await isSteamAvailable();
         if (!available) return;
         await setupSteam();
       } catch (error) {
         console.error('[Steam Integration] Auto-retry failed:', error);
+      } finally {
+        steamSetupInProgressRef.current = false;
       }
     }, 5000);
 
@@ -337,14 +355,17 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
         const achievementsToFetch: Record<string, number> = {};
 
         for (const gameId of recentGameIds) {
-          if (!gameAchievementsFromAPI[gameId]) {
-            try {
-              const gameAchievements = await getGameAchievements(gameId);
-              achievementsToFetch[gameId] = gameAchievements.achievements.length;
-            } catch (error) {
-              console.error(`Error fetching achievements for game ${gameId}:`, error);
-              achievementsToFetch[gameId] = 0;
-            }
+          if (fetchedGameAchievementsRef.current.has(gameId)) {
+            continue;
+          }
+          try {
+            const gameAchievements = await getGameAchievements(gameId);
+            achievementsToFetch[gameId] = gameAchievements.achievements.length;
+            fetchedGameAchievementsRef.current.add(gameId);
+          } catch (error) {
+            console.error(`Error fetching achievements for game ${gameId}:`, error);
+            achievementsToFetch[gameId] = 0;
+            fetchedGameAchievementsRef.current.add(gameId);
           }
         }
 
@@ -355,7 +376,7 @@ export const MonitoredAchievementsProvider: React.FC<{ children: React.ReactNode
     };
 
     fetchAchievementsFromAPI();
-  }, [games, gameAchievementsFromAPI]);
+  }, [games]);
 
   // Fetch achievements for Steam games separately
   useEffect(() => {

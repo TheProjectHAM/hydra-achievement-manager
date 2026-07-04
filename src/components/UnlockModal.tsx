@@ -374,10 +374,7 @@ const UnlockModal: React.FC<UnlockModalProps> = ({ isOpen, onClose, onConfirm, g
     selectedPath.startsWith('steam://');
   const showRetroAchievementsCustomTimestampWarning =
     selectedPath.startsWith('retroachievements://');
-  const steamWarningMessage =
-    unlockMode === 'custom'
-      ? t('unlockModal.steamCustomTimestampWarning')
-      : t('unlockModal.steamCustomTimestampWarning');
+  const steamWarningMessage = t('unlockModal.steamCustomTimestampWarning');
   const retroAchievementsWarningMessage =
     t('unlockModal.retroAchievementsCustomTimestampWarning');
   const retroAchievementsWebSessionWarningMessage =

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { exit } from "@tauri-apps/plugin-process";
 import { DateFormat, TimeFormat } from "../../types";
 import { useI18n, Language } from "../../contexts/I18nContext";
 import TimeFormatWarningModal from "../TimeFormatWarningModal";
@@ -65,7 +66,7 @@ const LocaleSettings: React.FC<LocaleSettingsProps> = ({
           console.error("Failed to save before restart:", error);
         }
       }
-      window.location.reload();
+      await exit(0);
     }
   };
 

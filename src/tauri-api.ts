@@ -15,8 +15,6 @@ import {
   SteamSearchResult,
 } from "./types";
 
-console.log("🚀 [TAURI-API] Module loaded with fallback support (Tauri v2)");
-
 const inFlightAchievementRequests = new Map<string, Promise<any>>();
 const inFlightSteamGameRequests = new Map<number, Promise<SteamAchievementData[]>>();
 const inFlightRetroAchievementRequests = new Map<number, Promise<RetroAchievementData[]>>();
@@ -98,10 +96,6 @@ export const getGameNameFallback = async (game_id: string): Promise<string> => {
     );
     return await getGameNameBackend(game_id);
   } catch (error) {
-    if (options.forceSteamApi) {
-      throw error;
-    }
-
     console.warn(
       `⚠️ [FALLBACK] Backend failed for game name ${game_id}, using Tauri HTTP plugin:`,
       error,
