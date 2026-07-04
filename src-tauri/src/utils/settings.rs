@@ -3,6 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
+use crate::utils::secrets;
+
 pub fn settings_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
     let user_data_path = app_handle
         .path()
@@ -15,12 +17,20 @@ pub fn settings_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
 pub fn load_settings_value(app_handle: &AppHandle) -> Result<Value, String> {
     let path = settings_path(app_handle)?;
 
-    if !path.exists() {
-        return Ok(serde_json::json!({}));
-    }
+    let raw_settings = if !path.exists() {
+        serde_json::json!({})
+    } else {
+        let settings_data = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        serde_json::from_str::<Value>(&settings_data).map_err(|e| e.to_string())?
+    };
 
-    let settings_data = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str::<Value>(&settings_data).map_err(|e| e.to_string())
+    // Migrate any plaintext secrets to keyring on first load
+    let mut settings = secrets::migrate_plaintext_secrets(&raw_settings, &path)?;
+
+    // Inject secrets from keyring into the settings object
+    secrets::inject_secrets(&mut settings)?;
+
+    Ok(settings)
 }
 
 pub fn load_settings_or_default(app_handle: &AppHandle) -> Value {
@@ -33,7 +43,10 @@ pub fn save_settings_value(app_handle: &AppHandle, settings: &Value) -> Result<(
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
 
-    let settings_json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
+    // Extract secrets and store them in the keyring
+    let clean_settings = secrets::extract_and_store_secrets(settings)?;
+
+    let settings_json = serde_json::to_string_pretty(&clean_settings).map_err(|e| e.to_string())?;
     fs::write(&path, settings_json).map_err(|e| e.to_string())
 }
 

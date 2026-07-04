@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://store.steampowered.com https://hydra-api-us-east-1.losbroxas.org https://retroachievements.org; img-src 'self' https://*.steamstatic.com https://media.retroachievements.org data:; font-src 'self'; object-src 'none'; frame-src 'none'"
     }
   },
   "bundle": {

@@ -54,7 +54,6 @@
     "core:path:default",
     "core:tray:default",
     "shell:allow-open",
-    "shell:allow-execute",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
@@ -86,7 +85,12 @@
     },
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://**" }, { "url": "http://**" }]
+      "allow": [
+        { "url": "https://store.steampowered.com/**" },
+        { "url": "https://hydra-api-us-east-1.losbroxas.org/**" },
+        { "url": "https://retroachievements.org/**" },
+        { "url": "http://localhost:**" }
+      ]
     },
     "log:default"
   ]
