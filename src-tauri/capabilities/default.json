@@ -86,10 +86,8 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://store.steampowered.com/**" },
-        { "url": "https://hydra-api-us-east-1.losbroxas.org/**" },
-        { "url": "https://retroachievements.org/**" },
-        { "url": "http://localhost:**" }
+        { "url": "https://**" },
+        { "url": "http://**" }
       ]
     },
     "log:default"
