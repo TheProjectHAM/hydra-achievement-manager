@@ -17,7 +17,7 @@ get_app_version() {
 }
 
 sync_icons() {
-  echo "Syncing app icons from assets..."
+  echo "Syncing app icons..."
 
   if [ -f "$ROOT_DIR/assets/icon.ico" ]; then
     cp -f "$ROOT_DIR/assets/icon.ico" "$ROOT_DIR/src-tauri/icons/icon.ico"
@@ -25,15 +25,7 @@ sync_icons() {
     echo "Warning: assets/icon.ico not found; keeping existing src-tauri/icons/icon.ico"
   fi
 
-  if [ -f "$ROOT_DIR/assets/icon.png" ]; then
-    cp -f "$ROOT_DIR/assets/icon.png" "$ROOT_DIR/src-tauri/icons/icon.png"
-    cp -f "$ROOT_DIR/assets/icon.png" "$ROOT_DIR/src-tauri/icons/128x128.png"
-    cp -f "$ROOT_DIR/assets/icon.png" "$ROOT_DIR/src-tauri/icons/128x128@2x.png"
-    cp -f "$ROOT_DIR/assets/icon.png" "$ROOT_DIR/src-tauri/icons/64x64.png"
-    cp -f "$ROOT_DIR/assets/icon.png" "$ROOT_DIR/src-tauri/icons/32x32.png"
-  else
-    echo "Warning: assets/icon.png not found; keeping existing src-tauri/icons/*"
-  fi
+  echo "Note: PNG icons in src-tauri/icons/ are pre-sized (32, 64, 128, 256). Do NOT overwrite them."
 }
 
 require_cmd() {
