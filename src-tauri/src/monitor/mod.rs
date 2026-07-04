@@ -221,3 +221,11 @@ impl AchievementMonitor {
         current_mtime != previous_mtime
     }
 }
+
+impl Drop for AchievementMonitor {
+    fn drop(&mut self) {
+        log::info!("[AchievementMonitor] Drop: stopping file watcher");
+        self.watcher = None;
+        self.file_mtimes.clear();
+    }
+}

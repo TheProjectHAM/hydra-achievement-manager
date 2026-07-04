@@ -109,6 +109,22 @@ pub fn run() {
                 }));
                 let _ = window.center();
 
+                // Define o ícone da janela para a taskbar
+                let icon_path = app
+                    .path()
+                    .resource_dir()
+                    .unwrap_or_default()
+                    .join("icons/icon.png");
+                if let Ok(img) = image::open(&icon_path) {
+                    let rgba = img.to_rgba8();
+                    let (w, h) = rgba.dimensions();
+                    let _ = window.set_icon(tauri::image::Image::new_owned(
+                        rgba.into_raw(),
+                        w,
+                        h,
+                    ));
+                }
+
                 // Abre devtools automaticamente em modo de desenvolvimento
                 #[cfg(debug_assertions)]
                 window.open_devtools();
@@ -259,6 +275,31 @@ pub fn run() {
             commands::retro_achievements::get_retro_achievements_game_achievements,
             commands::connections::get_steam_connection_profile,
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                log::info!("Window destroyed, cleaning up resources...");
+
+                if let Some(state) = window.try_state::<AppState>() {
+                    // Shutdown Steam monitor
+                    if let Ok(mut steam_lock) = state.steam_monitor.lock() {
+                        if let Some(ref mut steam_monitor) = *steam_lock {
+                            if steam_monitor.is_enabled() {
+                                log::info!("[Shutdown] Stopping Steam monitor...");
+                                let _ = steam_monitor.shutdown();
+                            }
+                        }
+                    }
+
+                    // Stop Achievement monitor
+                    if let Ok(mut monitor_lock) = state.monitor.lock() {
+                        if let Some(ref mut monitor) = *monitor_lock {
+                            log::info!("[Shutdown] Stopping achievement monitor...");
+                            monitor.stop_monitoring();
+                        }
+                    }
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

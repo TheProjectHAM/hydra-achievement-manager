@@ -1,45 +1,44 @@
 use super::steam_types::SteamAchievementData;
-use anyhow::{Context, Result};
+use anyhow::Context;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use steamworks::{Client, ClientManager, SingleClient};
+use steamworks::Client;
 
 pub struct SteamworksClient {
-    client: Option<Arc<Mutex<Client<ClientManager>>>>,
-    single_client: Option<Arc<Mutex<SingleClient<ClientManager>>>>,
+    client: Option<Client>,
     enabled: bool,
     last_init_error: Option<String>,
+    current_app_id: Option<u32>,
 }
 
 impl SteamworksClient {
     pub fn new() -> Self {
         Self {
             client: None,
-            single_client: None,
             enabled: false,
             last_init_error: None,
+            current_app_id: None,
         }
     }
 
-    pub fn initialize(&mut self) -> Result<()> {
+    pub fn initialize(&mut self) -> anyhow::Result<()> {
         if self.enabled {
             return Ok(());
         }
 
         let app_id = Self::resolve_appid_for_init();
-        std::env::set_var("SteamAppId", &app_id);
-        std::env::set_var("SteamGameId", &app_id);
+        let _ = std::env::set_var("SteamAppId", &app_id);
+        let _ = std::env::set_var("SteamGameId", &app_id);
         Self::ensure_steam_appid_file(&app_id);
 
         match catch_unwind(AssertUnwindSafe(Client::init)) {
-            Ok(Ok((client, single_client))) => {
-                self.client = Some(Arc::new(Mutex::new(client)));
-                self.single_client = Some(Arc::new(Mutex::new(single_client)));
+            Ok(Ok(client)) => {
+                self.client = Some(client);
                 self.enabled = true;
                 self.last_init_error = None;
+                self.current_app_id = app_id.parse().ok();
                 log::info!("Steam client initialized successfully");
                 Ok(())
             }
@@ -60,15 +59,19 @@ impl SteamworksClient {
         }
     }
 
-    pub fn switch_app_id(&mut self, app_id: u32) -> Result<()> {
+    pub fn switch_app_id(&mut self, app_id: u32) -> anyhow::Result<()> {
+        if self.enabled && self.current_app_id == Some(app_id) {
+            return Ok(());
+        }
+
         log::info!("Switching Steam AppID to {}", app_id);
-        std::env::set_var("SteamAppId", app_id.to_string());
-        std::env::set_var("SteamGameId", app_id.to_string());
+        let _ = std::env::set_var("SteamAppId", app_id.to_string());
+        let _ = std::env::set_var("SteamGameId", app_id.to_string());
         Self::ensure_steam_appid_file(&app_id.to_string());
 
-        self.single_client = None;
         self.client = None;
         self.enabled = false;
+        self.current_app_id = None;
         self.initialize()
     }
 
@@ -81,31 +84,27 @@ impl SteamworksClient {
     }
 
     pub fn shutdown(&mut self) {
-        self.single_client = None;
         self.client = None;
         self.enabled = false;
         self.last_init_error = None;
+        self.current_app_id = None;
 
         let neutral_app_id = "480";
-        std::env::set_var("SteamAppId", neutral_app_id);
-        std::env::set_var("SteamGameId", neutral_app_id);
+        let _ = std::env::set_var("SteamAppId", neutral_app_id);
+        let _ = std::env::set_var("SteamGameId", neutral_app_id);
         Self::ensure_steam_appid_file(neutral_app_id);
         log::info!("Steam client session closed");
     }
 
-    pub fn get_user_info(&self) -> Result<(String, String)> {
+    pub fn get_user_info(&self) -> anyhow::Result<(String, String)> {
         if !self.enabled {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self
+        let client = self
             .client
             .as_ref()
             .context("Steam client not initialized")?;
-        let guard = client_lock
-            .lock()
-            .map_err(|error| anyhow::anyhow!("Lock error: {}", error))?;
-        let client = &*guard;
 
         catch_unwind(AssertUnwindSafe(|| {
             let friends = client.friends();
@@ -116,21 +115,17 @@ impl SteamworksClient {
         .map_err(|_| anyhow::anyhow!("Steamworks panicked while reading user info"))
     }
 
-    pub fn set_achievement(&self, achievement_name: &str, unlocked: bool) -> Result<()> {
+    pub fn set_achievement(&self, achievement_name: &str, unlocked: bool) -> anyhow::Result<()> {
         if !self.enabled {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self
+        let client = self
             .client
             .as_ref()
             .context("Steam client not initialized")?;
-        let guard = client_lock
-            .lock()
-            .map_err(|error| anyhow::anyhow!("Lock error: {}", error))?;
-        let client = &*guard;
 
-        let changed = catch_unwind(AssertUnwindSafe(|| -> Result<bool> {
+        let changed = catch_unwind(AssertUnwindSafe(|| -> anyhow::Result<bool> {
             let user_stats = client.user_stats();
             let achievement = user_stats.achievement(achievement_name);
             let current_state = achievement
@@ -159,30 +154,27 @@ impl SteamworksClient {
         .map_err(|_| anyhow::anyhow!("Steamworks panicked while updating achievement"))??;
 
         if changed {
-            Self::pump_callbacks(&self.single_client, 5);
+            Self::pump_callbacks(client, 5);
         }
 
         Ok(())
     }
 
-    pub fn get_game_achievements(&self) -> Result<Vec<SteamAchievementData>> {
+    pub fn get_game_achievements(&self) -> anyhow::Result<Vec<SteamAchievementData>> {
         if !self.enabled {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self
+        let client = self
             .client
             .as_ref()
             .context("Steam client not initialized")?;
-        let guard = client_lock
-            .lock()
-            .map_err(|error| anyhow::anyhow!("Lock error: {}", error))?;
-        let client = &*guard;
 
-        catch_unwind(AssertUnwindSafe(|| -> Result<Vec<SteamAchievementData>> {
+        catch_unwind(AssertUnwindSafe(|| -> anyhow::Result<Vec<SteamAchievementData>> {
             let user_stats = client.user_stats();
-            user_stats.request_current_stats();
-            Self::pump_callbacks(&self.single_client, 10);
+            let steam_id = client.user().steam_id().raw();
+            user_stats.request_user_stats(steam_id);
+            Self::pump_callbacks(client, 10);
 
             if user_stats.get_num_achievements().is_err() {
                 return Ok(Vec::new());
@@ -227,19 +219,15 @@ impl SteamworksClient {
         .map_err(|_| anyhow::anyhow!("Steamworks panicked while reading achievements"))?
     }
 
-    pub fn get_achievement_status(&self, achievement_name: &str) -> Result<bool> {
+    pub fn get_achievement_status(&self, achievement_name: &str) -> anyhow::Result<bool> {
         if !self.enabled {
             return Err(anyhow::anyhow!("Steam integration not enabled"));
         }
 
-        let client_lock = self
+        let client = self
             .client
             .as_ref()
             .context("Steam client not initialized")?;
-        let guard = client_lock
-            .lock()
-            .map_err(|error| anyhow::anyhow!("Lock error: {}", error))?;
-        let client = &*guard;
 
         catch_unwind(AssertUnwindSafe(|| {
             let user_stats = client.user_stats();
@@ -256,27 +244,18 @@ impl SteamworksClient {
             return;
         }
 
-        if let Some(single_client_lock) = &self.single_client {
-            if let Ok(guard) = single_client_lock.lock() {
-                if catch_unwind(AssertUnwindSafe(|| guard.run_callbacks())).is_err() {
-                    log::warn!("Steam callbacks panicked");
-                }
+        if let Some(client) = &self.client {
+            if catch_unwind(AssertUnwindSafe(|| client.run_callbacks())).is_err() {
+                log::warn!("Steam callbacks panicked");
             }
         }
     }
 
-    fn pump_callbacks(
-        single_client: &Option<Arc<Mutex<SingleClient<ClientManager>>>>,
-        cycles: usize,
-    ) {
+    fn pump_callbacks(client: &Client, cycles: usize) {
         for _ in 0..cycles {
-            if let Some(single_client_lock) = single_client {
-                if let Ok(single_client) = single_client_lock.lock() {
-                    if catch_unwind(AssertUnwindSafe(|| single_client.run_callbacks())).is_err() {
-                        log::warn!("Steam callbacks panicked while pumping callbacks");
-                        break;
-                    }
-                }
+            if catch_unwind(AssertUnwindSafe(|| client.run_callbacks())).is_err() {
+                log::warn!("Steam callbacks panicked while pumping callbacks");
+                break;
             }
             thread::sleep(Duration::from_millis(100));
         }
@@ -321,7 +300,7 @@ impl SteamworksClient {
         }
     }
 
-    fn get_steam_appid_path() -> Result<PathBuf> {
+    fn get_steam_appid_path() -> anyhow::Result<PathBuf> {
         let exe = std::env::current_exe()?;
         let exe_dir = exe
             .parent()
@@ -333,5 +312,21 @@ impl SteamworksClient {
 impl Default for SteamworksClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Drop for SteamworksClient {
+    fn drop(&mut self) {
+        if self.enabled {
+            log::info!("[SteamworksClient] Drop: cleaning up Steam session");
+            self.client = None;
+            self.enabled = false;
+            self.current_app_id = None;
+
+            let neutral_app_id = "480";
+            let _ = std::env::set_var("SteamAppId", neutral_app_id);
+            let _ = std::env::set_var("SteamGameId", neutral_app_id);
+            Self::ensure_steam_appid_file(neutral_app_id);
+        }
     }
 }
