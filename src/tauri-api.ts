@@ -520,6 +520,26 @@ export const getHydraConnectionProfile = () =>
 export const getHydraDbPath = () =>
   invoke<string>("get_hydra_db_path");
 
+export interface HydraLibraryGame {
+  objectId: string;
+  title: string;
+  shop: string;
+  iconUrl?: string | null;
+  libraryHeroImageUrl?: string | null;
+  logoImageUrl?: string | null;
+  lastTimePlayed?: string | null;
+  playTimeInMilliseconds?: number | null;
+  achievementCount?: number | null;
+  unlockedAchievementCount?: number | null;
+  isDeleted: boolean;
+  favorite: boolean;
+  isPinned: boolean;
+  addedToLibraryAt?: string | null;
+}
+
+export const getHydraLibraryGames = () =>
+  invoke<HydraLibraryGame[]>("get_hydra_library_games_command");
+
 export interface SteamConnectionProfile {
   steamId64: string;
   accountId: number;
@@ -700,6 +720,7 @@ export const electronAPI = {
   getSteamDllPath,
   getSteamLibraryInfo,
   getAllSteamLibraryGames,
+  getHydraLibraryGames,
   onSteamGamesUpdate,
   onAchievementsUpdated,
   platform:

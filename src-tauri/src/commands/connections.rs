@@ -1,4 +1,4 @@
-use crate::integrations::hydra::{get_hydra_profile, HydraConnectionProfile};
+use crate::integrations::hydra::{get_hydra_profile, HydraConnectionProfile, HydraLibraryGame};
 use crate::integrations::steam::{get_steam_profile, SteamConnectionProfile};
 use crate::utils::settings::load_settings_or_default;
 use tauri::AppHandle;
@@ -10,7 +10,18 @@ pub async fn get_hydra_connection_profile(app_handle: AppHandle) -> Result<Optio
         .get("hydraDbPath")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
-    get_hydra_profile(custom_path.as_deref())
+
+    log::info!("[Hydra Profile] Command called. custom_path={:?}", custom_path);
+
+    let result = get_hydra_profile(custom_path.as_deref());
+
+    match &result {
+        Ok(Some(profile)) => log::info!("[Hydra Profile] Success: profile found for '{}'", profile.display_name),
+        Ok(None) => log::warn!("[Hydra Profile] No profile found"),
+        Err(e) => log::error!("[Hydra Profile] Error: {}", e),
+    }
+
+    result
 }
 
 #[tauri::command]
@@ -33,4 +44,32 @@ pub async fn get_hydra_db_path(app_handle: AppHandle) -> Result<String, String> 
 #[tauri::command]
 pub async fn get_steam_connection_profile() -> Result<Option<SteamConnectionProfile>, String> {
     get_steam_profile()
+}
+
+/// Returns all games from the Hydra Launcher LevelDB database.
+#[tauri::command]
+pub async fn get_hydra_library_games_command(app_handle: AppHandle) -> Result<Vec<HydraLibraryGame>, String> {
+    let settings = load_settings_or_default(&app_handle);
+    let custom_path = settings
+        .get("hydraDbPath")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    log::info!(
+        "[Hydra DB] Command called. custom_path={:?}",
+        custom_path
+    );
+
+    let result = crate::integrations::hydra::get_hydra_library_games(custom_path.as_deref());
+
+    match &result {
+        Ok(games) => {
+            log::info!("[Hydra DB] Success: {} games returned", games.len());
+        }
+        Err(e) => {
+            log::error!("[Hydra DB] Error: {}", e);
+        }
+    }
+
+    result
 }

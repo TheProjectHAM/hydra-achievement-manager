@@ -222,7 +222,9 @@ fn find_vdf_value(text: &str, wanted_key: &str) -> Option<String> {
 
 fn find_vdf_value_near_account(text: &str, account_id: &str, wanted_key: &str) -> Option<String> {
     let account_index = text.find(&format!("\"{}\"", account_id))?;
-    let slice = &text[account_index..text.len().min(account_index + 4096)];
+    let end = text.len().min(account_index + 4096);
+    let end = text.floor_char_boundary(end);
+    let slice = &text[account_index..end];
     find_vdf_value(slice, wanted_key)
 }
 

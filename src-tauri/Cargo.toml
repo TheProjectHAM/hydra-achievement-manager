@@ -44,3 +44,4 @@ steamworks = "0.13"
 dotenv = "0.15.0"
 sysinfo = "0.33"
 keyring = { version = "3", features = ["apple-native", "crypto-rust", "sync-secret-service"] }
+snap = "1.1.1"

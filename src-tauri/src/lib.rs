@@ -262,6 +262,7 @@ pub fn run() {
             commands::cache_system::get_system_info,
             commands::connections::get_hydra_connection_profile,
             commands::connections::get_hydra_db_path,
+            commands::connections::get_hydra_library_games_command,
             commands::retro_achievements::get_retro_achievements_connection_profile,
             commands::retro_achievements::test_retro_achievements_connection,
             commands::retro_achievements::login_retro_achievements_runtime_with_password,

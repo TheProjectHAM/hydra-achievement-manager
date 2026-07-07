@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { SteamSearchResult } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
-import { getAllSteamLibraryGames } from '../tauri-api';
+import { getAllSteamLibraryGames, getHydraLibraryGames, HydraLibraryGame } from '../tauri-api';
+import AlphabetScrollbar from '../components/AlphabetScrollbar';
 import { LibraryIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon, WarningIcon, PlatinumIcon, CheckIcon } from '../components/Icons';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,8 @@ interface SteamLibraryGame {
   imgIconUrl?: string;
 }
 
-type FilterType = 'all' | 'installed' | 'not_installed';
 type SortKey = 'name' | 'playtime' | 'last_played';
+type LibrarySourceFilter = 'all' | 'steam' | 'hydra';
 
 const formatPlaytime = (minutes: number | undefined): string => {
   if (!minutes || minutes === 0) return '0h';
@@ -217,7 +218,8 @@ const LibraryGameCard: React.FC<{
 const LibraryGameRow: React.FC<{
   game: SteamLibraryGame;
   onGameSelect: (game: SteamSearchResult) => void;
-}> = ({ game, onGameSelect }) => {
+  'data-alpha-ref'?: string;
+}> = ({ game, onGameSelect, ...rest }) => {
   const { t } = useI18n();
   const gameId = game.gameId;
   const [logoFailed, setLogoFailed] = useState(false);
@@ -252,6 +254,7 @@ const LibraryGameRow: React.FC<{
         }
       }}
       className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      data-alpha-ref={rest['data-alpha-ref']}
     >
       <TableCell className="w-[6%] p-2 sm:p-3">
         {logoFailed ? (
@@ -316,13 +319,13 @@ const LibraryGameRow: React.FC<{
             <div className="flex min-h-5 items-center justify-between gap-2 text-xs font-semibold">
               <div className="min-w-0">
                 {isCompleted && (
-                  <Badge className="h-5 shrink-0 gap-1 px-2 text-[10px]">
+                  <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/90 px-2 text-[10px] font-semibold text-primary-foreground">
                     <PlatinumIcon
                       className="shrink-0 leading-none opacity-80"
                       style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
                     />
                     {t('gamesPage.completed')}
-                  </Badge>
+                  </span>
                 )}
               </div>
               <span className="tabular-nums text-muted-foreground">
@@ -345,66 +348,206 @@ const LibraryGameRow: React.FC<{
   );
 };
 
+const FilterSection: React.FC<{
+  label: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}> = ({ label, defaultOpen = false, children }) => {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {label}
+        <svg
+          className={`w-3 h-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M3 4.5L6 7.5L9 4.5" />
+        </svg>
+      </button>
+      {open && <div className="pb-1">{children}</div>}
+    </div>
+  );
+};
+
+const CheckboxItem: React.FC<{
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  count?: number;
+}> = ({ label, checked, onChange, count }) => (
+  <label className="flex items-center gap-2.5 px-2 py-1 rounded-md cursor-pointer text-sm transition-colors hover:bg-accent text-foreground">
+    <span className={`flex items-center justify-center size-4 rounded flex-shrink-0 transition-colors ${checked ? 'bg-primary border-primary' : 'border border-border bg-background'}`}>
+      {checked && (
+        <svg className="size-3 text-primary-foreground" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z" />
+        </svg>
+      )}
+    </span>
+    <span className="font-medium truncate flex-1">{label}</span>
+    {count !== undefined && count > 0 && (
+      <span className="text-[10px] text-muted-foreground tabular-nums">{count}</span>
+    )}
+    <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+  </label>
+);
+
+const sourceOptions: { value: LibrarySourceFilter; label: string; icon: React.ReactNode }[] = [
+  { value: 'all', label: 'All Sources', icon: <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> },
+  { value: 'steam', label: 'Steam', icon: <SteamBrandIcon className="h-3.5 w-3.5" /> },
+  { value: 'hydra', label: 'Hydra', icon: <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> },
+];
+
 const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }> = ({ onGameSelect }) => {
   const { gamesViewMode, setGamesViewMode } = useTheme();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<FilterType>('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   const [libraryGames, setLibraryGames] = useState<SteamLibraryGame[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadedRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeAlphaChar, setActiveAlphaChar] = useState<string | null>(null);
+  const gameRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Filter state
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<LibrarySourceFilter>('all');
+  const [hideInstalled, setHideInstalled] = useState(false);
+  const [hideNotInstalled, setHideNotInstalled] = useState(false);
+  const [hideZeroAchievements, setHideZeroAchievements] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Use cached data if available, don't refetch on remount
-    if (loadedRef.current) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const cached = localStorage.getItem('steam_library_cache');
+  useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+
+    const CACHE_KEY = 'steam_library_cache';
+
+    // Load cache immediately to show something while fetching
+    const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
         setLibraryGames(JSON.parse(cached));
         setIsLoading(false);
-        loadedRef.current = true;
-        return;
       } catch { /* ignore bad cache */ }
     }
 
+    // Always try to fetch fresh data
     setIsLoading(true);
     setError(null);
 
-    getAllSteamLibraryGames()
-      .then((games) => {
-        setLibraryGames(games);
-        localStorage.setItem('steam_library_cache', JSON.stringify(games));
+    Promise.all([
+      getAllSteamLibraryGames().catch((err) => {
+        console.error('[Library] Failed to load Steam library:', err);
+        return [] as SteamLibraryGame[];
+      }),
+      getHydraLibraryGames().catch((err) => {
+        console.error('[Library] Failed to load Hydra library:', err);
+        return [] as HydraLibraryGame[];
+      }),
+    ])
+      .then(([steamGames, hydraGames]) => {
+        console.log(`[Library] Steam: ${steamGames.length}, Hydra: ${hydraGames.length}`);
+
+        const steamMap = new Map<string, SteamLibraryGame>();
+        for (const game of steamGames) {
+          steamMap.set(game.gameId, game);
+        }
+
+        const merged = [...steamGames];
+        for (const hg of hydraGames) {
+          if (hg.isDeleted) continue;
+          if (hg.shop !== 'steam') continue;
+          if (!hg.objectId) continue;
+          if (steamMap.has(hg.objectId)) continue;
+
+          merged.push({
+            gameId: hg.objectId,
+            name: hg.title,
+            achievementsTotal: hg.achievementCount || 0,
+            achievementsCurrent: hg.unlockedAchievementCount || 0,
+            source: 'hydra',
+            installed: false,
+            playtimeForever: hg.playTimeInMilliseconds
+              ? Math.floor(hg.playTimeInMilliseconds / 60000)
+              : undefined,
+            rtimeLastPlayed: hg.lastTimePlayed
+              ? Math.floor(new Date(hg.lastTimePlayed).getTime() / 1000)
+              : undefined,
+            imgIconUrl: hg.iconUrl || undefined,
+          });
+        }
+
+        console.log(`[Library] Merged: ${merged.length} total`);
+
+        setLibraryGames(merged);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
       })
       .catch((err) => {
-        console.error('Failed to load Steam library:', err);
+        console.error('[Library] Fetch failed, using cache:', err);
         setError(String(err));
       })
       .finally(() => {
         setIsLoading(false);
-        loadedRef.current = true;
       });
   }, []);
 
-  const filteredAndSortedGames = useMemo(() => {
-    let result = libraryGames.filter(game => {
+  // Source match counts
+  const sourceMatchCounts = useMemo(() => {
+    const counts: Record<string, number> = { steam: 0, hydra: 0 };
+    for (const game of libraryGames) {
+      const src = game.source || 'steam';
+      if (src in counts) counts[src]++;
+    }
+    return counts;
+  }, [libraryGames]);
+
+  const { filteredGames, hiddenCount } = useMemo(() => {
+    let hidden = 0;
+    const filtered = libraryGames.filter(game => {
       const name = (game.name || '').toLowerCase();
       const query = searchQuery.toLowerCase();
-      const matchesSearch = name.includes(query) || game.gameId.includes(query);
+      if (query && !name.includes(query) && !game.gameId.includes(query)) return false;
 
+      // Source filter
+      const gameSource = game.source || 'steam';
+      if (sourceFilter !== 'all' && gameSource !== sourceFilter) return false;
+
+      // Status filters
       const isInstalled = game.installed === true;
+      if (hideInstalled && isInstalled) { hidden++; return false; }
+      if (hideNotInstalled && !isInstalled) { hidden++; return false; }
 
-      const matchesFilter =
-        filter === 'all' ||
-        (filter === 'installed' && isInstalled) ||
-        (filter === 'not_installed' && !isInstalled);
+      // Zero achievements filter
+      if (hideZeroAchievements && game.achievementsTotal === 0) { hidden++; return false; }
 
-      return matchesSearch && matchesFilter;
+      return true;
     });
 
-    result.sort((a, b) => {
+    // Sort
+    filtered.sort((a, b) => {
       let valA: any;
       let valB: any;
 
@@ -430,8 +573,97 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
       return 0;
     });
 
-    return result;
-  }, [libraryGames, searchQuery, sortConfig, filter]);
+    return { filteredGames: filtered, hiddenCount: hidden };
+  }, [libraryGames, searchQuery, sortConfig, sourceFilter, hideInstalled, hideNotInstalled, hideZeroAchievements]);
+
+  const activeFiltersCount = (sourceFilter === 'all' ? 0 : 1)
+    + (hideInstalled ? 1 : 0)
+    + (hideNotInstalled ? 1 : 0)
+    + (hideZeroAchievements ? 1 : 0);
+
+  const getGameLetter = useCallback((game: SteamLibraryGame): string => {
+    const first = (game.name || game.gameId || '')[0] || '#';
+    if (/[0-9]/.test(first)) return '#';
+    return first.toUpperCase();
+  }, []);
+
+  const availableChars = useMemo(() => {
+    const chars = new Set<string>();
+    for (const game of filteredGames) {
+      chars.add(getGameLetter(game));
+    }
+    return chars;
+  }, [filteredGames, getGameLetter]);
+
+  const scrollLockRef = useRef(0);
+
+  const scrollToChar = useCallback((char: string) => {
+    const target = char === '0-9' ? '#' : char;
+    for (const game of filteredGames) {
+      if (getGameLetter(game) === target) {
+        const el = gameRefs.current.get(game.gameId)
+          || scrollRef.current?.querySelector(`[data-alpha-ref="${game.gameId}"]`);
+        if (el) {
+          scrollLockRef.current = Date.now() + 800;
+          setActiveAlphaChar(char);
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+      }
+    }
+  }, [filteredGames, getGameLetter]);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || filteredGames.length === 0) return;
+
+    let ticking = false;
+    let lastScrollTop = container.scrollTop;
+    const onScroll = () => {
+      if (Date.now() < scrollLockRef.current) return;
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const scrollTop = container.scrollTop;
+        const goingDown = scrollTop >= lastScrollTop;
+        lastScrollTop = scrollTop;
+        const viewH = container.clientHeight;
+        const scrollBottom = scrollTop + viewH;
+
+        if (goingDown) {
+          let lastVisible: string | null = null;
+          for (const game of filteredGames) {
+            const el = gameRefs.current.get(game.gameId)
+              || scrollRef.current?.querySelector(`[data-alpha-ref="${game.gameId}"]`);
+            if (!el) continue;
+            const elTop = (el as HTMLElement).offsetTop;
+            if (elTop <= scrollBottom) {
+              const letter = getGameLetter(game) === '#' ? '0-9' : getGameLetter(game);
+              if (lastVisible !== letter) lastVisible = letter;
+            }
+          }
+          if (lastVisible) setActiveAlphaChar(lastVisible);
+        } else {
+          for (const game of filteredGames) {
+            const el = gameRefs.current.get(game.gameId)
+              || scrollRef.current?.querySelector(`[data-alpha-ref="${game.gameId}"]`);
+            if (!el) continue;
+            const elTop = (el as HTMLElement).offsetTop;
+            const elBottom = elTop + (el as HTMLElement).offsetHeight;
+            if (elBottom >= scrollTop) {
+              const letter = getGameLetter(game) === '#' ? '0-9' : getGameLetter(game);
+              setActiveAlphaChar(letter);
+              return;
+            }
+          }
+        }
+      });
+    };
+
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [filteredGames, getGameLetter]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => ({
@@ -456,18 +688,9 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
     );
   };
 
-  const filterOptions: { key: FilterType; label: string }[] = [
-    { key: 'all', label: t('libraryPage.filterAll') },
-    { key: 'installed', label: t('libraryPage.installed') },
-    { key: 'not_installed', label: t('libraryPage.notInstalled') },
-  ];
-
-  const installedCount = libraryGames.filter(g => g.installed === true).length;
-  const notInstalledCount = libraryGames.filter(g => g.installed === false).length;
-
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 w-full mb-4">
+      <header className="flex-shrink-0 w-full mb-4 relative z-50">
         <div className="relative group flex-1">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <SearchIcon className={`text-lg transition-colors duration-300 ${searchQuery ? 'text-foreground' : 'text-muted-foreground group-focus-within:text-foreground'}`} />
@@ -480,44 +703,118 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
             className="w-full h-12 pl-12 pr-14 text-[0.95rem] font-semibold"
           />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setGamesViewMode(gamesViewMode === 'grid' ? 'list' : 'grid')}
-            className="absolute inset-y-1 right-2 h-auto w-10 rounded-md bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground"
-            title={gamesViewMode === 'grid' ? 'Alternar para lista' : 'Alternar para grade'}
-            aria-label={gamesViewMode === 'grid' ? 'Alternar para lista' : 'Alternar para grade'}
-          >
-            {gamesViewMode === 'grid' ? (
-              <ListViewIcon className="text-lg" />
-            ) : (
-              <GridViewIcon className="text-lg" />
-            )}
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap gap-2 mt-3">
-          {filterOptions.map((opt) => (
-            <Button
-              key={opt.key}
-              variant={filter === opt.key ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter(opt.key)}
-              className="h-7 px-3 text-xs"
+          <div className="absolute inset-y-0 right-2 flex items-center gap-1 z-10">
+            <button
+              ref={buttonRef}
+              type="button"
+              onClick={() => setFilterOpen(!filterOpen)}
+              className="relative flex items-center justify-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title={t('searchPage.searchFilters')}
             >
-              {opt.label}
-              {opt.key === 'installed' && !isLoading && (
-                <span className="ml-1.5 text-muted-foreground">({installedCount})</span>
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+                  {activeFiltersCount}
+                </span>
               )}
-              {opt.key === 'not_installed' && !isLoading && (
-                <span className="ml-1.5 text-muted-foreground">({notInstalledCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setGamesViewMode(gamesViewMode === 'grid' ? 'list' : 'grid')}
+              className="flex items-center justify-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title={gamesViewMode === 'grid' ? 'Alternar para lista' : 'Alternar para grade'}
+            >
+              {gamesViewMode === 'grid' ? (
+                <ListViewIcon className="text-lg" />
+              ) : (
+                <GridViewIcon className="text-lg" />
               )}
-            </Button>
-          ))}
+            </button>
+          </div>
+
+          {filterOpen && (
+            <div
+              ref={filterRef}
+              className="absolute top-full right-0 mt-2 w-64 max-h-[70vh] rounded-lg bg-popover shadow-xl shadow-black/20 z-50 animate-in fade-in-0 zoom-in-95 overflow-hidden flex flex-col"
+            >
+              <div className="overflow-y-auto custom-scrollbar p-1 flex-1 min-h-0">
+                <FilterSection label="Source" defaultOpen>
+                  {sourceOptions.map((option) => (
+                    <label
+                      key={option.value}
+                      className={`flex items-center gap-2.5 px-2 py-1 rounded-md cursor-pointer text-sm transition-colors hover:bg-accent ${sourceFilter === option.value ? 'text-foreground' : 'text-muted-foreground'}`}
+                    >
+                      <span className="flex items-center justify-center size-4 rounded border border-border flex-shrink-0 bg-background">
+                        {sourceFilter === option.value && (
+                          <svg className="size-3 text-primary" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-2 flex-1 min-w-0">
+                        {option.icon}
+                        <span className="font-medium truncate">{option.label}</span>
+                      </span>
+                      {option.value !== 'all' && sourceMatchCounts[option.value] !== undefined && (
+                        <span className="text-[10px] text-muted-foreground tabular-nums">{sourceMatchCounts[option.value]}</span>
+                      )}
+                      <input
+                        type="radio"
+                        name="library-source"
+                        value={option.value}
+                        checked={sourceFilter === option.value}
+                        onChange={() => setSourceFilter(option.value)}
+                        className="sr-only"
+                      />
+                    </label>
+                  ))}
+                </FilterSection>
+
+                <div className="h-px bg-border mx-1" />
+
+                <FilterSection label="Status" defaultOpen>
+                  <CheckboxItem
+                    label={t('libraryPage.installed')}
+                    checked={!hideInstalled}
+                    onChange={() => setHideInstalled(!hideInstalled)}
+                    count={libraryGames.filter(g => g.installed === true).length}
+                  />
+                  <CheckboxItem
+                    label={t('libraryPage.notInstalled')}
+                    checked={!hideNotInstalled}
+                    onChange={() => setHideNotInstalled(!hideNotInstalled)}
+                    count={libraryGames.filter(g => g.installed === false).length}
+                  />
+                </FilterSection>
+
+                <div className="h-px bg-border mx-1" />
+
+                <FilterSection label="Exclusions" defaultOpen>
+                  <CheckboxItem
+                    label="0 achievements"
+                    checked={hideZeroAchievements}
+                    onChange={() => setHideZeroAchievements(!hideZeroAchievements)}
+                  />
+                </FilterSection>
+              </div>
+
+              {hiddenCount > 0 && (
+                <>
+                  <div className="h-px bg-border" />
+                  <div className="px-3 py-2 text-[11px] text-muted-foreground flex-shrink-0">
+                    <span className="font-semibold text-foreground">{hiddenCount}</span> game{hiddenCount !== 1 ? 's' : ''} hidden
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
-      <div className="flex-grow overflow-y-auto no-scrollbar pb-10">
+      <div className="flex-grow flex overflow-hidden pb-4 gap-2">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar">
         {isLoading ? (
           gamesViewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-2 pb-5 overflow-visible">
@@ -561,7 +858,7 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
             <p className="text-sm text-muted-foreground mb-2">{t('libraryPage.error')}</p>
             <p className="text-xs text-muted-foreground/70 max-w-md">{error}</p>
           </div>
-        ) : filteredAndSortedGames.length === 0 ? (
+        ) : filteredGames.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <LibraryIcon className="text-muted-foreground/30 text-6xl mb-4" />
             <p className="text-sm text-muted-foreground">{t('libraryPage.noResults')}</p>
@@ -569,12 +866,16 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
         ) : (
           gamesViewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-2 pb-5 overflow-visible">
-              {filteredAndSortedGames.map(game => (
-                <LibraryGameCard
+              {filteredGames.map(game => (
+                <div
                   key={game.gameId}
-                  game={game}
-                  onGameSelect={onGameSelect}
-                />
+                  ref={(el) => { if (el) gameRefs.current.set(game.gameId, el); }}
+                >
+                  <LibraryGameCard
+                    game={game}
+                    onGameSelect={onGameSelect}
+                  />
+                </div>
               ))}
             </div>
           ) : (
@@ -609,17 +910,29 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAndSortedGames.map(game => (
+                  {filteredGames.map(game => (
                     <LibraryGameRow
                       key={game.gameId}
                       game={game}
                       onGameSelect={onGameSelect}
+                      data-alpha-ref={game.gameId}
                     />
                   ))}
                 </TableBody>
               </Table>
             </div>
           )
+        )}
+        </div>
+
+        {!isLoading && filteredGames.length > 0 && (
+          <div className="flex-shrink-0 h-full py-2">
+            <AlphabetScrollbar
+              onCharSelect={scrollToChar}
+              activeChar={activeAlphaChar}
+              availableChars={availableChars}
+            />
+          </div>
         )}
       </div>
     </div>
