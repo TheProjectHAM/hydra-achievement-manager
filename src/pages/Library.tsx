@@ -236,10 +236,11 @@ const LibraryGameCard: React.FC<{
   );
 };
 
-const LibraryGameRow = React.forwardRef<HTMLTableRowElement, {
+const LibraryGameRow: React.FC<{
   game: SteamLibraryGame;
   onGameSelect: (game: SteamSearchResult) => void;
-}>(({ game, onGameSelect }, ref) => {
+  'data-alpha-ref'?: string;
+}> = ({ game, onGameSelect, ...rest }) => {
   const { t } = useI18n();
   const gameId = game.gameId;
   const isRetro = game.source === 'retroachievements';
@@ -269,7 +270,6 @@ const LibraryGameRow = React.forwardRef<HTMLTableRowElement, {
 
   return (
     <TableRow
-      ref={ref}
       role="button"
       tabIndex={0}
       onClick={handleSelect}
@@ -280,6 +280,7 @@ const LibraryGameRow = React.forwardRef<HTMLTableRowElement, {
         }
       }}
       className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      data-alpha-ref={rest['data-alpha-ref']}
     >
       <TableCell className="w-[6%] p-2 sm:p-3">
         {isRetro ? (
@@ -387,7 +388,7 @@ const LibraryGameRow = React.forwardRef<HTMLTableRowElement, {
       </TableCell>
     </TableRow>
   );
-});
+};
 
 const FilterSection: React.FC<{
   label: string;
@@ -981,9 +982,9 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
                   {filteredGames.map(game => (
                     <LibraryGameRow
                       key={game.gameId}
-                      ref={(el) => { if (el) gameRefs.current.set(game.gameId, el); }}
                       game={game}
                       onGameSelect={onGameSelect}
+                      data-alpha-ref={game.gameId}
                     />
                   ))}
                 </TableBody>
