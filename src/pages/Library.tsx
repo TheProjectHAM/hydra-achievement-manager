@@ -139,7 +139,7 @@ const LibraryGameCard: React.FC<{
           </div>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent via-50% to-black/90"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 via-40% to-black/95"></div>
 
         {isCompleted && (
           <div className="absolute top-2.5 right-2.5 z-10 animate-fade-in">
@@ -175,28 +175,28 @@ const LibraryGameCard: React.FC<{
 
         <div className="relative flex flex-col justify-end h-full p-4 text-white">
           <div className="flex items-center justify-between mb-2 gap-3 min-w-0">
-            <h3 className="font-semibold text-sm truncate min-w-0 leading-tight drop-shadow-md flex items-center gap-2">
+            <h3 className="font-semibold text-sm truncate min-w-0 leading-tight drop-shadow-lg flex items-center gap-2">
               {isRetro ? (
-                <RetroAchievementsIcon className="h-5 w-5 shrink-0 opacity-75" />
+                <RetroAchievementsIcon className="h-5 w-5 shrink-0 opacity-90" />
               ) : (
-                <SteamBrandIcon className="h-5 w-5 shrink-0 opacity-75" />
+                <SteamBrandIcon className="h-5 w-5 shrink-0 opacity-90" />
               )}
               <span className="truncate">{game.name}</span>
             </h3>
             <div className="flex items-center gap-1 flex-shrink-0">
               {isRetro ? (
                 game.consoleName && (
-                  <span className="inline-flex items-center rounded-full border border-muted-foreground/20 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground/70 truncate max-w-[120px]">
+                  <span className="inline-flex items-center rounded-full border border-white/15 bg-black/40 px-1.5 py-0.5 text-[10px] font-semibold text-white/80 truncate max-w-[120px] backdrop-blur-sm">
                     {game.consoleName}
                   </span>
                 )
               ) : isInstalled ? (
-                <span className="inline-flex items-center gap-0.5 rounded-full border border-green-500/30 bg-green-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-green-400">
+                <span className="inline-flex items-center gap-0.5 rounded-full border border-green-500/40 bg-green-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-green-300 backdrop-blur-sm">
                   <CheckIcon className="leading-none" style={{ fontSize: 12 }} />
                   {t('libraryPage.installed')}
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-full border border-muted-foreground/20 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground/70">
+                <span className="inline-flex items-center rounded-full border border-white/15 bg-black/40 px-1.5 py-0.5 text-[10px] font-medium text-white/70 backdrop-blur-sm">
                   {t('libraryPage.notInstalled')}
                 </span>
               )}
@@ -204,26 +204,26 @@ const LibraryGameCard: React.FC<{
           </div>
 
           {game.achievementsTotal > 0 && (
-            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden mb-1.5">
+            <div className="w-full bg-white/20 rounded-full h-1.5 overflow-hidden mb-1.5 shadow-inner">
               <div
                 className={`game-card-progress-fill h-full transition-all duration-500 ease-out ${isCompleted
-                  ? 'bg-gradient-to-r from-primary via-primary/80 to-primary shadow-[0_0_15px_var(--primary)] animate-shimmer bg-[length:200%_100%]'
-                  : 'bg-white/40 group-hover:bg-white/60'
+                  ? 'bg-gradient-to-r from-primary via-primary/80 to-primary shadow-[0_0_10px_var(--primary)] animate-shimmer bg-[length:200%_100%]'
+                  : 'bg-white/50 group-hover:bg-white/70'
                   }`}
                 style={{ width: `${(game.achievementsCurrent / game.achievementsTotal) * 100}%` }}
               ></div>
             </div>
           )}
 
-          <div className="flex items-center gap-3 text-[11px] text-white/60">
+          <div className="flex items-center gap-3 text-[12px] text-white/80">
             {!isRetro && game.playtimeForever ? (
-              <span>{formatPlaytime(game.playtimeForever)}</span>
+              <span className="font-medium">{formatPlaytime(game.playtimeForever)}</span>
             ) : null}
             {!isRetro && game.rtimeLastPlayed ? (
-              <span>{formatLastPlayed(game.rtimeLastPlayed)}</span>
+              <span className="font-medium">{formatLastPlayed(game.rtimeLastPlayed)}</span>
             ) : null}
             {game.achievementsTotal > 0 && (
-              <span className={isCompleted ? 'text-primary' : ''}>
+              <span className={`font-medium ${isCompleted ? 'text-primary' : 'text-white/80'}`}>
                 {game.achievementsCurrent}/{game.achievementsTotal}
               </span>
             )}
