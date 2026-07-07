@@ -12,9 +12,9 @@ const MaterialIcon: React.FC<IconProps & { iconName: string }> = ({ className, s
   </span>
 );
 
-export const GameIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="sports_esports" />;
+export const GameIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="joystick" />;
 export const LibraryIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="auto_stories" />;
-export const SearchIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="search" />;
+export const SearchIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="travel_explore" />;
 export const SettingsIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="settings" />;
 export const ArrowRightIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="arrow_forward" />;
 export const SortIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="swap_vert" />;
@@ -240,7 +240,7 @@ export const SpainFlagIcon: React.FC<IconProps> = (props) => (
   </svg>
 );
 
-export const GridViewIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="grid_view" />;
+export const GridViewIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="grid_on" />;
 
-export const ListViewIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="view_list" />;
+export const ListViewIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="list_alt" />;
 export const PowerIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="power_settings_new" />;

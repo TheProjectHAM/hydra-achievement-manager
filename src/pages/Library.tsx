@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { SteamSearchResult } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
-import { getAllSteamLibraryGames, getHydraLibraryGames, HydraLibraryGame } from '../tauri-api';
+import { getAllSteamLibraryGames, getHydraLibraryGames, getRetroAchievementsLibraryGames, HydraLibraryGame } from '../tauri-api';
 import AlphabetScrollbar from '../components/AlphabetScrollbar';
-import { LibraryIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon, WarningIcon, PlatinumIcon, CheckIcon } from '../components/Icons';
+import { LibraryIcon, GridViewIcon, ListViewIcon, SteamBrandIcon, SearchIcon, WarningIcon, PlatinumIcon, CheckIcon, RetroAchievementsIcon } from '../components/Icons';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -16,6 +16,7 @@ import {
   getSteamLogoUrl,
   isSteamLogoFallbackUrl,
 } from '@/lib/steam-assets';
+import { getRetroAchievementsGameImage } from '@/lib/retro-achievements-assets';
 
 interface SteamLibraryGame {
   gameId: string;
@@ -28,10 +29,13 @@ interface SteamLibraryGame {
   playtime2weeks?: number;
   rtimeLastPlayed?: number;
   imgIconUrl?: string;
+  consoleName?: string | null;
+  imageBoxArt?: string | null;
+  imageIcon?: string | null;
 }
 
 type SortKey = 'name' | 'playtime' | 'last_played';
-type LibrarySourceFilter = 'all' | 'steam' | 'hydra';
+type LibrarySourceFilter = 'all' | 'steam' | 'hydra' | 'retroachievements';
 
 const formatPlaytime = (minutes: number | undefined): string => {
   if (!minutes || minutes === 0) return '0h';
@@ -63,8 +67,11 @@ const LibraryGameCard: React.FC<{
 }> = ({ game, onGameSelect }) => {
   const { t } = useI18n();
   const gameId = game.gameId;
+  const isRetro = game.source === 'retroachievements';
 
-  const fallbackImages = getSteamBackgroundFallbackUrls(gameId);
+  const fallbackImages = isRetro
+    ? [getRetroAchievementsGameImage({ imageUrl: game.imageBoxArt, logoUrl: game.imageIcon })]
+    : getSteamBackgroundFallbackUrls(gameId);
   const [imageIndex, setImageIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState(fallbackImages[0]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -105,6 +112,10 @@ const LibraryGameCard: React.FC<{
       id: parseInt(gameId),
       name: game.name,
       achievementsTotal: game.achievementsTotal,
+      source: isRetro ? 'retroachievements' : undefined,
+      consoleName: game.consoleName,
+      imageUrl: game.imageBoxArt,
+      logoUrl: game.imageIcon,
     });
   };
 
@@ -142,7 +153,7 @@ const LibraryGameCard: React.FC<{
           </div>
         )}
 
-        {hoverLogoFailed ? (
+        {isRetro ? null : hoverLogoFailed ? (
           <div className="absolute -top-2 -left-1 z-10 h-16 w-16 flex items-center justify-center opacity-0 drop-shadow-xl transition-opacity duration-300 group-hover:opacity-100">
             <WarningIcon className="text-yellow-500 text-5xl" />
           </div>
@@ -165,11 +176,21 @@ const LibraryGameCard: React.FC<{
         <div className="relative flex flex-col justify-end h-full p-4 text-white">
           <div className="flex items-center justify-between mb-2 gap-3 min-w-0">
             <h3 className="font-semibold text-sm truncate min-w-0 leading-tight drop-shadow-md flex items-center gap-2">
-              <SteamBrandIcon className="h-5 w-5 shrink-0 opacity-75" />
+              {isRetro ? (
+                <RetroAchievementsIcon className="h-5 w-5 shrink-0 opacity-75" />
+              ) : (
+                <SteamBrandIcon className="h-5 w-5 shrink-0 opacity-75" />
+              )}
               <span className="truncate">{game.name}</span>
             </h3>
             <div className="flex items-center gap-1 flex-shrink-0">
-              {isInstalled ? (
+              {isRetro ? (
+                game.consoleName && (
+                  <span className="inline-flex items-center rounded-full border border-muted-foreground/20 bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground/70 truncate max-w-[120px]">
+                    {game.consoleName}
+                  </span>
+                )
+              ) : isInstalled ? (
                 <span className="inline-flex items-center gap-0.5 rounded-full border border-green-500/30 bg-green-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-green-400">
                   <CheckIcon className="leading-none" style={{ fontSize: 12 }} />
                   {t('libraryPage.installed')}
@@ -195,10 +216,10 @@ const LibraryGameCard: React.FC<{
           )}
 
           <div className="flex items-center gap-3 text-[11px] text-white/60">
-            {game.playtimeForever ? (
+            {!isRetro && game.playtimeForever ? (
               <span>{formatPlaytime(game.playtimeForever)}</span>
             ) : null}
-            {game.rtimeLastPlayed ? (
+            {!isRetro && game.rtimeLastPlayed ? (
               <span>{formatLastPlayed(game.rtimeLastPlayed)}</span>
             ) : null}
             {game.achievementsTotal > 0 && (
@@ -215,13 +236,13 @@ const LibraryGameCard: React.FC<{
   );
 };
 
-const LibraryGameRow: React.FC<{
+const LibraryGameRow = React.forwardRef<HTMLTableRowElement, {
   game: SteamLibraryGame;
   onGameSelect: (game: SteamSearchResult) => void;
-  'data-alpha-ref'?: string;
-}> = ({ game, onGameSelect, ...rest }) => {
+}>(({ game, onGameSelect }, ref) => {
   const { t } = useI18n();
   const gameId = game.gameId;
+  const isRetro = game.source === 'retroachievements';
   const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
@@ -239,11 +260,16 @@ const LibraryGameRow: React.FC<{
       id: parseInt(gameId),
       name: game.name,
       achievementsTotal: game.achievementsTotal,
+      source: isRetro ? 'retroachievements' : undefined,
+      consoleName: game.consoleName,
+      imageUrl: game.imageBoxArt,
+      logoUrl: game.imageIcon,
     });
   };
 
   return (
     <TableRow
+      ref={ref}
       role="button"
       tabIndex={0}
       onClick={handleSelect}
@@ -254,10 +280,15 @@ const LibraryGameRow: React.FC<{
         }
       }}
       className="group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-      data-alpha-ref={rest['data-alpha-ref']}
     >
       <TableCell className="w-[6%] p-2 sm:p-3">
-        {logoFailed ? (
+        {isRetro ? (
+          <img
+            src={game.imageIcon || game.imageBoxArt || getRetroAchievementsGameImage({ imageUrl: game.imageBoxArt, logoUrl: game.imageIcon })}
+            alt=""
+            className="h-12 w-12 object-cover rounded-md drop-shadow-md sm:h-14 sm:w-14"
+          />
+        ) : logoFailed ? (
           <div className="h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center">
             <WarningIcon className="text-yellow-500 text-4xl sm:text-5xl" />
           </div>
@@ -281,15 +312,25 @@ const LibraryGameRow: React.FC<{
       <TableCell className="w-[28%] min-w-0">
         <div className="min-w-0 space-y-1">
           <h3 className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
-            <SteamBrandIcon className="h-4 w-4 shrink-0 opacity-60" />
+            {isRetro ? (
+              <RetroAchievementsIcon className="h-4 w-4 shrink-0 opacity-60" />
+            ) : (
+              <SteamBrandIcon className="h-4 w-4 shrink-0 opacity-60" />
+            )}
             <span className="truncate">{game.name}</span>
           </h3>
-          <p className="text-[11px] font-medium text-muted-foreground">AppID: {gameId}</p>
+          <p className="text-[11px] font-medium text-muted-foreground">
+            {isRetro ? (game.consoleName || 'RetroAchievements') : `AppID: ${gameId}`}
+          </p>
         </div>
       </TableCell>
 
       <TableCell className="hidden w-[10%] sm:table-cell">
-        {isInstalled ? (
+        {isRetro ? (
+          <span className="inline-flex items-center rounded-full border border-muted-foreground/20 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-muted-foreground/70">
+            Retro
+          </span>
+        ) : isInstalled ? (
           <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/15 px-2 py-0.5 text-[11px] font-semibold text-green-400">
             <CheckIcon className="leading-none" style={{ fontSize: 14 }} />
             {t('libraryPage.installed')}
@@ -303,13 +344,13 @@ const LibraryGameRow: React.FC<{
 
       <TableCell className="hidden w-[12%] md:table-cell">
         <span className="text-xs font-medium text-muted-foreground">
-          {game.playtimeForever ? formatPlaytime(game.playtimeForever) : '—'}
+          {isRetro ? '—' : (game.playtimeForever ? formatPlaytime(game.playtimeForever) : '—')}
         </span>
       </TableCell>
 
       <TableCell className="hidden w-[12%] lg:table-cell">
         <span className="text-xs font-medium text-muted-foreground">
-          {game.rtimeLastPlayed ? formatLastPlayed(game.rtimeLastPlayed) : '—'}
+          {isRetro ? '—' : (game.rtimeLastPlayed ? formatLastPlayed(game.rtimeLastPlayed) : '—')}
         </span>
       </TableCell>
 
@@ -346,7 +387,7 @@ const LibraryGameRow: React.FC<{
       </TableCell>
     </TableRow>
   );
-};
+});
 
 const FilterSection: React.FC<{
   label: string;
@@ -404,6 +445,7 @@ const sourceOptions: { value: LibrarySourceFilter; label: string; icon: React.Re
   { value: 'all', label: 'All Sources', icon: <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> },
   { value: 'steam', label: 'Steam', icon: <SteamBrandIcon className="h-3.5 w-3.5" /> },
   { value: 'hydra', label: 'Hydra', icon: <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> },
+  { value: 'retroachievements', label: 'RetroAchievements', icon: <RetroAchievementsIcon className="h-3.5 w-3.5" /> },
 ];
 
 const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void }> = ({ onGameSelect }) => {
@@ -467,9 +509,13 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
         console.error('[Library] Failed to load Hydra library:', err);
         return [] as HydraLibraryGame[];
       }),
+      getRetroAchievementsLibraryGames().catch((err) => {
+        console.error('[Library] Failed to load RetroAchievements library:', err);
+        return [] as any[];
+      }),
     ])
-      .then(([steamGames, hydraGames]) => {
-        console.log(`[Library] Steam: ${steamGames.length}, Hydra: ${hydraGames.length}`);
+      .then(([steamGames, hydraGames, retroGames]) => {
+        console.log(`[Library] Steam: ${steamGames.length}, Hydra: ${hydraGames.length}, RetroAchievements: ${retroGames.length}`);
 
         const steamMap = new Map<string, SteamLibraryGame>();
         for (const game of steamGames) {
@@ -500,6 +546,22 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
           });
         }
 
+        for (const rg of retroGames) {
+          const rgId = String(rg.id);
+          if (steamMap.has(rgId)) continue;
+
+          merged.push({
+            gameId: rgId,
+            name: rg.title,
+            achievementsTotal: rg.achievementsTotal || 0,
+            achievementsCurrent: rg.achievementsCurrent || 0,
+            source: 'retroachievements',
+            consoleName: rg.consoleName || null,
+            imageBoxArt: rg.imageBoxArt || null,
+            imageIcon: rg.imageIcon || null,
+          });
+        }
+
         console.log(`[Library] Merged: ${merged.length} total`);
 
         setLibraryGames(merged);
@@ -516,7 +578,7 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
 
   // Source match counts
   const sourceMatchCounts = useMemo(() => {
-    const counts: Record<string, number> = { steam: 0, hydra: 0 };
+    const counts: Record<string, number> = { steam: 0, hydra: 0, retroachievements: 0 };
     for (const game of libraryGames) {
       const src = game.source || 'steam';
       if (src in counts) counts[src]++;
@@ -617,6 +679,12 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
     const container = scrollRef.current;
     if (!container || filteredGames.length === 0) return;
 
+    const getElTop = (el: Element) => {
+      const containerRect = container.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      return elRect.top - containerRect.top + container.scrollTop;
+    };
+
     let ticking = false;
     let lastScrollTop = container.scrollTop;
     const onScroll = () => {
@@ -637,7 +705,7 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
             const el = gameRefs.current.get(game.gameId)
               || scrollRef.current?.querySelector(`[data-alpha-ref="${game.gameId}"]`);
             if (!el) continue;
-            const elTop = (el as HTMLElement).offsetTop;
+            const elTop = getElTop(el);
             if (elTop <= scrollBottom) {
               const letter = getGameLetter(game) === '#' ? '0-9' : getGameLetter(game);
               if (lastVisible !== letter) lastVisible = letter;
@@ -649,7 +717,7 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
             const el = gameRefs.current.get(game.gameId)
               || scrollRef.current?.querySelector(`[data-alpha-ref="${game.gameId}"]`);
             if (!el) continue;
-            const elTop = (el as HTMLElement).offsetTop;
+            const elTop = getElTop(el);
             const elBottom = elTop + (el as HTMLElement).offsetHeight;
             if (elBottom >= scrollTop) {
               const letter = getGameLetter(game) === '#' ? '0-9' : getGameLetter(game);
@@ -727,9 +795,9 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
               title={gamesViewMode === 'grid' ? 'Alternar para lista' : 'Alternar para grade'}
             >
               {gamesViewMode === 'grid' ? (
-                <ListViewIcon className="text-lg" />
-              ) : (
                 <GridViewIcon className="text-lg" />
+              ) : (
+                <ListViewIcon className="text-lg" />
               )}
             </button>
           </div>
@@ -913,9 +981,9 @@ const LibraryContent: React.FC<{ onGameSelect: (game: SteamSearchResult) => void
                   {filteredGames.map(game => (
                     <LibraryGameRow
                       key={game.gameId}
+                      ref={(el) => { if (el) gameRefs.current.set(game.gameId, el); }}
                       game={game}
                       onGameSelect={onGameSelect}
-                      data-alpha-ref={game.gameId}
                     />
                   ))}
                 </TableBody>

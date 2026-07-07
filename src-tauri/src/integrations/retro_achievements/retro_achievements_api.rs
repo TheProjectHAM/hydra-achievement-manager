@@ -280,6 +280,27 @@ impl RetroAchievementsApi {
         Ok(items.iter().filter_map(Self::game_from_value).collect())
     }
 
+    pub async fn get_library_games(
+        credentials: &RetroAchievementsCredentials,
+    ) -> Result<Vec<RetroAchievementsGame>> {
+        let body = Self::get_json(
+            "API_GetUserRecentlyPlayedGames.php",
+            &[
+                ("u", credentials.username.as_str()),
+                ("c", "100"),
+                ("z", credentials.username.as_str()),
+                ("y", credentials.api_key.as_str()),
+            ],
+        )
+        .await?;
+
+        let Some(items) = body.as_array() else {
+            return Ok(Vec::new());
+        };
+
+        Ok(items.iter().filter_map(Self::game_from_value).collect())
+    }
+
     pub async fn get_game_summary(
         credentials: Option<&RetroAchievementsCredentials>,
         game_id: u32,

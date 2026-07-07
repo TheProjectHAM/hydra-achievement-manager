@@ -234,6 +234,19 @@ pub async fn get_retro_achievements_recent_games(
 }
 
 #[tauri::command]
+pub async fn get_retro_achievements_library_games(
+    app_handle: AppHandle,
+) -> Result<Vec<RetroAchievementsGame>, String> {
+    let Some(credentials) = load_credentials(&app_handle)? else {
+        return Ok(Vec::new());
+    };
+
+    RetroAchievementsApi::get_library_games(&credentials)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub async fn get_retro_achievements_game_achievements(
     game_id: u32,
     app_handle: AppHandle,

@@ -596,6 +596,9 @@ export const deleteRetroGameUnlocks = (gameId: number) =>
 export const getRetroAchievementsRecentGames = () =>
   invoke<RetroAchievementsGame[]>("get_retro_achievements_recent_games");
 
+export const getRetroAchievementsLibraryGames = () =>
+  invoke<RetroAchievementsGame[]>("get_retro_achievements_library_games");
+
 export const getRetroAchievementsGameAchievements = (gameId: number) => {
   const inFlightRequest = inFlightRetroAchievementRequests.get(gameId);
   if (inFlightRequest) return inFlightRequest;

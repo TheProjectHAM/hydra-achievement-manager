@@ -274,6 +274,7 @@ pub fn run() {
             commands::retro_achievements::delete_retro_game_unlocks,
             commands::retro_achievements::search_retro_achievements_games,
             commands::retro_achievements::get_retro_achievements_recent_games,
+            commands::retro_achievements::get_retro_achievements_library_games,
             commands::retro_achievements::get_retro_achievements_game_achievements,
             commands::connections::get_steam_connection_profile,
         ])
