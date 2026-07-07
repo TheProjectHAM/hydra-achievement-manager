@@ -13,6 +13,7 @@
   },
   "sidebar": {
     "games": "Games",
+    "library": "Library",
     "search": "Search",
     "achievements": "Achievements",
     "settings": "Settings",
@@ -38,6 +39,17 @@
   },
   "gamesPage": {
     "completed": "COMPLETED"
+  },
+  "libraryPage": {
+    "title": "Steam Library",
+    "searchPlaceholder": "Search your library...",
+    "totalGames": "games",
+    "installed": "Installed",
+    "notInstalled": "Not Installed",
+    "hasAchievements": "Has Achievements",
+    "filterAll": "All",
+    "noResults": "No games found.",
+    "error": "Failed to load Steam library. Make sure your Steam API key and Steam ID are configured in Settings."
   },
   "searchPage": {
     "inputPlaceholder": "Search games on Steam...",

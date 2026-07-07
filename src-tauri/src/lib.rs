@@ -254,6 +254,7 @@ pub fn run() {
             commands::steam::get_steam_dll_path,
             commands::steam::get_steam_library_path,
             commands::steam::get_steam_library_info,
+            commands::steam::get_all_steam_library_games,
             commands::ui::open_devtools,
             commands::ui::get_window_decoration_info,
             commands::cache_system::get_cache_size,

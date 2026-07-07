@@ -12,6 +12,7 @@ import { useTheme } from './contexts/ThemeContext';
 import { useI18n } from './contexts/I18nContext';
 import { useMonitoredAchievements } from './contexts/MonitoredAchievementsContext';
 import GamesContent from './pages/Games';
+import LibraryContent from './pages/Library';
 import AchievementsContent from './pages/Achievements';
 import ExportPage from './pages/Export';
 import InitialWizard from './pages/InitialWizard';
@@ -813,6 +814,8 @@ const App: React.FC = () => {
     switch (activeTabId) {
       case 'jogos':
         return <GamesContent onGameSelect={handleGameSelect} />;
+      case 'biblioteca':
+        return <LibraryContent onGameSelect={handleGameSelect} />;
       case 'pesquisar':
         return <SearchContent onGameSelect={handleGameSelect} />;
       case 'conquistas':
@@ -833,7 +836,7 @@ const App: React.FC = () => {
     }
   };
 
-  const isLayoutManaged = ['jogos', 'pesquisar', 'conquistas'].includes(activeTabId);
+  const isLayoutManaged = ['jogos', 'biblioteca', 'pesquisar', 'conquistas'].includes(activeTabId);
 
   if (isLoading) {
     return <div className="w-screen h-screen bg-background" />;

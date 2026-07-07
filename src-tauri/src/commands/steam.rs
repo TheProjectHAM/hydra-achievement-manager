@@ -927,3 +927,111 @@ pub async fn pick_steam_dll_file(app_handle: AppHandle) -> Result<Option<String>
 
     Ok(path.and_then(|fp| fp.as_path().map(|p| p.to_string_lossy().to_string())))
 }
+
+/// Busca todos os jogos Steam da biblioteca do usuário via Steam Web API + .acf locais.
+/// Combina dados da API (lista completa) com arquivos locais (detectar instalação).
+#[tauri::command]
+pub async fn get_all_steam_library_games(
+    state: tauri::State<'_, crate::AppState>,
+    app_handle: AppHandle,
+) -> Result<Vec<SteamGame>, String> {
+    let settings = load_settings(app_handle.clone()).await.map_err(|e| e.to_string())?;
+    let steam_api_key = settings
+        .get("steamApiKey")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let steam_id = settings
+        .get("steamId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    if steam_api_key.is_empty() || steam_id.is_empty() {
+        log::warn!("Steam API key or Steam ID not configured, falling back to local .acf files only");
+        let monitor_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
+        if let Some(ref steam_monitor) = *monitor_lock {
+            return steam_monitor
+                .get_steam_games()
+                .map_err(|e| e.to_string());
+        }
+        return Err("Steam monitor not initialized".to_string());
+    }
+
+    // 1. Fetch games from Steam Web API (complete list with playtime metadata)
+    let api_games_result =
+        SteamWebApi::get_all_owned_games(&steam_api_key, &steam_id).await;
+
+    // 2. Fetch games from local .acf files (for install path detection)
+    let local_games_result = {
+        let monitor_lock = state.steam_monitor.lock().map_err(|e| e.to_string())?;
+        if let Some(ref steam_monitor) = *monitor_lock {
+            steam_monitor.get_steam_games()
+        } else {
+            Ok(Vec::new())
+        }
+    };
+
+    let api_games = api_games_result.unwrap_or_else(|e| {
+        log::error!("Failed to fetch owned games from Steam API: {}", e);
+        Vec::new()
+    });
+    let local_games = local_games_result.unwrap_or_else(|e| {
+        log::error!("Failed to fetch local .acf games: {}", e);
+        Vec::new()
+    });
+
+    // 3. Build a map of local games by game_id for install path lookup
+    let local_map: HashMap<String, &SteamGame> = local_games
+        .iter()
+        .map(|g| (g.game_id.clone(), g))
+        .collect();
+
+    // 4. Merge: start with API games, enrich with local data
+    let mut merged: Vec<SteamGame> = Vec::new();
+    let mut seen_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    for mut game in api_games {
+        if let Some(local) = local_map.get(&game.game_id) {
+            // Game exists locally -> mark as installed, use local paths
+            game.installed = Some(true);
+            game.library_path = local.library_path.clone();
+            game.install_path = local.install_path.clone();
+        } else {
+            // Game only in API -> not installed locally
+            game.installed = Some(false);
+        }
+        seen_ids.insert(game.game_id.clone());
+        merged.push(game);
+    }
+
+    // 5. Add local-only games (not in API, e.g. delisted games)
+    for game in local_games {
+        if !seen_ids.contains(&game.game_id) {
+            merged.push(game);
+        }
+    }
+
+    // 6. Enrich with cache data (fast, no API calls)
+    let mut enriched = Vec::new();
+    for mut game in merged {
+        if let Some(cached) = CacheManager::get_game(&app_handle, &game.game_id) {
+            if game.achievements_total == 0 {
+                game.achievements_total = cached.achievements_total.unwrap_or(0) as u32;
+            }
+            if game.name.is_empty() {
+                game.name = cached.name.unwrap_or(game.game_id.clone());
+            }
+        }
+        enriched.push(game);
+    }
+
+    log::info!(
+        "Returning {} merged Steam library games ({} from API, {} local-only)",
+        enriched.len(),
+        enriched.iter().filter(|g| g.installed != Some(false)).count(),
+        enriched.iter().filter(|g| g.installed == Some(false)).count()
+    );
+
+    Ok(enriched)
+}

@@ -13,6 +13,7 @@
   },
   "sidebar": {
     "games": "Jogos",
+    "library": "Biblioteca",
     "search": "Pesquisar",
     "achievements": "Conquistas",
     "settings": "Configurações",
@@ -38,6 +39,17 @@
   },
   "gamesPage": {
     "completed": "PLATINADO"
+  },
+  "libraryPage": {
+    "title": "Biblioteca Steam",
+    "searchPlaceholder": "Pesquisar na sua biblioteca...",
+    "totalGames": "jogos",
+    "installed": "Instalado",
+    "notInstalled": "Não Instalado",
+    "hasAchievements": "Possui Conquistas",
+    "filterAll": "Todos",
+    "noResults": "Nenhum jogo encontrado.",
+    "error": "Falha ao carregar a biblioteca Steam. Verifique se sua chave de API Steam e Steam ID estão configurados nas Configurações."
   },
   "searchPage": {
     "inputPlaceholder": "Pesquise por jogos na Steam...",

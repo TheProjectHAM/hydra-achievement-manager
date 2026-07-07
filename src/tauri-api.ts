@@ -639,6 +639,9 @@ export const getSteamLibraryInfo = () =>
     "get_steam_library_info",
   );
 
+export const getAllSteamLibraryGames = () =>
+  invoke<any[]>("get_all_steam_library_games");
+
 export const onSteamGamesUpdate = (
   callback: (games: any[]) => void,
 ): Promise<UnlistenFn> => {
@@ -696,6 +699,7 @@ export const electronAPI = {
   detectSteamGames,
   getSteamDllPath,
   getSteamLibraryInfo,
+  getAllSteamLibraryGames,
   onSteamGamesUpdate,
   onAchievementsUpdated,
   platform:

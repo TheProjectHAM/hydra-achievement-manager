@@ -458,6 +458,124 @@ impl SteamWebApi {
         Ok(achievements)
     }
 
+    /// Busca todos os jogos possuídos pelo jogador via Steam Web API
+    pub async fn get_all_owned_games(
+        api_key: &str,
+        steam_id: &str,
+    ) -> Result<Vec<super::steam_types::SteamGame>> {
+        let normalized_steam_id = Self::normalize_steam_id(steam_id)
+            .ok_or_else(|| anyhow::anyhow!("Invalid SteamID for Steam Web API"))?;
+        let base_url = std::env::var("STEAM_API_URL")
+            .unwrap_or_else(|_| "https://api.steampowered.com".to_string());
+
+        let url = format!(
+            "{}/IPlayerService/GetOwnedGames/v1/?key={}&steamid={}&include_appinfo=1&include_played_free_games=1&format=json",
+            base_url,
+            api_key.trim(),
+            normalized_steam_id
+        );
+
+        log::info!(
+            "Fetching all owned Steam games for SteamID {}",
+            Self::mask_steam_id(&normalized_steam_id)
+        );
+
+        let client = crate::utils::http::get_client()
+            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
+
+        let response = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to fetch owned games: {}", e))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body_text = response
+                .text()
+                .await
+                .context("Failed to read owned games error body")?;
+            return Err(anyhow::anyhow!(
+                "Steam owned games request failed with status {} (body: {})",
+                status,
+                Self::response_preview(&body_text)
+            ));
+        }
+
+        let body: Value = response
+            .json()
+            .await
+            .context("Failed to parse owned games response as JSON")?;
+
+        let games_value = body
+            .get("response")
+            .and_then(|r| r.get("games"));
+
+        let Some(games_array) = games_value.and_then(|g| g.as_array()) else {
+            log::info!("Steam owned games response had no games array");
+            return Ok(Vec::new());
+        };
+
+        let mut games = Vec::new();
+
+        for game in games_array {
+            let appid = game
+                .get("appid")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if appid == 0 {
+                continue;
+            }
+
+            let name = game
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            if name.is_empty() {
+                continue;
+            }
+
+            let playtime_forever = game
+                .get("playtime_forever")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+            let playtime_2weeks = game
+                .get("playtime_2weeks")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+            let rtime_last_played = game
+                .get("rtime_last_played")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+            let img_icon_url = game
+                .get("img_icon_url")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            games.push(super::steam_types::SteamGame {
+                game_id: appid.to_string(),
+                name,
+                achievements_total: 0,
+                achievements_current: 0,
+                source: "steam".to_string(),
+                library_path: String::new(),
+                install_path: String::new(),
+                installed: None,
+                playtime_forever,
+                playtime_2weeks,
+                rtime_last_played,
+                img_icon_url,
+            });
+        }
+
+        log::info!(
+            "Found {} owned Steam games via Steam Web API",
+            games.len()
+        );
+        Ok(games)
+    }
+
     /// Busca porcentagens globais de achievements
     pub async fn get_global_achievement_percentages(app_id: u32) -> Result<Vec<(String, f64)>> {
         let base_url = std::env::var("STEAM_API_URL")

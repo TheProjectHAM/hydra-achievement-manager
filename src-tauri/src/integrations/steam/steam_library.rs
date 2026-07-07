@@ -59,6 +59,11 @@ pub fn get_owned_games() -> Result<Vec<SteamGame>> {
                                 source: "steam".to_string(),
                                 library_path: folder.to_string_lossy().to_string(),
                                 install_path: install_path.to_string_lossy().to_string(),
+                                installed: Some(true),
+                                playtime_forever: None,
+                                playtime_2weeks: None,
+                                rtime_last_played: None,
+                                img_icon_url: None,
                             });
                         }
                     }

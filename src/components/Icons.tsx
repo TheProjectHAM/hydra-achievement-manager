@@ -13,6 +13,7 @@ const MaterialIcon: React.FC<IconProps & { iconName: string }> = ({ className, s
 );
 
 export const GameIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="sports_esports" />;
+export const LibraryIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="auto_stories" />;
 export const SearchIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="search" />;
 export const SettingsIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="settings" />;
 export const ArrowRightIcon: React.FC<IconProps> = (props) => <MaterialIcon {...props} iconName="arrow_forward" />;

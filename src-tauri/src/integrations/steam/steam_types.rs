@@ -14,6 +14,16 @@ pub struct SteamGame {
     pub library_path: String,
     #[serde(rename = "installPath")]
     pub install_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub installed: Option<bool>,
+    #[serde(rename = "playtimeForever", skip_serializing_if = "Option::is_none")]
+    pub playtime_forever: Option<u32>,
+    #[serde(rename = "playtime2weeks", skip_serializing_if = "Option::is_none")]
+    pub playtime_2weeks: Option<u32>,
+    #[serde(rename = "rtimeLastPlayed", skip_serializing_if = "Option::is_none")]
+    pub rtime_last_played: Option<u32>,
+    #[serde(rename = "imgIconUrl", skip_serializing_if = "Option::is_none")]
+    pub img_icon_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
