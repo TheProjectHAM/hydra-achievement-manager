@@ -110,8 +110,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                   </div>
                   {!isCollapsed && (
-                    <span className="text-[0.95rem] font-semibold truncate">
+                    <span className="text-[0.95rem] font-semibold truncate flex items-center gap-2">
                       {t(tab.label)}
+                      {tab.id === 'biblioteca' && (
+                        <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold leading-none text-amber-400 uppercase tracking-wider">
+                          Beta
+                        </span>
+                      )}
                     </span>
                   )}
                 </button>
